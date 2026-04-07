@@ -68,24 +68,28 @@ export default function RegisterPage() {
   const progress = step >= 4 ? 100 : (step / 4) * 100;
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1a1a2e] via-[#16213e] to-[#0f3460] p-4">
-      
+    <main className="min-h-screen flex items-center justify-center p-4" style={{background: 'radial-gradient(ellipse at top right, rgba(232,59,20,0.2) 0%, transparent 50%), radial-gradient(ellipse at bottom left, rgba(232,59,20,0.1) 0%, transparent 50%), #1a1a1a'}}>
       {/* Card glassmorphism */}
       <div className="w-full max-w-md relative">
         
         {/* Progress bar */}
         {step < 4 && (
           <div className="mb-6">
-            <div className="flex justify-between mb-2">
+          
+          <div className="flex justify-between mb-2 items-center">
               {STEPS.map((s, i) => (
-                <div
+                <img
                   key={s.id}
-                  className={`w-2 h-2 rounded-full transition-all duration-500 ${
-                    i <= step ? 'bg-white scale-125' : 'bg-white/30'
+                  src="/cos-icone-blanc.png"
+                  alt=""
+                  className={`h-4 w-4 transition-all duration-500 ${
+                    i <= step ? 'opacity-100 scale-110' : 'opacity-20'
                   }`}
                 />
               ))}
             </div>
+
+
             <div className="h-1 bg-white/20 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-[#e83b14] to-[#ff6f3d] rounded-full transition-all duration-700"
@@ -97,7 +101,15 @@ export default function RegisterPage() {
 
         {/* Glass card */}
         <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl">
-
+          
+          {/* Logo */}
+          <div className="flex justify-center mb-6">
+            <img 
+              src="/cos-logo-blanc.png" 
+              alt="CocktailOS" 
+              className="h-8 w-auto"
+            />
+          </div>
           {/* Step 0 — Email */}
           {step === 0 && (
             <div className="animate-fadeIn">
