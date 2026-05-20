@@ -122,6 +122,28 @@
   --duration-slow:  350ms;
 }
 
+/* ─── Skip to content ──────────────────────────────────────── */
+
+.skip-to-content {
+  position: fixed;
+  top: -100%;
+  left: var(--space-4);
+  z-index: 9999;
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-brand);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: top var(--duration-fast);
+}
+
+.skip-to-content:focus {
+  top: var(--space-4);
+}
+
 /* ─── Base ─────────────────────────────────────────────────── */
 
 *, *::before, *::after {

@@ -37,25 +37,7 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <a
-          href="#main-content"
-          style={{
-            position: 'fixed',
-            top: '-100%',
-            left: 'var(--space-4)',
-            zIndex: 9999,
-            padding: 'var(--space-3) var(--space-6)',
-            background: 'var(--color-brand)',
-            color: 'white',
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: 'var(--text-sm)',
-            textDecoration: 'none',
-            borderRadius: 'var(--radius-md)',
-          }}
-          onFocus={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = 'var(--space-4)' }}
-          onBlur={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = '-100%' }}
-        >
+        <a href="#main-content" className="skip-to-content">
           Aller au contenu principal
         </a>
         {children}
