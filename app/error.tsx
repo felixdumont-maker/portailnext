@@ -11,6 +11,9 @@ export default function Error({
   reset: () => void
 }) {
   useEffect(() => {
+    if (process.env.NODE_ENV === 'production') {
+      import('@sentry/nextjs').then(Sentry => Sentry.captureException(error))
+    }
     console.error('[CocktailOS Error]', error)
   }, [error])
 
@@ -35,8 +38,8 @@ export default function Error({
           width: '64px',
           height: '64px',
           borderRadius: '50%',
-          background: 'oklch(54% 0.20 25 / 0.15)',
-          border: '1px solid oklch(54% 0.20 25 / 0.30)',
+          background: 'var(--color-error-muted)',
+          border: '1px solid var(--color-error-border)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',

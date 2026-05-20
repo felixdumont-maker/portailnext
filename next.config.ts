@@ -12,7 +12,18 @@ const SECURITY_HEADERS = [
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.10.10'],
   images: {
-    unoptimized: true,
+    // Images optimisées par défaut (WebP, lazy loading automatique)
+    // Si des images viennent de domaines externes (Flask/Drive), ajouter dans remotePatterns
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'drive.google.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+    ],
   },
   async headers() {
     return [{ source: '/(.*)', headers: SECURITY_HEADERS }]

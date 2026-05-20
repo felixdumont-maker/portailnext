@@ -50,7 +50,7 @@ export default function LoginPage() {
         style={{
           width: '45%',
           flexShrink: 0,
-          background: 'linear-gradient(170deg, var(--color-dark-0) 55%, oklch(15% 0.028 32) 100%)',
+          background: 'linear-gradient(170deg, var(--color-dark-0) 55%, var(--color-login-gradient-end) 100%)',
           flexDirection: 'column',
           padding: 'var(--space-8)',
           position: 'relative',
@@ -188,8 +188,8 @@ export default function LoginPage() {
               display: 'flex',
               alignItems: 'flex-start',
               gap: 'var(--space-2)',
-              background: 'oklch(54% 0.20 25 / 0.12)',
-              border: '1px solid oklch(54% 0.20 25 / 0.35)',
+              background: 'var(--color-error-glow)',
+              border: '1px solid var(--color-error-border)',
               color: 'oklch(78% 0.10 25)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-3) var(--space-4)',
@@ -248,7 +248,7 @@ export default function LoginPage() {
                   minHeight: '48px',
                   colorScheme: 'dark',
                 }}
-                onFocus={e  => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                onFocus={e  => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'var(--color-input-focus-dark)' }}
                 onBlur={e   => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
               />
             </div>
@@ -273,15 +273,15 @@ export default function LoginPage() {
                   style={{
                     fontFamily: 'var(--font-body)',
                     fontSize: 'var(--text-sm)',
-                    color: 'oklch(72% 0.18 32)',
+                    color: 'var(--color-brand-text-muted)',
                     background: 'none',
                     border: 'none',
                     cursor: 'pointer',
                     padding: 0,
                     transition: 'color var(--duration-fast)',
                   }}
-                  onMouseEnter={e => (e.currentTarget.style.color = 'oklch(84% 0.13 32)')}
-                  onMouseLeave={e => (e.currentTarget.style.color = 'oklch(72% 0.18 32)')}
+                  onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-brand-text-hover)')}
+                  onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-brand-text-muted)')}
                 >
                   Mot de passe oublié?
                 </button>
@@ -309,7 +309,7 @@ export default function LoginPage() {
                     minHeight: '48px',
                     colorScheme: 'dark',
                   }}
-                  onFocus={e  => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                  onFocus={e  => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'var(--color-input-focus-dark)' }}
                   onBlur={e   => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
                 />
                 <button
@@ -398,23 +398,23 @@ export default function LoginPage() {
               style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: 'var(--text-sm)',
-                color: 'oklch(72% 0.18 32)',
+                color: 'var(--color-brand-text-muted)',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
                 padding: 0,
                 textDecoration: 'underline',
                 textUnderlineOffset: '3px',
-                textDecorationColor: 'oklch(72% 0.18 32 / 0.45)',
+                textDecorationColor: 'color-mix(in oklch, var(--color-brand-text-muted) 45%, transparent)',
                 transition: 'color var(--duration-fast), text-decoration-color var(--duration-fast)',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.color = 'oklch(84% 0.13 32)'
-                e.currentTarget.style.textDecorationColor = 'oklch(84% 0.13 32 / 0.5)'
+                e.currentTarget.style.color = 'var(--color-brand-text-hover)'
+                e.currentTarget.style.textDecorationColor = 'color-mix(in oklch, var(--color-brand-text-hover) 50%, transparent)'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.color = 'oklch(72% 0.18 32)'
-                e.currentTarget.style.textDecorationColor = 'oklch(72% 0.18 32 / 0.45)'
+                e.currentTarget.style.color = 'var(--color-brand-text-muted)'
+                e.currentTarget.style.textDecorationColor = 'color-mix(in oklch, var(--color-brand-text-muted) 45%, transparent)'
               }}
             >
               Créer un compte

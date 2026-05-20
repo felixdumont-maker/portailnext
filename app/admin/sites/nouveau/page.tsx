@@ -282,7 +282,7 @@ export default function NouveauSitePage() {
       </div>
 
       {/* Formulaire */}
-      <section style={{ background: 'white', borderRadius: 'var(--radius-lg)', padding: 'var(--space-10)', boxShadow: '0 1px 4px oklch(0% 0 0 / 0.06)' }}>
+      <section style={{ background: 'white', borderRadius: 'var(--radius-lg)', padding: 'var(--space-10)', boxShadow: 'var(--shadow-sm)' }}>
 
         {error && (
           <div className="bg-[var(--color-error-bg)] text-[var(--color-error-text)] px-4 py-3 rounded-lg text-sm font-medium mb-8">

@@ -86,7 +86,7 @@ export default function ToolsHub({ basePath }: Props) {
                 transition: 'box-shadow 0.15s, border-color 0.15s',
               }}
               onMouseEnter={e => {
-                (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px oklch(0% 0 0 / 0.08)'
+                (e.currentTarget as HTMLDivElement).style.boxShadow = '0 4px 20px var(--overlay-hover)'
                 ;(e.currentTarget as HTMLDivElement).style.borderColor = 'var(--color-light-border-2)'
               }}
               onMouseLeave={e => {

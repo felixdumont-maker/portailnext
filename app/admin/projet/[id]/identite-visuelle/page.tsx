@@ -121,7 +121,7 @@ function LogoCard({ variantKey, label, bg, dark, logo, projetId, onUploaded }: {
         ) : imgUrl ? (
           <>
             <img src={imgUrl} alt={label} style={{ maxWidth: '80%', maxHeight: '80%', objectFit: 'contain' }} />
-            <div style={{ position: 'absolute', inset: 0, background: 'oklch(0% 0 0 / 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: hovering ? 1 : 0, transition: 'opacity var(--duration-fast)' }}>
+            <div style={{ position: 'absolute', inset: 0, background: 'var(--overlay-dark)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: hovering ? 1 : 0, transition: 'opacity var(--duration-fast)' }}>
               <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'white', letterSpacing: '0.1em', textTransform: 'uppercase' as const }}>Remplacer</span>
             </div>
           </>
@@ -347,7 +347,7 @@ export default function AdminIdentiteVisuellePage() {
           <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text-3)', margin: 0 }}>{data.nom_projet}</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, padding: 'var(--space-1) var(--space-3)', borderRadius: 'var(--radius-full)', background: published ? 'oklch(56% 0.16 145 / 0.10)' : 'var(--color-light-0)', color: published ? 'var(--color-success)' : 'var(--color-light-text-3)', border: `1px solid ${published ? 'oklch(56% 0.16 145 / 0.28)' : 'var(--color-light-border)'}` }}>
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' as const, padding: 'var(--space-1) var(--space-3)', borderRadius: 'var(--radius-full)', background: published ? 'var(--color-success-glow)' : 'var(--color-light-0)', color: published ? 'var(--color-success)' : 'var(--color-light-text-3)', border: `1px solid ${published ? 'var(--color-success-border)' : 'var(--color-light-border)'}` }}>
             {published ? 'Publié' : 'Brouillon'}
           </span>
           <button onClick={publish} disabled={publishing || published}
@@ -445,7 +445,7 @@ export default function AdminIdentiteVisuellePage() {
             <div key={d.id}>
               <div style={{ position: 'relative' as const, borderRadius: 'var(--radius-md)', overflow: 'hidden', background: 'var(--color-light-0)', border: '1px solid var(--color-light-border)', aspectRatio: '4/3', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {d.public_url ? <img src={d.public_url} alt={d.label || ''} style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 'var(--space-3)' }} /> : <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '28px', color: 'var(--color-light-border-2)' }}>image</span>}
-                <button onClick={() => deleteDeclinaison(d.id)} style={{ position: 'absolute', top: 'var(--space-2)', right: 'var(--space-2)', background: 'oklch(0% 0 0 / 0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+                <button onClick={() => deleteDeclinaison(d.id)} style={{ position: 'absolute', top: 'var(--space-2)', right: 'var(--space-2)', background: 'var(--overlay-dark)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                   <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>close</span>
                 </button>
               </div>
@@ -468,7 +468,7 @@ export default function AdminIdentiteVisuellePage() {
             <div key={m.id} style={{ position: 'relative' as const, borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: 'var(--color-light-0)', border: '1px solid var(--color-light-border)' }}>
               {m.public_url ? <img src={m.public_url} alt={m.label || ''} style={{ width: '100%', display: 'block' }} /> : <div style={{ height: '160px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px', color: 'var(--color-light-border-2)' }}>image</span></div>}
               {m.label && <div style={{ padding: 'var(--space-3) var(--space-4)' }}><span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.10em', color: 'var(--color-light-text-3)' }}>{m.label}</span></div>}
-              <button onClick={() => deleteMockup(m.id)} style={{ position: 'absolute', top: 'var(--space-2)', right: 'var(--space-2)', background: 'oklch(0% 0 0 / 0.5)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
+              <button onClick={() => deleteMockup(m.id)} style={{ position: 'absolute', top: 'var(--space-2)', right: 'var(--space-2)', background: 'var(--overlay-dark)', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>
                 <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>close</span>
               </button>
             </div>

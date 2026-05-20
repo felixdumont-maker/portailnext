@@ -49,6 +49,33 @@
   --color-info-bg:      oklch(94% 0.05 250);
   --color-info-text:    oklch(32% 0.14 250);
 
+  /* Shadows — black with opacity */
+  --shadow-sm:  0 1px 4px oklch(0% 0 0 / 0.06);
+  --shadow-md:  0 8px 24px oklch(0% 0 0 / 0.12);
+  --shadow-lg:  0 8px 32px oklch(0% 0 0 / 0.20);
+  --shadow-xl:  0 12px 32px oklch(0% 0 0 / 0.35);
+
+  /* Color-mix alpha variants — error/success avec opacité */
+  --color-error-glow:    color-mix(in oklch, var(--color-error) 12%, transparent);
+  --color-error-border:  color-mix(in oklch, var(--color-error) 35%, transparent);
+  --color-error-muted:   color-mix(in oklch, var(--color-error) 15%, transparent);
+  --color-success-glow:  color-mix(in oklch, var(--color-success) 10%, transparent);
+  --color-success-border:color-mix(in oklch, var(--color-success) 28%, transparent);
+
+  /* Dark overlay pour hover sur images */
+  --overlay-dark: oklch(0% 0 0 / 0.5);
+  --overlay-hover: oklch(0% 0 0 / 0.08);
+
+  /* Brand muted variants */
+  --color-brand-text-muted: oklch(72% 0.18 32);
+  --color-brand-text-hover: oklch(84% 0.13 32);
+
+  /* Input focus state — dark surfaces */
+  --color-input-focus-dark: oklch(24% 0.018 33);
+
+  /* Login panel gradient end */
+  --color-login-gradient-end: oklch(15% 0.028 32);
+
   /* Spacing — 4pt scale */
   --space-1:  4px;
   --space-2:  8px;

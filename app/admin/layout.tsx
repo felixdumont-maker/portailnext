@@ -104,7 +104,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           background: 'var(--color-dark-1)',
           border: '1px solid var(--color-dark-border)',
           borderRadius: 'var(--radius-full)',
-          boxShadow: '0 8px 32px oklch(0% 0 0 / 0.20)',
+          boxShadow: 'var(--shadow-lg)',
         }}
       >
         {/* Logo */}
@@ -217,7 +217,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       background: 'var(--color-dark-1)',
                       border: '1px solid var(--color-dark-border)',
                       borderRadius: 'var(--radius-md)',
-                      boxShadow: '0 12px 32px oklch(0% 0 0 / 0.35)',
+                      boxShadow: 'var(--shadow-xl)',
                       overflow: 'hidden',
                       minWidth: '170px',
                       zIndex: 200,
@@ -297,7 +297,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               <div style={{
                 position: 'absolute', right: 0, top: 'calc(100% + 10px)',
                 background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
-                borderRadius: 'var(--radius-md)', boxShadow: '0 8px 24px oklch(0% 0 0 / 0.12)',
+                borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-md)',
                 overflow: 'hidden', width: '190px',
                 zIndex: 'calc(var(--z-dropdown) + 1)' as never,
               }}>

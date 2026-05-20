@@ -104,7 +104,7 @@ function NouvelleFactureForm() {
         {error && (
           <div style={{
             padding: 'var(--space-3) var(--space-4)', borderRadius: 'var(--radius-sm)',
-            background: 'oklch(54% 0.20 25 / 0.15)', outline: '1px solid oklch(54% 0.20 25 / 0.4)',
+            background: 'var(--color-error-muted)', outline: '1px solid oklch(54% 0.20 25 / 0.4)',
             fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'oklch(70% 0.14 25)',
             marginBottom: 'var(--space-6)',
           }}>{error}</div>

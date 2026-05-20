@@ -137,7 +137,7 @@ function AssetZone({ siteId, slot, label, hint, icon, hasRepo }: {
 
 function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
-    <div style={{ background: 'white', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)', boxShadow: '0 1px 4px oklch(0% 0 0 / 0.06)' }}>
+    <div style={{ background: 'white', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)', boxShadow: 'var(--shadow-sm)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
         <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20, color: 'var(--color-brand)' }}>{icon}</span>
         <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-light-text)', margin: 0 }}>

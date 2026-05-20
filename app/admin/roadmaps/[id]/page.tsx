@@ -184,8 +184,8 @@ export default function RoadmapDetailPage() {
 
       {/* Notes block */}
       {roadmap.notes && (
-        <div className="bg-[var(--color-warning-bg)] rounded-lg p-4 mb-8 border-l-4 border-[var(--color-brand)] flex gap-3 items-start">
-          <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] text-lg">sticky_note_2</span>
+        <div className="bg-[var(--color-warning-bg)] rounded-lg p-4 mb-8 flex gap-3 items-start" style={{ outline: '1px solid var(--color-warning)' }}>
+          <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] text-lg flex-shrink-0">sticky_note_2</span>
           <p className="text-sm text-[var(--color-light-text-2)] italic">{roadmap.notes}</p>
         </div>
       )}
@@ -198,7 +198,7 @@ export default function RoadmapDetailPage() {
             <span className="text-xs font-bold text-[var(--color-dark-0)]">{doneTodos}/{totalTodos} tâches — {pct}%</span>
           </div>
           <div className="w-full h-3 bg-[var(--color-light-0)] rounded-full overflow-hidden">
-            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, var(--color-brand), var(--color-brand))' }} />
+            <div className="h-full w-full rounded-full" style={{ background: 'var(--color-brand)', transform: `scaleX(${pct / 100})`, transformOrigin: 'left', transition: `transform var(--duration-slow) var(--ease-out-quart)` }} />
           </div>
         </div>
       )}

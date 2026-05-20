@@ -1051,7 +1051,7 @@ export default function ProjetDetail() {
             </span>
           </div>
           <div style={{ height: '4px', background: 'var(--color-light-0)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${pct}%`, background: allDone ? 'var(--color-success)' : 'var(--color-brand)', borderRadius: 'var(--radius-full)', transition: `width var(--duration-slow) var(--ease-out-quart)` }} />
+            <div style={{ height: '100%', width: '100%', background: allDone ? 'var(--color-success)' : 'var(--color-brand)', borderRadius: 'var(--radius-full)', transform: `scaleX(${pct / 100})`, transformOrigin: 'left', transition: `transform var(--duration-slow) var(--ease-out-quart)` }} />
           </div>
         </div>
       )}

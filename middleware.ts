@@ -17,8 +17,8 @@ export function middleware(request: NextRequest) {
   const isProtected = PROTECTED.some(prefix => pathname.startsWith(prefix))
   if (!isProtected) return NextResponse.next()
 
-  // Flask utilise un cookie de session signé nommé "session"
-  const session = request.cookies.get('session')
+  // Flask SESSION_COOKIE_NAME = "cocktailmedia_session" (app.py:112)
+  const session = request.cookies.get('cocktailmedia_session')
   if (!session) {
     const loginUrl = new URL('/', request.url)
     loginUrl.searchParams.set('redirect', pathname)
