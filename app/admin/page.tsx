@@ -457,6 +457,7 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
           <div className="bg-[var(--color-light-1)] rounded-xl overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="bg-[var(--color-light-0)]">
                 <tr>
@@ -496,6 +497,7 @@ export default function AdminDashboardPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         </div>
 

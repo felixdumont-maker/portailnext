@@ -171,19 +171,19 @@ export default function EditClientPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             <Field label="Nom complet">
-              <input type="text" value={nomComplet} onChange={e => setNomComplet(e.target.value)} required className={inputCls} />
+              <input type="text" aria-label="Nom complet" value={nomComplet} onChange={e => setNomComplet(e.target.value)} required className={inputCls} />
             </Field>
 
             <Field label="Adresse email">
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} required className={inputCls} />
+              <input type="email" aria-label="Adresse courriel" value={email} onChange={e => setEmail(e.target.value)} required className={inputCls} />
             </Field>
 
             <Field label="Nom d'entreprise" optional>
-              <input type="text" value={nomEntreprise} onChange={e => setNomEntreprise(e.target.value)} className={inputCls} />
+              <input type="text" aria-label="Nom entreprise" value={nomEntreprise} onChange={e => setNomEntreprise(e.target.value)} className={inputCls} />
             </Field>
 
             <Field label="Téléphone" optional>
-              <input type="tel" value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="819 555-0000" className={inputCls} />
+              <input type="tel" aria-label="Téléphone" value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="819 555-0000" className={inputCls} />
             </Field>
 
           </div>
@@ -205,16 +205,16 @@ export default function EditClientPage() {
 
             <div className="md:col-span-2">
               <Field label="Adresse" optional>
-                <input type="text" value={adresse} onChange={e => setAdresse(e.target.value)} placeholder="123 rue Exemple" className={inputCls} />
+                <input type="text" aria-label="Adresse" value={adresse} onChange={e => setAdresse(e.target.value)} placeholder="123 rue Exemple" className={inputCls} />
               </Field>
             </div>
 
             <Field label="Ville" optional>
-              <input type="text" value={ville} onChange={e => setVille(e.target.value)} className={inputCls} />
+              <input type="text" aria-label="Ville" value={ville} onChange={e => setVille(e.target.value)} className={inputCls} />
             </Field>
 
             <Field label="Code postal" optional>
-              <input type="text" value={codePostal} onChange={e => setCodePostal(e.target.value)} placeholder="G1A 0A1" className={inputCls} />
+              <input type="text" aria-label="Code postal" value={codePostal} onChange={e => setCodePostal(e.target.value)} placeholder="G1A 0A1" className={inputCls} />
             </Field>
 
             <Field label="Province">
@@ -224,7 +224,7 @@ export default function EditClientPage() {
             </Field>
 
             <Field label="Pays">
-              <input type="text" value={pays} onChange={e => setPays(e.target.value)} className={inputCls} />
+              <input type="text" aria-label="Pays" value={pays} onChange={e => setPays(e.target.value)} className={inputCls} />
             </Field>
 
           </div>

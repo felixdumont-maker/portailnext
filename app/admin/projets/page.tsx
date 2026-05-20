@@ -134,7 +134,7 @@ export default function AdminProjetsPage() {
         <p className="text-[var(--color-dark-text-2)] font-body text-center py-20">Chargement...</p>
       ) : (
         <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
-          <table className="w-full text-left">
+          <div className="overflow-x-auto"><table className="w-full text-left">
             <thead className="bg-[var(--color-light-0)]">
               <tr>
                 <th className="px-6 py-4 text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">Projet</th>
@@ -195,7 +195,7 @@ export default function AdminProjetsPage() {
                 </tr>
               )}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>

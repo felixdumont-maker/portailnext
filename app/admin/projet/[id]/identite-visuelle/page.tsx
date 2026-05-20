@@ -382,7 +382,7 @@ export default function AdminIdentiteVisuellePage() {
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
               <input type="color" value={c.hex} onChange={e => setPalette(p => p.map((x, j) => j === i ? { ...x, hex: e.target.value } : x))}
                 style={{ width: '36px', height: '36px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-light-border)', cursor: 'pointer', padding: '2px', background: 'none' }} />
-              <input type="text" value={c.hex} onChange={e => setPalette(p => p.map((x, j) => j === i ? { ...x, hex: e.target.value } : x))}
+              <input type="text" aria-label="Valeur hex de la couleur" value={c.hex} onChange={e => setPalette(p => p.map((x, j) => j === i ? { ...x, hex: e.target.value } : x))}
                 style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-light-text)', background: 'var(--color-light-0)', border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-2) var(--space-3)', width: '100px', outline: 'none' }} />
               <input aria-label="Label" type="text" placeholder="Label" value={c.label || ''} onChange={e => setPalette(p => p.map((x, j) => j === i ? { ...x, label: e.target.value } : x))}
                 style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text)', background: 'var(--color-light-0)', border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-sm)', padding: 'var(--space-2) var(--space-3)', flex: 1, outline: 'none' }} />

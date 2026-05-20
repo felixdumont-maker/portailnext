@@ -348,24 +348,24 @@ export default function FactureDetailPage() {
               <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] font-body">
                 Description <span className="text-[var(--color-brand)]">*</span>
               </label>
-              <input type="text" value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Ex: Photo immobilière" className={inputCls + ' w-full'} required />
+              <input type="text" aria-label="Description" value={newDesc} onChange={e => setNewDesc(e.target.value)} placeholder="Ex: Photo immobilière" className={inputCls + ' w-full'} required />
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] font-body">Date service</label>
-              <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} className={inputCls + ' w-full'} />
+              <input type="date" aria-label="Date" value={newDate} onChange={e => setNewDate(e.target.value)} className={inputCls + ' w-full'} />
             </div>
             <div className="space-y-1.5">
               <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] font-body">Localisation <span className="text-[var(--color-dark-text-2)] font-normal">(optionnel)</span></label>
-              <input type="text" value={newLoc} onChange={e => setNewLoc(e.target.value)} placeholder="Adresse ou ville" className={inputCls + ' w-full'} />
+              <input type="text" aria-label="Localisation" value={newLoc} onChange={e => setNewLoc(e.target.value)} placeholder="Adresse ou ville" className={inputCls + ' w-full'} />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] font-body">Prix unitaire ($)</label>
-                <input type="number" step="0.01" min="0" value={newPrix} onChange={e => setNewPrix(e.target.value)} placeholder="0.00" className={inputCls + ' w-full'} />
+                <input type="number" step="0.01" min="0" aria-label="Prix unitaire" value={newPrix} onChange={e => setNewPrix(e.target.value)} placeholder="0.00" className={inputCls + ' w-full'} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] font-body">Quantité</label>
-                <input type="number" min="1" value={newQte} onChange={e => setNewQte(e.target.value)} className={inputCls + ' w-full'} />
+                <input type="number" aria-label="Quantité" min="1" value={newQte} onChange={e => setNewQte(e.target.value)} className={inputCls + ' w-full'} />
               </div>
             </div>
           </div>

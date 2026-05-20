@@ -31,7 +31,7 @@ export default function NouveauPigistePage() {
   const field = (label: string, key: string, type = 'text', placeholder = '') => (
     <div className="flex flex-col gap-2">
       <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] font-body">{label}</label>
-      <input type={type} value={form[key as keyof typeof form]} onChange={e => set(key, e.target.value)}
+      <input type={type} aria-label={label} value={form[key as keyof typeof form]} onChange={e => set(key, e.target.value)}
         placeholder={placeholder}
         className="bg-[var(--color-light-0)] border-none rounded-xl px-4 py-3 outline-none font-body text-sm focus:ring-2 focus:ring-[var(--color-brand)]/40" />
     </div>

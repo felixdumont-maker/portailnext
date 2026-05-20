@@ -227,7 +227,7 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
       </nav>
 
       {/* Page content */}
-      <main style={{
+      <main id="main-content" style={{
         paddingTop: '80px',
         paddingBottom: '72px',
       }}>

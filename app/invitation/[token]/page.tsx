@@ -211,33 +211,33 @@ function InvitationForm() {
           <div style={{ ...row, marginBottom: '1rem' }}>
             <div>
               <label style={label}>Nom de l'entreprise</label>
-              <input style={input} type="text" value={nomEntreprise} onChange={e => setNomEntreprise(e.target.value)} placeholder="Acme inc." />
+              <input style={input} type="text" aria-label="Nom entreprise" value={nomEntreprise} onChange={e => setNomEntreprise(e.target.value)} placeholder="Acme inc." />
             </div>
             <div>
               <label style={label}>Téléphone</label>
-              <input style={input} type="tel" value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="819 000-0000" />
+              <input style={input} type="tel" aria-label="Téléphone" value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="819 000-0000" />
             </div>
           </div>
 
           <div style={{ marginBottom: '1rem' }}>
             <label style={label}>Adresse de facturation</label>
-            <input style={input} type="text" value={adresse} onChange={e => setAdresse(e.target.value)} placeholder="123 rue Exemple" />
+            <input style={input} type="text" aria-label="Adresse" value={adresse} onChange={e => setAdresse(e.target.value)} placeholder="123 rue Exemple" />
           </div>
 
           <div style={{ ...row, marginBottom: '1rem' }}>
             <div>
               <label style={label}>Ville</label>
-              <input style={input} type="text" value={ville} onChange={e => setVille(e.target.value)} placeholder="Trois-Rivières" />
+              <input style={input} type="text" aria-label="Ville" value={ville} onChange={e => setVille(e.target.value)} placeholder="Trois-Rivières" />
             </div>
             <div>
               <label style={label}>Province</label>
-              <input style={input} type="text" value={province} onChange={e => setProvince(e.target.value)} />
+              <input style={input} type="text" aria-label="Province" value={province} onChange={e => setProvince(e.target.value)} />
             </div>
           </div>
 
           <div style={{ marginBottom: '2rem' }}>
             <label style={label}>Code postal</label>
-            <input style={{ ...input, maxWidth: '180px' }} type="text" value={codePostal} onChange={e => setCodePostal(e.target.value)} placeholder="G8V 1X4" />
+            <input style={{ ...input, maxWidth: '180px' }} type="text" aria-label="Code postal" value={codePostal} onChange={e => setCodePostal(e.target.value)} placeholder="G8V 1X4" />
           </div>
 
           {/* ─ Section Mot de passe ─ */}
@@ -248,11 +248,11 @@ function InvitationForm() {
           <div style={{ ...row, marginBottom: '0.75rem' }}>
             <div>
               <label style={label}>Mot de passe</label>
-              <input style={input} type={showPasswords ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+              <input style={input} type={showPasswords ? 'text' : 'password'} aria-label="Mot de passe" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
             </div>
             <div>
               <label style={label}>Confirmer</label>
-              <input style={input} type={showPasswords ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" required />
+              <input style={input} type={showPasswords ? 'text' : 'password'} aria-label="Confirmer le mot de passe" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" required />
             </div>
           </div>
 

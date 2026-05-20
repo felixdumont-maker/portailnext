@@ -36,5 +36,6 @@ export const config = {
     '/projet/:path*',
     '/pigiste/:path*',
     '/outils/:path*',
+    '/invitation/:path*',
   ],
 }

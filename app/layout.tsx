@@ -36,7 +36,30 @@ export default function RootLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <a
+          href="#main-content"
+          style={{
+            position: 'fixed',
+            top: '-100%',
+            left: 'var(--space-4)',
+            zIndex: 9999,
+            padding: 'var(--space-3) var(--space-6)',
+            background: 'var(--color-brand)',
+            color: 'white',
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 'var(--text-sm)',
+            textDecoration: 'none',
+            borderRadius: 'var(--radius-md)',
+          }}
+          onFocus={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = 'var(--space-4)' }}
+          onBlur={(e) => { (e.currentTarget as HTMLAnchorElement).style.top = '-100%' }}
+        >
+          Aller au contenu principal
+        </a>
+        {children}
+      </body>
     </html>
   );
 }

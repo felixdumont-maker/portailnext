@@ -368,7 +368,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </nav>
 
       {/* ── Content ── */}
-      <main style={{
+      <main id="main-content" style={{
         paddingTop: '80px',
         paddingBottom: '72px',
         paddingLeft: 'var(--space-6)',

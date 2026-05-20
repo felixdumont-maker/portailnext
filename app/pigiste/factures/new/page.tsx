@@ -140,13 +140,13 @@ function NouvelleFactureForm() {
                       </select>
                     )}
                   </div>
-                  <input className="pg-input" type="number" value={l.quantite} min={0} step="0.5"
+                  <input className="pg-input" type="number" aria-label="Quantité" value={l.quantite} min={0} step="0.5"
                     onChange={e => updateLigne(i, 'quantite', parseFloat(e.target.value) || 0)}
                     style={{ ...inputStyle, textAlign: 'right' }} />
                   <input aria-label="0,00" className="pg-input" type="number" value={l.taux} min={0} step="0.01" placeholder="0,00"
                     onChange={e => updateLigne(i, 'taux', parseFloat(e.target.value) || 0)}
                     style={{ ...inputStyle, textAlign: 'right' }} />
-                  <input className="pg-input" type="number" value={l.montant} min={0} step="0.01"
+                  <input className="pg-input" type="number" aria-label="Montant" value={l.montant} min={0} step="0.01"
                     onChange={e => updateLigne(i, 'montant', parseFloat(e.target.value) || 0)}
                     style={{ ...inputStyle, textAlign: 'right', fontWeight: 600 }} />
                   <button type="button" onClick={() => removeLigne(i)} disabled={lignes.length === 1}
@@ -197,7 +197,7 @@ function NouvelleFactureForm() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-5)', marginBottom: 'var(--space-10)' }}>
             <div>
               <label style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-light-text-3)', display: 'block', marginBottom: 'var(--space-2)' }}>Échéance</label>
-              <input className="pg-input" type="date" value={dateEcheance} onChange={e => setDateEcheance(e.target.value)} style={{ ...inputStyle }} />
+              <input className="pg-input" type="date" aria-label="Date d'échéance" value={dateEcheance} onChange={e => setDateEcheance(e.target.value)} style={{ ...inputStyle }} />
             </div>
             <div>
               <label style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-light-text-3)', display: 'block', marginBottom: 'var(--space-2)' }}>Notes de paiement</label>

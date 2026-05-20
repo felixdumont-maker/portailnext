@@ -164,7 +164,7 @@ export default function RoadmapDetailPage() {
           <div className="space-y-4">
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-light-text-2)] block mb-2">Nom</label>
-              <input value={editForm.titre} onChange={e => setEditForm(p => ({ ...p, titre: e.target.value }))} className="w-full bg-[var(--color-light-0)] rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/40" />
+              <input aria-label="Titre de la roadmap" value={editForm.titre} onChange={e => setEditForm(p => ({ ...p, titre: e.target.value }))} className="w-full bg-[var(--color-light-0)] rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/40" />
             </div>
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-light-text-2)] block mb-2">Description</label>
@@ -323,7 +323,7 @@ export default function RoadmapDetailPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="md:col-span-2">
               <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-light-text-2)] block mb-2">Nom de la phase *</label>
-              <input value={phaseForm.titre} onChange={e => setPhaseForm(p => ({ ...p, titre: e.target.value }))} placeholder="ex: Phase 1 — Lancement" className="w-full bg-[var(--color-light-0)] rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/40" />
+              <input aria-label="Titre de la phase" value={phaseForm.titre} onChange={e => setPhaseForm(p => ({ ...p, titre: e.target.value }))} placeholder="ex: Phase 1 — Lancement" className="w-full bg-[var(--color-light-0)] rounded-lg px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/40" />
             </div>
             <div className="md:col-span-2">
               <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-light-text-2)] block mb-2">Description</label>
@@ -331,11 +331,11 @@ export default function RoadmapDetailPage() {
             </div>
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-light-text-2)] block mb-2">Date début</label>
-              <input value={phaseForm.date_debut} onChange={e => setPhaseForm(p => ({ ...p, date_debut: e.target.value }))} placeholder="ex: Avril 2026" className="w-full bg-[var(--color-light-0)] rounded-lg px-4 py-3 text-sm outline-none" />
+              <input aria-label="Date de début" value={phaseForm.date_debut} onChange={e => setPhaseForm(p => ({ ...p, date_debut: e.target.value }))} placeholder="ex: Avril 2026" className="w-full bg-[var(--color-light-0)] rounded-lg px-4 py-3 text-sm outline-none" />
             </div>
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-light-text-2)] block mb-2">Date fin</label>
-              <input value={phaseForm.date_fin} onChange={e => setPhaseForm(p => ({ ...p, date_fin: e.target.value }))} placeholder="ex: Mai 2026" className="w-full bg-[var(--color-light-0)] rounded-lg px-4 py-3 text-sm outline-none" />
+              <input aria-label="Date de fin" value={phaseForm.date_fin} onChange={e => setPhaseForm(p => ({ ...p, date_fin: e.target.value }))} placeholder="ex: Mai 2026" className="w-full bg-[var(--color-light-0)] rounded-lg px-4 py-3 text-sm outline-none" />
             </div>
             <div>
               <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-light-text-2)] block mb-2">Badge</label>

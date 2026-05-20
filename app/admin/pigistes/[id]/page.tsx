@@ -285,7 +285,7 @@ export default function AdminPigisteDetail() {
                 <input type="date" value={mandatForm.date_echeance} onChange={e => setMandatForm(p => ({ ...p, date_echeance: e.target.value }))} placeholder="Échéance" aria-label="Date d'échéance"
                   className="bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]" />
               </div>
-              <input type="number" value={mandatForm.montant_convenu} onChange={e => setMandatForm(p => ({ ...p, montant_convenu: e.target.value }))} placeholder="Montant convenu ($)" step="0.01" min="0"
+              <input type="number" value={mandatForm.montant_convenu} onChange={e => setMandatForm(p => ({ ...p, montant_convenu: e.target.value }))} placeholder="Montant convenu" aria-label="Montant convenu" step="0.01" min="0"
                 className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]" />
               <textarea value={mandatForm.notes_admin} onChange={e => setMandatForm(p => ({ ...p, notes_admin: e.target.value }))} placeholder="Notes pour le pigiste" rows={2}
                 className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)] resize-none" />

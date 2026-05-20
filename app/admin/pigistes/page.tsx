@@ -70,7 +70,7 @@ export default function AdminPigistesPage() {
         </div>
       ) : (
         <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
-          <table className="w-full text-left">
+          <div className="overflow-x-auto"><table className="w-full text-left">
             <thead className="bg-[var(--color-light-0)]">
               <tr>
                 {['Pigiste', 'Email', 'Mandats', 'Statut', ''].map(h => (
@@ -118,7 +118,7 @@ export default function AdminPigistesPage() {
                 )
               })}
             </tbody>
-          </table>
+          </table></div>
         </div>
       )}
     </div>

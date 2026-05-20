@@ -226,7 +226,7 @@ export default function PigisteLayout({ children }: { children: React.ReactNode 
       </nav>
 
       {/* Content */}
-      <main style={{
+      <main id="main-content" style={{
         maxWidth: '1080px', margin: '0 auto',
         padding: 'var(--space-6) var(--space-6)',
         paddingTop: '80px',
