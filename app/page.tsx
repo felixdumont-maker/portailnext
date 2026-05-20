@@ -190,7 +190,7 @@ export default function LoginPage() {
               gap: 'var(--space-2)',
               background: 'var(--color-error-glow)',
               border: '1px solid var(--color-error-border)',
-              color: 'oklch(78% 0.10 25)',
+              color: 'var(--color-brand-text-muted)',
               borderRadius: 'var(--radius-md)',
               padding: 'var(--space-3) var(--space-4)',
               marginBottom: 'var(--space-4)',

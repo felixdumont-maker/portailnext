@@ -210,7 +210,7 @@ function GabaritDetail({
                 <button onClick={() => deleteFile(f.id)} style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   width: 32, height: 32, borderRadius: 'var(--radius-sm)',
-                  background: 'oklch(95% 0.04 25)', border: '1px solid oklch(85% 0.06 25)',
+                  background: 'var(--color-error-bg-2)', border: '1px solid var(--color-error-light)',
                   color: 'var(--color-error)', cursor: 'pointer',
                 }}>
                   <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 16 }}>delete</span>
@@ -623,7 +623,7 @@ export default function Mediatheque({ backHref, isAdmin }: Props) {
                       style={{
                         position: 'absolute', top: 6, right: 6,
                         width: 26, height: 26, borderRadius: 'var(--radius-full)',
-                        background: 'rgba(255,255,255,.9)', border: '1px solid oklch(85% 0.06 25)',
+                        background: 'rgba(255,255,255,.9)', border: '1px solid var(--color-error-light)',
                         color: 'var(--color-error)', cursor: 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}
@@ -705,7 +705,7 @@ export default function Mediatheque({ backHref, isAdmin }: Props) {
                         <button onClick={() => deleteAsset(asset)} style={{
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           width: 32, padding: '6px',
-                          background: 'oklch(95% 0.04 25)', border: '1px solid oklch(85% 0.06 25)',
+                          background: 'var(--color-error-bg-2)', border: '1px solid var(--color-error-light)',
                           borderRadius: 'var(--radius-sm)', color: 'var(--color-error)', cursor: 'pointer',
                         }}>
                           <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 14 }}>delete</span>

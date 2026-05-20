@@ -403,7 +403,7 @@ export default function AdminDashboardPage() {
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-[var(--color-dark-text-2)] font-body line-through truncate">{todo.texte}</p>
-                        {todo.projet_nom && <p className="text-[9px] text-[#c0b8b0] font-body uppercase">{todo.projet_nom}</p>}
+                        {todo.projet_nom && <p className="text-[9px] text-[var(--color-light-border-2)] font-body uppercase">{todo.projet_nom}</p>}
                       </div>
                       <button
                         onClick={() => deleteTodo(todo.id)}
@@ -432,7 +432,7 @@ export default function AdminDashboardPage() {
           </div>
           <p className="font-display text-[var(--text-xl)] font-extrabold text-[var(--color-dark-1)]">{data.projets_actifs}</p>
         </div>
-        <div className="bg-[#fff3f1] rounded-xl p-4 flex flex-col gap-3">
+        <div className="bg-[var(--color-error-bg-2)] rounded-xl p-4 flex flex-col gap-3">
           <div className="flex justify-between items-start">
             <p className="text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">En révision</p>
             <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-[9px] font-bold rounded-full font-body tracking-wide">ACTION</span>

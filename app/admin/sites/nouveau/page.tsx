@@ -218,7 +218,7 @@ export default function NouveauSitePage() {
       <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center', paddingTop: 'var(--space-16)' }}>
         <div style={{
           width: 72, height: 72, borderRadius: '50%',
-          background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          background: 'var(--color-success-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center',
           margin: '0 auto var(--space-6)',
         }}>
           <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 36, color: 'var(--color-success)' }}>check_circle</span>

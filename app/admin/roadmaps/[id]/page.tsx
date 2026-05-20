@@ -255,7 +255,7 @@ export default function RoadmapDetailPage() {
                   {/* Todos */}
                   <div className="space-y-2 mb-4">
                     {phase.todos.map(todo => (
-                      <div key={todo.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${todo.est_coche ? 'bg-[#f0faf4]' : 'bg-[#f9f6f2]'}`}>
+                      <div key={todo.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${todo.est_coche ? 'bg-[var(--color-success-bg)]' : 'bg-[var(--color-light-0)]'}`}>
                         <input type="checkbox" checked={!!todo.est_coche} onChange={() => toggleTodo(phase.id, todo.id)} className="accent-['var(--color-brand)'] cursor-pointer" />
                         <span className={`text-sm flex-1 ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-0)]'}`}>{todo.texte}</span>
                         <button onClick={() => deleteTodo(phase.id, todo.id)} className="text-[#ccc] hover:text-red-400 text-xs transition-colors">✕</button>
@@ -282,7 +282,7 @@ export default function RoadmapDetailPage() {
                     <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] block mb-3">Journal de notes</label>
                     <div className="space-y-2 mb-3">
                       {phase.journal.map(note => (
-                        <div key={note.id} className="flex items-start gap-3 py-2 border-b border-[#f5f0eb] group">
+                        <div key={note.id} className="flex items-start gap-3 py-2 border-b border-[var(--color-light-border)] group">
                           <span className="text-xs text-[var(--color-dark-text-2)] whitespace-nowrap pt-0.5">{note.created_at?.slice(0, 10)}</span>
                           <span className="text-sm text-[var(--color-dark-0)] flex-1">{note.texte}</span>
                           <button onClick={() => deleteNote(phase.id, note.id)} className="text-[#ccc] hover:text-red-400 text-xs opacity-0 group-hover:opacity-100 transition-all">✕</button>

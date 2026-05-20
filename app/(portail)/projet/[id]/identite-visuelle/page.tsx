@@ -64,8 +64,8 @@ function LoadingSkeleton() {
 // ─── Logo card ────────────────────────────────────────────────
 
 const LOGO_VARIANTS = [
-  { key: 'principal', label: 'Logo principal',    bg: 'oklch(96% 0.010 70)',  dark: false },
-  { key: 'icone',     label: 'Icône',             bg: 'oklch(96% 0.010 70)',  dark: false },
+  { key: 'principal', label: 'Logo principal',    bg: 'var(--color-light-0b)',  dark: false },
+  { key: 'icone',     label: 'Icône',             bg: 'var(--color-light-0b)',  dark: false },
   { key: 'variante',  label: 'Variante inversée', bg: 'var(--color-dark-1)',  dark: true  },
 ] as const
 
@@ -97,7 +97,7 @@ function LogoCard({ label, bg, dark, logo }: {
           <div style={{ textAlign: 'center' as const }}>
             <span
               className="material-symbols-outlined"
-              style={{ fontSize: '28px', color: dark ? 'oklch(35% 0.01 50)' : 'var(--color-light-border-2)', display: 'block' }}
+              style={{ fontSize: '28px', color: dark ? 'var(--color-dark-3)' : 'var(--color-light-border-2)', display: 'block' }}
             >
               image
             </span>
@@ -302,8 +302,8 @@ export default function IdentiteVisuelleClientPage() {
                 <div style={{
                   width: '36px', height: '36px', borderRadius: 'var(--radius-sm)',
                   background: c.hex, flexShrink: 0,
-                  border: '1px solid oklch(0% 0 0 / 10%)',
-                  boxShadow: '0 1px 4px oklch(0% 0 0 / 0.08)',
+                  border: '1px solid var(--color-black-10pct)',
+                  boxShadow: '0 1px 4px var(--color-black-4pct)',
                 }} />
                 <div>
                   {c.label && (

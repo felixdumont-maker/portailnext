@@ -44,13 +44,13 @@ interface Projet {
 // ─── Helpers ─────────────────────────────────────────────────
 
 const STATUT_STYLES: Record<string, { bg: string; text: string }> = {
-  'Documents à donner': { bg: 'oklch(95% 0.035 20)',    text: 'oklch(44% 0.19 28)'  },
-  'Documents reçus':    { bg: 'oklch(95% 0.030 248)',   text: 'oklch(44% 0.16 248)' },
+  'Documents à donner': { bg: 'var(--color-fire-bg)',    text: 'var(--color-fire-text)'  },
+  'Documents reçus':    { bg: 'var(--color-info-bg-2)',   text: 'var(--color-info-text)' },
   'Travaux en cours':   { bg: 'var(--color-brand-muted)', text: 'var(--color-brand-hover)' },
-  'En révision':        { bg: 'oklch(96% 0.038 78)',    text: 'oklch(46% 0.16 72)'  },
-  'Finalisation':       { bg: 'oklch(95% 0.040 195)',   text: 'oklch(40% 0.14 195)' },
-  'Travaux terminés':   { bg: 'oklch(95% 0.055 148)',   text: 'oklch(40% 0.17 145)' },
-  'Complété':           { bg: 'oklch(95% 0.055 148)',   text: 'oklch(40% 0.17 145)' },
+  'En révision':        { bg: 'var(--color-warning-bg-2)',    text: 'var(--color-warning-mid-2)'  },
+  'Finalisation':       { bg: 'var(--color-teal-bg)',   text: 'var(--color-teal-text)' },
+  'Travaux terminés':   { bg: 'var(--color-success-bg-2)',   text: 'var(--color-success-text-2)' },
+  'Complété':           { bg: 'var(--color-success-bg-2)',   text: 'var(--color-success-text-2)' },
   'Annulé':             { bg: 'var(--color-light-0)',   text: 'var(--color-light-text-3)' },
 };
 
@@ -151,7 +151,7 @@ function UploadPendingItem({
       padding: 'var(--space-4) var(--space-6)',
       background: 'var(--color-brand-muted)',
       borderRadius: 'var(--radius-md)',
-      border: '1px solid oklch(88% 0.05 50)',
+      border: '1px solid var(--color-light-border-4)',
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flex: 1, minWidth: 0 }}>
         <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--color-brand)', flexShrink: 0 }}>

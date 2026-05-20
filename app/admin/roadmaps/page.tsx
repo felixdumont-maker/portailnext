@@ -129,7 +129,7 @@ export default function RoadmapsPage() {
             {archivees.map(r => (
               <div key={r.id} className="bg-[var(--color-light-1)] p-5 rounded-xl flex items-center justify-between opacity-70">
                 <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-[#ccc5c1]" />
+                  <div className="w-2 h-2 rounded-full bg-[var(--color-light-border-2)]" />
                   <h3 className="text-sm font-bold text-[var(--color-dark-text-2)] uppercase tracking-tight">{r.titre}</h3>
                 </div>
                 <div className="flex items-center gap-4">

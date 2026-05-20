@@ -44,7 +44,7 @@ interface Facture {
 const fmt = (n: number) => n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 
 const STATUT_STYLE: Record<string, string> = {
-  ouverte:  'bg-[#fff4e5] text-[#b26a00]',
+  ouverte:  'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
   envoyee:  'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
   payee:    'bg-[var(--color-success-bg)] text-[var(--color-success-text)]',
 }
@@ -306,7 +306,7 @@ export default function FactureDetailPage() {
                             </button>
                             <button onClick={() => action(`/api/v1/admin/ligne/${l.id}/supprimer`, `del-${l.id}`, 'Supprimer cette ligne ?')}
                               disabled={actionLoading === `del-${l.id}`}
-                              className="bg-[var(--color-error-bg)] text-[var(--color-brand)] rounded-lg px-2 py-1.5 hover:bg-[#fbd5d1] transition-colors disabled:opacity-50">
+                              className="bg-[var(--color-error-bg)] text-[var(--color-brand)] rounded-lg px-2 py-1.5 hover:bg-[var(--color-error-light)] transition-colors disabled:opacity-50">
                               <span aria-hidden="true" className="material-symbols-outlined text-base">delete</span>
                             </button>
                           </div>

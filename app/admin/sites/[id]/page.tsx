@@ -103,7 +103,7 @@ function AssetZone({ siteId, slot, label, hint, icon, hasRepo }: {
         gap: 'var(--space-2)', padding: 'var(--space-5)',
         border: `2px dashed ${status === 'done' ? 'var(--color-success)' : status === 'error' ? 'var(--color-brand)' : 'var(--color-light-border)'}`,
         borderRadius: 'var(--radius-md)',
-        background: status === 'done' ? '#f0fdf4' : status === 'error' ? '#fef2f2' : 'var(--color-light-2)',
+        background: status === 'done' ? 'var(--color-success-bg)' : status === 'error' ? 'var(--color-error-bg)' : 'var(--color-light-2)',
         cursor: hasRepo ? 'pointer' : 'not-allowed',
         opacity: hasRepo ? 1 : 0.5,
         transition: 'all var(--duration-fast)',

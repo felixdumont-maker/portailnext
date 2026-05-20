@@ -131,7 +131,7 @@ export default function NouveauPostPage() {
                   onClick={() => togglePlateforme(p.id)}
                   className={`p-6 rounded-2xl flex flex-col items-center justify-center gap-3 transition-all hover:scale-[1.02] border-2 ${
                     active
-                      ? 'bg-[#fff4f2] border-[var(--color-brand)]'
+                      ? 'bg-[var(--color-error-bg-2)] border-[var(--color-brand)]'
                       : 'bg-[var(--color-light-0)] border-transparent hover:bg-[var(--color-light-0)]'
                   }`}
                 >

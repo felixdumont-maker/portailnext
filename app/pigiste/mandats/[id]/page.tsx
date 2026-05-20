@@ -5,11 +5,11 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 const STATUTS: Record<string, { label: string; color: string; bg: string }> = {
-  'en_attente': { label: 'En attente', color: 'var(--color-light-text-3)',   bg: 'oklch(30% 0.01 50 / 0.4)' },
-  'en_cours':   { label: 'En cours',   color: 'oklch(72% 0.14 72)',         bg: 'oklch(72% 0.14 72 / 0.12)' },
-  'remis':      { label: 'Remis',      color: 'oklch(68% 0.12 240)',        bg: 'oklch(68% 0.12 240 / 0.12)' },
-  'approuvé':   { label: 'Approuvé',   color: 'oklch(65% 0.15 145)',        bg: 'oklch(65% 0.15 145 / 0.12)' },
-  'annulé':     { label: 'Annulé',     color: 'oklch(55% 0.10 25)',         bg: 'oklch(55% 0.10 25 / 0.12)' },
+  'en_attente': { label: 'En attente', color: 'var(--color-light-text-3)',   bg: 'var(--color-dark-3-40pct)' },
+  'en_cours':   { label: 'En cours',   color: 'var(--color-warning-mid)',         bg: 'var(--color-warning-mid-bg)' },
+  'remis':      { label: 'Remis',      color: 'var(--color-info-mid)',        bg: 'var(--color-info-mid-bg)' },
+  'approuvé':   { label: 'Approuvé',   color: 'var(--color-success-mid)',        bg: 'var(--color-success-mid-bg)' },
+  'annulé':     { label: 'Annulé',     color: 'var(--color-error-mid)',         bg: 'var(--color-error-bg-alpha)' },
 }
 
 interface Livrable { id: number; filename: string; public_url: string; uploaded_at: string }
@@ -71,7 +71,7 @@ export default function PigisteMandatDetail() {
         <div style={{
           position: 'fixed', top: '24px', right: '24px', zIndex: 'var(--z-toast)' as never,
           padding: '12px 18px', borderRadius: 'var(--radius-md)',
-          background: toast.ok ? 'oklch(65% 0.15 145)' : 'oklch(54% 0.20 25)',
+          background: toast.ok ? 'var(--color-success-mid)' : 'var(--color-error)',
           color: 'white', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 700,
           display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
         }}>
@@ -152,9 +152,9 @@ export default function PigisteMandatDetail() {
           <div style={{
             marginBottom: 'var(--space-8)',
             padding: 'var(--space-4)',
-            background: 'oklch(52% 0.21 32 / 0.08)',
+            background: 'var(--color-brand-8pct)',
             borderRadius: 'var(--radius-md)',
-            outline: '1px solid oklch(52% 0.21 32 / 0.2)',
+            outline: '1px solid var(--color-brand-20pct)',
           }}>
             <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-brand)', margin: '0 0 var(--space-2)' }}>Note de Cocktail Média</p>
             <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text-2)', margin: 0, lineHeight: 'var(--leading-relaxed)' }}>{m.notes_admin}</p>
@@ -202,7 +202,7 @@ export default function PigisteMandatDetail() {
                 style={{
                   padding: 'var(--space-8)',
                   borderRadius: 'var(--radius-md)',
-                  background: dragging ? 'oklch(52% 0.21 32 / 0.1)' : 'transparent',
+                  background: dragging ? 'var(--color-brand-10pct)' : 'transparent',
                   outline: `2px dashed ${dragging ? 'var(--color-brand)' : 'var(--color-light-border)'}`,
                   cursor: uploading ? 'not-allowed' : 'pointer',
                   display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--space-3)',

@@ -288,7 +288,7 @@ export default function EditProjetPage() {
         </button>
 
         {/* Zone dangereuse */}
-        <section className="bg-[#fff8f7] border border-[var(--color-error-bg)] rounded-3xl p-8">
+        <section className="bg-[var(--color-error-bg-2)] border border-[var(--color-error-bg)] rounded-3xl p-8">
           <h2 className="font-display text-[var(--text-xl)] text-[var(--color-brand)] uppercase mb-4 tracking-wide">
             ZONE DANGEREUSE
           </h2>

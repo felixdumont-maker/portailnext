@@ -5,10 +5,10 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 const STATUTS: Record<string, { label: string; color: string; bg: string }> = {
-  'brouillon': { label: 'Brouillon', color: 'var(--color-light-text-3)',   bg: 'oklch(30% 0.01 50 / 0.5)' },
-  'soumise':   { label: 'Soumise',   color: 'oklch(72% 0.14 72)',         bg: 'oklch(72% 0.14 72 / 0.15)' },
-  'approuvée': { label: 'Approuvée', color: 'oklch(68% 0.12 240)',        bg: 'oklch(68% 0.12 240 / 0.15)' },
-  'payée':     { label: 'Payée',     color: 'oklch(65% 0.15 145)',        bg: 'oklch(65% 0.15 145 / 0.15)' },
+  'brouillon': { label: 'Brouillon', color: 'var(--color-light-text-3)',   bg: 'var(--color-dark-3-50pct)' },
+  'soumise':   { label: 'Soumise',   color: 'var(--color-warning-mid)',         bg: 'var(--color-warning-mid-bg-2)' },
+  'approuvée': { label: 'Approuvée', color: 'var(--color-info-mid)',        bg: 'var(--color-info-mid-bg-2)' },
+  'payée':     { label: 'Payée',     color: 'var(--color-success-mid)',        bg: 'var(--color-success-mid-bg-2)' },
 }
 
 interface Ligne { id: number; description: string; quantite: number; taux: number; montant: number; id_mandat?: number }
@@ -64,10 +64,10 @@ export default function PigisteFactureDetail() {
         <div style={{
           position: 'fixed', top: '24px', right: '24px', zIndex: 'var(--z-toast)' as never,
           padding: '12px 18px', borderRadius: 'var(--radius-md)',
-          background: toast.ok ? 'oklch(65% 0.15 145)' : 'oklch(54% 0.20 25)',
+          background: toast.ok ? 'var(--color-success-mid)' : 'var(--color-error)',
           color: 'white', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 700,
           display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
-          boxShadow: '0 8px 24px oklch(0% 0 0 / 0.4)',
+          boxShadow: '0 8px 24px var(--color-black-40pct)',
         }}>
           <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>{toast.ok ? 'check_circle' : 'error'}</span>
           {toast.msg}
@@ -92,10 +92,10 @@ export default function PigisteFactureDetail() {
         {/* ── Document ── */}
         <div className="pg-anim" style={{
           maxWidth: '680px',
-          background: 'oklch(98% 0.008 68)',
+          background: 'var(--color-surface-warm)',
           borderRadius: 'var(--radius-lg)',
           overflow: 'hidden',
-          boxShadow: '0 32px 64px oklch(0% 0 0 / 0.5)',
+          boxShadow: '0 32px 64px var(--overlay-dark)',
           marginBottom: 'var(--space-6)',
           animation: 'pg-slide-up 450ms var(--ease-out-quart) both',
         }}>
@@ -131,39 +131,39 @@ export default function PigisteFactureDetail() {
           </div>
 
           {/* Document body — light */}
-          <div style={{ padding: 'var(--space-8)', color: 'oklch(22% 0.015 35)' }}>
+          <div style={{ padding: 'var(--space-8)', color: 'var(--color-light-text)' }}>
 
             {/* From / To */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-8)', marginBottom: 'var(--space-8)', paddingBottom: 'var(--space-8)', borderBottom: '1px solid oklch(87% 0.016 70)' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-8)', marginBottom: 'var(--space-8)', paddingBottom: 'var(--space-8)', borderBottom: '1px solid var(--color-light-border)' }}>
               <div>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'oklch(60% 0.010 50)', margin: '0 0 var(--space-3)' }}>De</p>
-                <p style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'oklch(22% 0.015 35)', margin: '0 0 var(--space-1)', letterSpacing: '-0.01em' }}>{f.nom_pigiste}</p>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'oklch(44% 0.013 45)', margin: 0 }}>Travailleur autonome</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--color-light-text-3)', margin: '0 0 var(--space-3)' }}>De</p>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-light-text)', margin: '0 0 var(--space-1)', letterSpacing: '-0.01em' }}>{f.nom_pigiste}</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-2)', margin: 0 }}>Travailleur autonome</p>
               </div>
               <div>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'oklch(60% 0.010 50)', margin: '0 0 var(--space-3)' }}>À</p>
-                <p style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'oklch(22% 0.015 35)', margin: '0 0 var(--space-1)', letterSpacing: '-0.01em' }}>Cocktail Média</p>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'oklch(44% 0.013 45)', margin: 0 }}>felix.dumont@cocktailmedia.ca</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'var(--color-light-text-3)', margin: '0 0 var(--space-3)' }}>À</p>
+                <p style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-light-text)', margin: '0 0 var(--space-1)', letterSpacing: '-0.01em' }}>Cocktail Média</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-2)', margin: 0 }}>felix.dumont@cocktailmedia.ca</p>
               </div>
             </div>
 
             {/* Line items */}
             <div style={{ marginBottom: 'var(--space-8)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 52px 80px 80px', gap: 'var(--space-3)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid oklch(87% 0.016 70)', marginBottom: 'var(--space-2)' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 52px 80px 80px', gap: 'var(--space-3)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--color-light-border)', marginBottom: 'var(--space-2)' }}>
                 {['Prestation', 'Qté', 'Taux', 'Montant'].map(h => (
-                  <p key={h} style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'oklch(60% 0.010 50)', margin: 0, textAlign: h === 'Prestation' ? 'left' : 'right' }}>{h}</p>
+                  <p key={h} style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-light-text-3)', margin: 0, textAlign: h === 'Prestation' ? 'left' : 'right' }}>{h}</p>
                 ))}
               </div>
               {f.lignes.map((l, i) => (
                 <div key={l.id} style={{
                   display: 'grid', gridTemplateColumns: '1fr 52px 80px 80px', gap: 'var(--space-3)',
                   padding: 'var(--space-3) 0',
-                  borderBottom: i < f.lignes.length - 1 ? '1px solid oklch(93% 0.016 72)' : 'none',
+                  borderBottom: i < f.lignes.length - 1 ? '1px solid var(--color-border-warm)' : 'none',
                 }}>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'oklch(22% 0.015 35)', margin: 0, lineHeight: 'var(--leading-snug)' }}>{l.description}</p>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'oklch(44% 0.013 45)', margin: 0, textAlign: 'right' }}>{l.quantite}</p>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'oklch(44% 0.013 45)', margin: 0, textAlign: 'right' }}>{l.taux.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}</p>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'oklch(22% 0.015 35)', margin: 0, textAlign: 'right' }}>{l.montant.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}</p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text)', margin: 0, lineHeight: 'var(--leading-snug)' }}>{l.description}</p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text-2)', margin: 0, textAlign: 'right' }}>{l.quantite}</p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text-2)', margin: 0, textAlign: 'right' }}>{l.taux.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}</p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-light-text)', margin: 0, textAlign: 'right' }}>{l.montant.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}</p>
                 </div>
               ))}
             </div>
@@ -177,13 +177,13 @@ export default function PigisteFactureDetail() {
                   ...(f.tvq > 0   ? [{ label: 'TVQ (9,975 %)',   val: f.tvq,   small: true }] : []),
                 ].map(row => (
                   <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 'var(--space-2)' }}>
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: row.small ? 'var(--text-xs)' : 'var(--text-sm)', color: 'oklch(44% 0.013 45)' }}>{row.label}</span>
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: row.small ? 'var(--text-xs)' : 'var(--text-sm)', color: 'oklch(22% 0.015 35)' }}>{row.val.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}</span>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: row.small ? 'var(--text-xs)' : 'var(--text-sm)', color: 'var(--color-light-text-2)' }}>{row.label}</span>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: row.small ? 'var(--text-xs)' : 'var(--text-sm)', color: 'var(--color-light-text)' }}>{row.val.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}</span>
                   </div>
                 ))}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 'var(--space-3)', marginTop: 'var(--space-2)', borderTop: '2px solid oklch(22% 0.015 35)' }}>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-base)', fontWeight: 700, color: 'oklch(22% 0.015 35)', letterSpacing: '0.04em' }}>TOTAL</span>
-                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'oklch(22% 0.015 35)', lineHeight: 1, letterSpacing: '-0.01em' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: 'var(--space-3)', marginTop: 'var(--space-2)', borderTop: '2px solid var(--color-light-text)' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-light-text)', letterSpacing: '0.04em' }}>TOTAL</span>
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-light-text)', lineHeight: 1, letterSpacing: '-0.01em' }}>
                     {f.montant_total.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}
                   </span>
                 </div>
@@ -192,9 +192,9 @@ export default function PigisteFactureDetail() {
 
             {/* Notes */}
             {f.notes && (
-              <div style={{ paddingTop: 'var(--space-6)', borderTop: '1px solid oklch(87% 0.016 70)', marginTop: 'var(--space-6)' }}>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'oklch(60% 0.010 50)', margin: '0 0 var(--space-3)' }}>Notes</p>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'oklch(44% 0.013 45)', margin: 0, lineHeight: 'var(--leading-relaxed)', maxWidth: '55ch' }}>{f.notes}</p>
+              <div style={{ paddingTop: 'var(--space-6)', borderTop: '1px solid var(--color-light-border)', marginTop: 'var(--space-6)' }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-light-text-3)', margin: '0 0 var(--space-3)' }}>Notes</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text-2)', margin: 0, lineHeight: 'var(--leading-relaxed)', maxWidth: '55ch' }}>{f.notes}</p>
               </div>
             )}
 
@@ -220,18 +220,18 @@ export default function PigisteFactureDetail() {
           )}
 
           {f.statut === 'soumise' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-4) var(--space-5)', background: 'oklch(72% 0.14 72 / 0.1)', borderRadius: 'var(--radius-md)', outline: '1px solid oklch(72% 0.14 72 / 0.25)' }}>
-              <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'oklch(72% 0.14 72)', fontSize: '20px' }}>hourglass_empty</span>
-              <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, color: 'oklch(72% 0.14 72)', margin: 0, fontSize: 'var(--text-sm)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-4) var(--space-5)', background: 'var(--color-warning-mid-bg-3)', borderRadius: 'var(--radius-md)', outline: '1px solid var(--color-warning-mid-ring)' }}>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-warning-mid)', fontSize: '20px' }}>hourglass_empty</span>
+              <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, color: 'var(--color-warning-mid)', margin: 0, fontSize: 'var(--text-sm)' }}>
                 Facture soumise — en attente d&apos;approbation.
               </p>
             </div>
           )}
 
           {f.statut === 'payée' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-4) var(--space-5)', background: 'oklch(65% 0.15 145 / 0.1)', borderRadius: 'var(--radius-md)', outline: '1px solid oklch(65% 0.15 145 / 0.25)' }}>
-              <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'oklch(65% 0.15 145)', fontSize: '20px' }}>check_circle</span>
-              <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, color: 'oklch(65% 0.15 145)', margin: 0, fontSize: 'var(--text-sm)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-4) var(--space-5)', background: 'var(--color-success-mid-bg-3)', borderRadius: 'var(--radius-md)', outline: '1px solid var(--color-success-mid-ring)' }}>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-success-mid)', fontSize: '20px' }}>check_circle</span>
+              <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, color: 'var(--color-success-mid)', margin: 0, fontSize: 'var(--text-sm)' }}>
                 Cette facture a été payée.
               </p>
             </div>

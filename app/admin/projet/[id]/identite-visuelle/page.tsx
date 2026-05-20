@@ -91,8 +91,8 @@ function LogoCard({ variantKey, label, bg, dark, logo, projetId, onUploaded }: {
     } finally { setUploading(false) }
   }
 
-  const borderColor = dark ? 'oklch(32% 0.01 40)' : 'var(--color-light-border-2)'
-  const emptyColor  = dark ? 'oklch(42% 0.01 50)' : 'var(--color-light-text-3)'
+  const borderColor = dark ? 'var(--color-dark-3)' : 'var(--color-light-border-2)'
+  const emptyColor  = dark ? 'var(--color-dark-text-3b)' : 'var(--color-light-text-3)'
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-2)' }}>
@@ -105,7 +105,7 @@ function LogoCard({ variantKey, label, bg, dark, logo, projetId, onUploaded }: {
         onDragLeave={() => setDragOver(false)}
         onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) uploadFile(f) }}
         style={{
-          aspectRatio: '4/3', background: dragOver ? (dark ? 'oklch(26% 0.015 35)' : 'var(--color-light-0)') : bg,
+          aspectRatio: '4/3', background: dragOver ? (dark ? 'var(--color-dark-drag)' : 'var(--color-light-0)') : bg,
           borderRadius: 'var(--radius-md)',
           border: dragOver ? '2px solid var(--color-brand)' : imgUrl ? 'none' : `1px dashed ${borderColor}`,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -115,7 +115,7 @@ function LogoCard({ variantKey, label, bg, dark, logo, projetId, onUploaded }: {
       >
         {uploading ? (
           <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 'var(--space-2)' }}>
-            <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: `2px solid ${dark ? 'oklch(35% 0.01 50)' : 'var(--color-light-border)'}`, borderTopColor: 'var(--color-brand)', animation: 'spin 0.8s linear infinite' }} />
+            <div style={{ width: '22px', height: '22px', borderRadius: '50%', border: `2px solid ${dark ? 'var(--color-dark-3)' : 'var(--color-light-border)'}`, borderTopColor: 'var(--color-brand)', animation: 'spin 0.8s linear infinite' }} />
             <span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: emptyColor }}>Envoi…</span>
           </div>
         ) : imgUrl ? (

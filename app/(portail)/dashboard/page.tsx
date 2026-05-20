@@ -20,12 +20,12 @@ interface DashboardData {
 }
 
 const STATUT_STYLES: Record<string, { bg: string; text: string }> = {
-  'Documents à donner': { bg: 'oklch(95% 0.035 20)',    text: 'oklch(44% 0.19 28)'  },
-  'Documents reçus':    { bg: 'oklch(95% 0.030 248)',   text: 'oklch(44% 0.16 248)' },
+  'Documents à donner': { bg: 'var(--color-fire-bg)',    text: 'var(--color-fire-text)'  },
+  'Documents reçus':    { bg: 'var(--color-info-bg-2)',   text: 'var(--color-info-text)' },
   'Travaux en cours':   { bg: 'var(--color-brand-muted)', text: 'var(--color-brand-hover)' },
-  'En révision':        { bg: 'oklch(96% 0.038 78)',    text: 'oklch(46% 0.16 72)'  },
-  'Travaux terminés':   { bg: 'oklch(95% 0.055 148)',   text: 'oklch(40% 0.17 145)' },
-  'Complété':           { bg: 'oklch(95% 0.055 148)',   text: 'oklch(40% 0.17 145)' },
+  'En révision':        { bg: 'var(--color-warning-bg-2)',    text: 'var(--color-warning-mid-2)'  },
+  'Travaux terminés':   { bg: 'var(--color-success-bg-2)',   text: 'var(--color-success-text-2)' },
+  'Complété':           { bg: 'var(--color-success-bg-2)',   text: 'var(--color-success-text-2)' },
   'Annulé':             { bg: 'var(--color-light-0)',   text: 'var(--color-light-text-3)' },
 }
 
@@ -58,8 +58,8 @@ function ProjetCard({ projet }: { projet: Projet }) {
           borderRadius: 'var(--radius-lg)',
           padding: 'var(--space-6)',
           border: '1px solid',
-          borderColor: hovered ? 'oklch(52% 0.21 32 / 25%)' : 'var(--color-light-border)',
-          boxShadow: hovered ? '0 4px 20px oklch(52% 0.21 32 / 6%)' : 'none',
+          borderColor: hovered ? 'var(--color-brand-25pct)' : 'var(--color-light-border)',
+          boxShadow: hovered ? '0 4px 20px var(--color-brand-6pct)' : 'none',
           transition: `border-color var(--duration-base), box-shadow var(--duration-base)`,
           cursor: 'pointer',
         }}

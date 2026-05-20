@@ -21,7 +21,7 @@ const TOOLS = [
     desc: 'Génère des documents professionnels — plan d\'affaires, programme pigiste. Mise en page automatique, export PDF.',
     href: '/outils/pdf',
     external: true,
-    accent: 'oklch(46% 0.18 245)',
+    accent: 'var(--color-tools-blue)',
   },
   {
     id: 'mediatheque',
@@ -31,7 +31,7 @@ const TOOLS = [
     desc: 'Accède aux assets partagés — templates Canva, photos libres de droit, polices, logos Cocktail Média.',
     href: null, // set by basePath prop
     external: false,
-    accent: 'oklch(52% 0.15 145)',
+    accent: 'var(--color-success-52)',
   },
 ]
 

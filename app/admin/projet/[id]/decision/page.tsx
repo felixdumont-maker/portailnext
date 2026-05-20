@@ -295,12 +295,12 @@ export default function AdminDecisionBoardPage() {
 
       {/* Choix du client */}
       {hasChoices && choices && (
-        <section className="bg-[#f0faf0] border border-[#a7d7aa] rounded-3xl p-8">
+        <section className="bg-[var(--color-success-bg)] border border-[var(--color-success-border)] rounded-3xl p-8">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="font-display text-[var(--text-xl)] text-[#2e7d32] uppercase tracking-wide">
+            <h2 className="font-display text-[var(--text-xl)] text-[var(--color-success-text)] uppercase tracking-wide">
               ✅ CHOIX SOUMIS PAR LE CLIENT
             </h2>
-            <span className="text-xs text-[#5a8a5e] font-body">{choices.submitted_at}</span>
+            <span className="text-xs text-[var(--color-success-text)] font-body">{choices.submitted_at}</span>
           </div>
           <div className="space-y-0.5">
             <ChoiceRow label="Directions"    value={choices.choix_directions} />

@@ -21,7 +21,7 @@ function getPasswordStrength(pw: string): number {
 }
 
 const strengthLabel = ['', 'Faible', 'Moyen', 'Bon', 'Fort'];
-const strengthColor = ['', 'var(--color-error)', 'var(--color-warning)', 'oklch(62% 0.16 145)', 'var(--color-success)'];
+const strengthColor = ['', 'var(--color-error)', 'var(--color-warning)', 'var(--color-success-62)', 'var(--color-success)'];
 
 const inputStyle: React.CSSProperties = {
   fontFamily: 'var(--font-body)',
@@ -134,7 +134,7 @@ export default function RegisterPage() {
         style={{
           width: '38%',
           flexShrink: 0,
-          background: 'linear-gradient(170deg, var(--color-dark-0) 55%, oklch(15% 0.028 32) 100%)',
+          background: 'linear-gradient(170deg, var(--color-dark-0) 55%, var(--color-login-gradient-end) 100%)',
           flexDirection: 'column',
           padding: 'var(--space-8)',
           boxShadow: '1px 0 0 0 var(--color-dark-border)',
@@ -344,7 +344,7 @@ export default function RegisterPage() {
                     gap: 'var(--space-2)',
                     background: 'var(--color-error-glow)',
                     border: '1px solid var(--color-error-border)',
-                    color: 'oklch(78% 0.10 25)',
+                    color: 'var(--color-brand-text-muted)',
                     borderRadius: 'var(--radius-md)',
                     padding: 'var(--space-3) var(--space-4)',
                     marginBottom: 'var(--space-4)',
@@ -374,7 +374,7 @@ export default function RegisterPage() {
                         autoComplete="email"
                         required
                         style={inputStyle}
-                        onFocus={e  => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                        onFocus={e  => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'var(--color-input-focus-dark)' }}
                         onBlur={e   => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
                       />
                     </div>
@@ -401,7 +401,7 @@ export default function RegisterPage() {
                         autoComplete="name"
                         required
                         style={inputStyle}
-                        onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                        onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'var(--color-input-focus-dark)' }}
                         onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
                       />
                     </div>
@@ -418,7 +418,7 @@ export default function RegisterPage() {
                         placeholder="514 000-0000"
                         autoComplete="tel"
                         style={inputStyle}
-                        onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                        onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'var(--color-input-focus-dark)' }}
                         onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
                       />
                     </div>
@@ -441,7 +441,7 @@ export default function RegisterPage() {
                         autoComplete="organization"
                         required
                         style={inputStyle}
-                        onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                        onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'var(--color-input-focus-dark)' }}
                         onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
                       />
                     </div>
@@ -464,7 +464,7 @@ export default function RegisterPage() {
                           placeholder="Min. 8 caractères"
                           autoComplete="new-password"
                           style={{ ...inputStyle, paddingRight: 'var(--space-12)' }}
-                          onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                          onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'var(--color-input-focus-dark)' }}
                           onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
                         />
                         <ToggleVis show={showPw} onClick={() => setShowPw(s => !s)} />
@@ -508,7 +508,7 @@ export default function RegisterPage() {
                           placeholder="Répétez le mot de passe"
                           autoComplete="new-password"
                           style={{ ...inputStyle, paddingRight: 'var(--space-12)' }}
-                          onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                          onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'var(--color-input-focus-dark)' }}
                           onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
                         />
                         <ToggleVis show={showPw2} onClick={() => setShowPw2(s => !s)} />
@@ -530,8 +530,8 @@ export default function RegisterPage() {
                   width: '64px',
                   height: '64px',
                   borderRadius: '50%',
-                  background: 'oklch(56% 0.16 145 / 0.15)',
-                  border: '1px solid oklch(56% 0.16 145 / 0.4)',
+                  background: 'var(--color-success-glow-2)',
+                  border: '1px solid var(--color-success-glow-3)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -704,14 +704,14 @@ function InlineLink({ children, onClick }: { children: React.ReactNode; onClick:
       style={{
         fontFamily: 'var(--font-body)',
         fontSize: 'inherit',
-        color: hovered ? 'oklch(84% 0.13 32)' : 'oklch(72% 0.18 32)',
+        color: hovered ? 'var(--color-brand-text-hover)' : 'var(--color-brand-text-muted)',
         background: 'none',
         border: 'none',
         cursor: 'pointer',
         padding: 0,
         textDecoration: 'underline',
         textUnderlineOffset: '3px',
-        textDecorationColor: hovered ? 'oklch(84% 0.13 32 / 0.5)' : 'oklch(72% 0.18 32 / 0.45)',
+        textDecorationColor: hovered ? 'var(--color-brand-text-hover-50)' : 'var(--color-brand-text-muted-45)',
         transition: 'color var(--duration-fast), text-decoration-color var(--duration-fast)',
       }}
       onMouseEnter={() => setHovered(true)}

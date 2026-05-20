@@ -5,10 +5,10 @@ import Link from 'next/link'
 
 const STATUTS: Record<string, { label: string; color: string }> = {
   'en_attente': { label: 'En attente', color: 'var(--color-light-text-3)' },
-  'en_cours':   { label: 'En cours',   color: 'oklch(72% 0.14 72)' },
-  'remis':      { label: 'Remis',      color: 'oklch(68% 0.12 240)' },
-  'approuvé':   { label: 'Approuvé',   color: 'oklch(65% 0.15 145)' },
-  'annulé':     { label: 'Annulé',     color: 'oklch(55% 0.10 25)' },
+  'en_cours':   { label: 'En cours',   color: 'var(--color-warning-mid)' },
+  'remis':      { label: 'Remis',      color: 'var(--color-info-mid)' },
+  'approuvé':   { label: 'Approuvé',   color: 'var(--color-success-mid)' },
+  'annulé':     { label: 'Annulé',     color: 'var(--color-error-mid)' },
 }
 
 const FILTRES = [

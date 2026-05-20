@@ -5,9 +5,9 @@ import Link from 'next/link'
 
 const STATUTS: Record<string, { label: string; color: string }> = {
   'brouillon': { label: 'Brouillon', color: 'var(--color-light-text-3)' },
-  'soumise':   { label: 'Soumise',   color: 'oklch(72% 0.14 72)' },
-  'approuvée': { label: 'Approuvée', color: 'oklch(68% 0.12 240)' },
-  'payée':     { label: 'Payée',     color: 'oklch(65% 0.15 145)' },
+  'soumise':   { label: 'Soumise',   color: 'var(--color-warning-mid)' },
+  'approuvée': { label: 'Approuvée', color: 'var(--color-info-mid)' },
+  'payée':     { label: 'Payée',     color: 'var(--color-success-mid)' },
 }
 
 interface Facture { id: number; numero: string; statut: string; montant_total: number; montant_ht: number; tps: number; tvq: number; date_emission: string; date_echeance: string }
@@ -70,7 +70,7 @@ export default function PigisteFactures() {
         }}>
           <div>
             <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-light-text-3)', margin: '0 0 var(--space-2)' }}>À recevoir</p>
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 800, color: en_attente.length > 0 ? 'oklch(72% 0.14 72)' : 'var(--color-light-text-3)', margin: 0, lineHeight: 1 }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 800, color: en_attente.length > 0 ? 'var(--color-warning-mid)' : 'var(--color-light-text-3)', margin: 0, lineHeight: 1 }}>
               {total_a_recevoir.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}
             </p>
             <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: 'var(--space-2) 0 0' }}>
@@ -79,7 +79,7 @@ export default function PigisteFactures() {
           </div>
           <div>
             <p style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-light-text-3)', margin: '0 0 var(--space-2)' }}>Total reçu</p>
-            <p style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 800, color: payees.length > 0 ? 'oklch(65% 0.15 145)' : 'var(--color-light-text-3)', margin: 0, lineHeight: 1 }}>
+            <p style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: 800, color: payees.length > 0 ? 'var(--color-success-mid)' : 'var(--color-light-text-3)', margin: 0, lineHeight: 1 }}>
               {total_recu.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}
             </p>
             <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: 'var(--space-2) 0 0' }}>

@@ -104,8 +104,8 @@ function NouvelleFactureForm() {
         {error && (
           <div style={{
             padding: 'var(--space-3) var(--space-4)', borderRadius: 'var(--radius-sm)',
-            background: 'var(--color-error-muted)', outline: '1px solid oklch(54% 0.20 25 / 0.4)',
-            fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'oklch(70% 0.14 25)',
+            background: 'var(--color-error-muted)', outline: '1px solid var(--color-error-glow-4)',
+            fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-error-mid)',
             marginBottom: 'var(--space-6)',
           }}>{error}</div>
         )}
@@ -156,7 +156,7 @@ function NouvelleFactureForm() {
                       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px',
                       transition: `color var(--duration-fast)`,
                     }}
-                    onMouseEnter={e => { if (lignes.length > 1) e.currentTarget.style.color = 'oklch(54% 0.20 25)' }}
+                    onMouseEnter={e => { if (lignes.length > 1) e.currentTarget.style.color = 'var(--color-error)' }}
                     onMouseLeave={e => { e.currentTarget.style.color = 'var(--color-light-text-3)' }}
                   >
                     <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>close</span>

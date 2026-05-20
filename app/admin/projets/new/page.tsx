@@ -312,10 +312,10 @@ export default function NouveauProjetPage() {
 
           {/* Bandeau decision board */}
           {decisionBoardRequis && (
-            <div className="bg-[#f0f7ff] border border-[#bfdbfe] rounded-xl px-5 py-4 flex items-start gap-3">
+            <div className="bg-[var(--color-info-bg)] border border-[var(--color-info-bg-2)] rounded-xl px-5 py-4 flex items-start gap-3">
               <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-info)] text-xl mt-0.5">dashboard</span>
               <div>
-                <p className="text-sm font-bold text-[#1e40af]">Decision board requis</p>
+                <p className="text-sm font-bold text-[var(--color-info-text)]">Decision board requis</p>
                 <p className="text-xs text-[var(--color-info)] mt-0.5">Un decision board sera envoyé automatiquement au client avant la rencontre Google Meet.</p>
               </div>
             </div>

@@ -5,17 +5,17 @@ import Link from 'next/link'
 
 const S_MANDAT: Record<string, { label: string; color: string }> = {
   'en_attente': { label: 'En attente', color: 'var(--color-light-text-3)' },
-  'en_cours':   { label: 'En cours',   color: 'oklch(72% 0.14 72)' },
-  'remis':      { label: 'Remis',      color: 'oklch(68% 0.12 240)' },
-  'approuvé':   { label: 'Approuvé',   color: 'oklch(65% 0.15 145)' },
-  'annulé':     { label: 'Annulé',     color: 'oklch(55% 0.10 25)' },
+  'en_cours':   { label: 'En cours',   color: 'var(--color-warning-mid)' },
+  'remis':      { label: 'Remis',      color: 'var(--color-info-mid)' },
+  'approuvé':   { label: 'Approuvé',   color: 'var(--color-success-mid)' },
+  'annulé':     { label: 'Annulé',     color: 'var(--color-error-mid)' },
 }
 
 const S_FACTURE: Record<string, { label: string; color: string }> = {
   'brouillon': { label: 'Brouillon', color: 'var(--color-light-text-3)' },
-  'soumise':   { label: 'Soumise',   color: 'oklch(72% 0.14 72)' },
-  'approuvée': { label: 'Approuvée', color: 'oklch(68% 0.12 240)' },
-  'payée':     { label: 'Payée',     color: 'oklch(65% 0.15 145)' },
+  'soumise':   { label: 'Soumise',   color: 'var(--color-warning-mid)' },
+  'approuvée': { label: 'Approuvée', color: 'var(--color-info-mid)' },
+  'payée':     { label: 'Payée',     color: 'var(--color-success-mid)' },
 }
 
 interface Mandat { id: number; titre: string; statut: string; date_echeance: string; montant_convenu: number; nom_projet: string }
