@@ -1069,6 +1069,7 @@ export default function AdminServicesPage() {
                   ) : (
                     <button
                       onClick={() => setAddingTo(service.id)}
+                      aria-label="Ajouter un item à la checklist"
                       className="flex items-center justify-center border-2 border-dashed border-[var(--color-light-border-2)] rounded-2xl p-4 hover:bg-white/50 transition-colors group/add"
                     >
                       <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-dark-text-2)] group-hover/add:text-[var(--color-brand)] transition-colors">

@@ -11,6 +11,10 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.10.10'],
+  experimental: {
+    // Augmenter la limite pour les uploads d'assets (images, zips) via le proxy Flask
+    middlewareClientMaxBodySize: 52428800, // 50MB
+  },
   images: {
     // Images optimisées par défaut (WebP, lazy loading automatique)
     // Si des images viennent de domaines externes (Flask/Drive), ajouter dans remotePatterns
