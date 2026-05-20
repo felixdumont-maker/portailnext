@@ -1,0 +1,1018 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Les Belles Sœurs — Guide de marque</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Gloock:ital@0;1&family=Figtree:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ── Tokens ─────────────────────────────────────────── */
+    :root {
+      --cream:    oklch(99% 0.005 75);
+      --cream-2:  oklch(94% 0.010 72);
+      --peach:    oklch(93% 0.025 35);
+      --blush:    oklch(87% 0.045 15);
+      --rose:     oklch(63% 0.068 15);
+      --ink:      oklch(20% 0.022 30);
+      --ink-2:    oklch(14% 0.016 30);
+      --line:     color-mix(in oklch, var(--ink) 14%, transparent);
+      --line-soft:color-mix(in oklch, var(--ink) 7%, transparent);
+
+      --serif: 'Gloock', 'Times New Roman', serif;
+      --sans:  'Figtree', system-ui, sans-serif;
+    }
+
+    /* ── Reset / base ────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--sans);
+      background: var(--cream);
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+
+    /* ── Layout ──────────────────────────────────────────── */
+    .page { max-width: 1100px; margin: 0 auto; padding: 0 48px; }
+
+    section { padding: 96px 0; border-top: 1px solid var(--line); }
+    section:first-of-type { border-top: none; }
+
+    /* ── Eyebrow ─────────────────────────────────────────── */
+    .eyebrow {
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--rose);
+      margin-bottom: 20px;
+    }
+
+    /* ── Section headers ─────────────────────────────────── */
+    .section-head {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: end;
+      margin-bottom: 64px;
+    }
+    .section-head h2 {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: clamp(2.4rem, 4vw, 3.6rem);
+      line-height: 1.0;
+      letter-spacing: -0.02em;
+    }
+    .section-head p {
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--ink);
+      opacity: 0.68;
+      max-width: 420px;
+    }
+
+    /* ── Cover ───────────────────────────────────────────── */
+    .cover {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border-top: none;
+      padding: 0;
+    }
+    .cover-left {
+      background: var(--ink-2);
+      color: var(--cream);
+      padding: 80px 64px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+    .cover-wordmark {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 72px;
+      line-height: 0.9;
+      letter-spacing: -0.02em;
+    }
+    .cover-wordmark span {
+      display: block;
+      font-style: normal;
+      font-size: 13px;
+      font-family: var(--sans);
+      font-weight: 500;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      opacity: 0.55;
+      margin-bottom: 16px;
+    }
+    .cover-meta {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      opacity: 0.45;
+    }
+    .cover-right {
+      background: var(--blush);
+      position: relative;
+      overflow: hidden;
+    }
+    .cover-right img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .cover-right-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 56px;
+      background: linear-gradient(to top, rgba(28,15,12,0.55) 0%, transparent 55%);
+    }
+    .cover-doc-label {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.7);
+      margin-bottom: 10px;
+    }
+    .cover-doc-title {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: 32px;
+      color: #fff;
+      line-height: 1.1;
+    }
+
+    /* ── Nav sidebar ─────────────────────────────────────── */
+    .toc-strip {
+      background: var(--cream-2);
+      border-bottom: 1px solid var(--line);
+      padding: 20px 48px;
+      display: flex;
+      align-items: center;
+      gap: 48px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .toc-strip a {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--ink);
+      opacity: 0.55;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .toc-strip a:hover { opacity: 1; }
+    .toc-brand {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 18px;
+      color: var(--ink);
+      margin-right: auto;
+    }
+
+    /* ── Brand values ────────────────────────────────────── */
+    .values-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+    }
+    .value-card {
+      background: var(--cream-2);
+      padding: 48px 40px;
+    }
+    .value-card:nth-child(even) { background: var(--peach); }
+    .value-number {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 56px;
+      line-height: 1;
+      color: var(--rose);
+      margin-bottom: 24px;
+    }
+    .value-title {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: 22px;
+      margin-bottom: 14px;
+    }
+    .value-desc {
+      font-size: 13.5px;
+      line-height: 1.7;
+      opacity: 0.68;
+    }
+
+    /* ── Palette ─────────────────────────────────────────── */
+    .palette-primary {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 2px;
+      margin-bottom: 2px;
+    }
+    .palette-secondary {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+    }
+    .swatch {
+      padding: 40px 28px 28px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      min-height: 220px;
+    }
+    .swatch.sm { min-height: 140px; }
+    .swatch-name {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+    .swatch-hex {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 400;
+      letter-spacing: 0.08em;
+      opacity: 0.7;
+      margin-bottom: 2px;
+    }
+    .swatch-role {
+      font-size: 11px;
+      opacity: 0.55;
+      letter-spacing: 0.05em;
+    }
+    .swatch-light .swatch-name,
+    .swatch-light .swatch-hex,
+    .swatch-light .swatch-role { color: var(--ink); }
+    .swatch-dark .swatch-name,
+    .swatch-dark .swatch-hex,
+    .swatch-dark .swatch-role { color: var(--cream); }
+
+    /* ── Typography ──────────────────────────────────────── */
+    .type-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      margin-bottom: 48px;
+    }
+    .type-specimen {
+      background: var(--cream-2);
+      padding: 56px 48px;
+    }
+    .type-specimen.dark { background: var(--ink-2); }
+    .specimen-label {
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--rose);
+      margin-bottom: 32px;
+    }
+    .type-specimen.dark .specimen-label { color: rgba(253,234,227,0.5); }
+    .type-scale {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .type-row {
+      display: flex;
+      align-items: baseline;
+      gap: 24px;
+      border-bottom: 1px solid var(--line-soft);
+      padding-bottom: 16px;
+    }
+    .type-row:last-child { border-bottom: none; }
+    .type-row-meta {
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      opacity: 0.4;
+      min-width: 80px;
+    }
+    .type-specimen.dark .type-row-meta { color: var(--cream); }
+
+    .font-detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+    }
+    .font-card {
+      background: var(--peach);
+      padding: 48px;
+    }
+    .font-card:last-child { background: var(--blush); }
+    .font-card-label {
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.38em;
+      text-transform: uppercase;
+      color: var(--rose);
+      margin-bottom: 28px;
+    }
+    .font-card-name {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      margin-bottom: 8px;
+    }
+    .font-card-weights {
+      font-size: 12px;
+      opacity: 0.6;
+      margin-bottom: 32px;
+    }
+    .font-card-alphabet {
+      font-size: 28px;
+      line-height: 1.4;
+      letter-spacing: 0.04em;
+      color: var(--ink);
+      opacity: 0.85;
+    }
+
+    /* ── Voice ───────────────────────────────────────────── */
+    .voice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      margin-bottom: 2px;
+    }
+    .voice-card {
+      padding: 48px;
+      background: var(--cream-2);
+    }
+    .voice-card.accent { background: var(--ink-2); color: var(--cream); }
+    .voice-card-label {
+      font-family: var(--sans);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: var(--rose);
+      margin-bottom: 28px;
+    }
+    .voice-card.accent .voice-card-label { color: rgba(201,138,135,0.8); }
+    .voice-card-title {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-size: 26px;
+      margin-bottom: 20px;
+      line-height: 1.15;
+    }
+    .voice-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .voice-list li {
+      font-size: 13.5px;
+      line-height: 1.6;
+      opacity: 0.78;
+      padding-left: 20px;
+      position: relative;
+    }
+    .voice-list li::before {
+      content: '—';
+      position: absolute;
+      left: 0;
+      color: var(--rose);
+      font-style: normal;
+    }
+    .voice-card.accent .voice-list li { opacity: 0.72; }
+    .voice-quote {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 22px;
+      line-height: 1.45;
+      opacity: 0.88;
+      margin-top: 12px;
+    }
+
+    /* ── Do / Don't ─────────────────────────────────────── */
+    .do-dont-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+    }
+    .do-card, .dont-card {
+      padding: 48px;
+    }
+    .do-card { background: #edf5ed; }
+    .dont-card { background: #fdecea; }
+    .do-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: #3a7a3a;
+      margin-bottom: 28px;
+    }
+    .dont-card-label {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.4em;
+      text-transform: uppercase;
+      color: #b53a2a;
+      margin-bottom: 28px;
+    }
+    .ex-text {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 20px;
+      line-height: 1.4;
+      margin-bottom: 12px;
+    }
+    .ex-note {
+      font-size: 12px;
+      opacity: 0.6;
+    }
+
+    /* ── Templates overview ──────────────────────────────── */
+    .templates-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 2px;
+    }
+    .template-card {
+      aspect-ratio: 1;
+      background: var(--cream-2);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: flex-end;
+    }
+    .template-card-inner {
+      width: 100%;
+      padding: 18px 16px;
+      background: linear-gradient(to top, rgba(44,31,28,0.7) 0%, transparent 100%);
+      color: #fff;
+    }
+    .template-card-code {
+      font-family: var(--sans);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      opacity: 0.7;
+      margin-bottom: 4px;
+    }
+    .template-card-name {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 16px;
+      line-height: 1.1;
+    }
+    .template-bg-1  { background-color: var(--blush); }
+    .template-bg-2  { background-color: var(--peach); }
+    .template-bg-3  { background-color: var(--cream-2); }
+    .template-bg-4  { background-color: var(--rose); }
+    .template-bg-5  { background-color: var(--ink); }
+
+    .template-preview {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .template-preview-serif {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 38px;
+      line-height: 0.95;
+      text-align: center;
+      letter-spacing: -0.01em;
+    }
+
+    /* ── Usage rules ─────────────────────────────────────── */
+    .rules-list {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+    }
+    .rule-item {
+      padding-top: 32px;
+      border-top: 1px solid var(--line);
+    }
+    .rule-number {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 42px;
+      color: var(--rose);
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .rule-title {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .rule-text {
+      font-size: 13.5px;
+      line-height: 1.7;
+      opacity: 0.68;
+    }
+
+    /* ── Footer ──────────────────────────────────────────── */
+    .guide-footer {
+      background: var(--ink-2);
+      color: var(--cream);
+      padding: 64px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    .guide-footer-brand {
+      font-family: var(--serif);
+      font-style: italic;
+      font-size: 36px;
+      line-height: 1;
+      opacity: 0.9;
+    }
+    .guide-footer-meta {
+      font-family: var(--sans);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      opacity: 0.4;
+      text-align: right;
+      line-height: 2;
+    }
+
+    /* ── Print ───────────────────────────────────────────── */
+    @media print {
+      .toc-strip { display: none; }
+      section { page-break-inside: avoid; }
+      .cover { min-height: auto; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ COVER ══════════════════════════════════════════════ -->
+  <section class="cover" id="cover">
+    <div class="cover-left">
+      <div>
+        <div class="cover-wordmark">
+          <span>Salon d'esthétique</span>
+          Les<br/>Belles<br/>Sœurs
+        </div>
+      </div>
+      <div>
+        <div style="height:1px; background:rgba(255,255,255,0.15); margin-bottom:32px;"></div>
+        <div class="cover-meta">
+          Guide de marque · Identité visuelle<br/>
+          Version 1.0 · 2025 · Montréal
+        </div>
+      </div>
+    </div>
+    <div class="cover-right">
+      <img src="refs/ref-01.webp" alt="Les Belles Sœurs" />
+      <div class="cover-right-overlay">
+        <div class="cover-doc-label">Ce document</div>
+        <div class="cover-doc-title">Standards d'identité<br/>& usage de la marque</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ NAV ════════════════════════════════════════════════ -->
+  <nav class="toc-strip">
+    <div class="toc-brand">Les Belles Sœurs</div>
+    <a href="#marque">Marque</a>
+    <a href="#palette">Palette</a>
+    <a href="#typographie">Typographie</a>
+    <a href="#voix">Voix</a>
+    <a href="#gabarits">Gabarits</a>
+    <a href="#regles">Règles</a>
+  </nav>
+
+  <div class="page">
+
+    <!-- ══ MARQUE ══════════════════════════════════════════ -->
+    <section id="marque">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">01 — Identité de marque</div>
+          <h2>Ce que<br/><em>nous sommes</em></h2>
+        </div>
+        <p>Les Belles Sœurs est un salon d'esthétique montréalais fondé sur la conviction que chaque cliente mérite une expérience soignée, intime et élevée — loin du bruit, proche d'elle-même.</p>
+      </div>
+
+      <div class="values-grid">
+        <div class="value-card">
+          <div class="value-number">01</div>
+          <div class="value-title">Rituel</div>
+          <p class="value-desc">Chaque visite est pensée comme un moment de pause. Pas un rendez-vous — un rite. L'environnement, les gestes, les matières : tout concourt à ralentir.</p>
+        </div>
+        <div class="value-card">
+          <div class="value-number">02</div>
+          <div class="value-title">Savoir-faire</div>
+          <p class="value-desc">La maîtrise technique est à la base de tout. Les techniciennes sont formées en continu. La précision n'est pas négociable.</p>
+        </div>
+        <div class="value-card">
+          <div class="value-number">03</div>
+          <div class="value-title">Authenticité</div>
+          <p class="value-desc">Nous aidons les clientes à être plus elles-mêmes, pas à ressembler à une tendance. Le beau, ici, est une affaire personnelle.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ PALETTE ══════════════════════════════════════════ -->
+    <section id="palette">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">02 — Palette de couleurs</div>
+          <h2>Des teintes<br/><em>qui respirent</em></h2>
+        </div>
+        <p>Une palette chaude construite autour du crème, du blush et du brun encre. Peu de couleurs, utilisées avec intention. L'accent rose est réservé aux moments d'emphasis.</p>
+      </div>
+
+      <div class="palette-primary">
+        <div class="swatch swatch-dark" style="background:#2c1f1c;">
+          <div class="swatch-name">Encre</div>
+          <div class="swatch-hex">#2C1F1C</div>
+          <div class="swatch-role">Typographie · arrière-plans foncés</div>
+        </div>
+        <div class="swatch swatch-dark" style="background:#1a1310;">
+          <div class="swatch-name">Encre profonde</div>
+          <div class="swatch-hex">#1A1310</div>
+          <div class="swatch-role">Couverture · fonds premium</div>
+        </div>
+        <div class="swatch swatch-light" style="background:#c98a87;">
+          <div class="swatch-name">Rose</div>
+          <div class="swatch-hex">#C98A87</div>
+          <div class="swatch-role">Accent · CTA · mise en valeur</div>
+        </div>
+      </div>
+
+      <div class="palette-secondary">
+        <div class="swatch sm swatch-light" style="background:#fffcfa;">
+          <div class="swatch-name">Crème</div>
+          <div class="swatch-hex">#FFFCFA</div>
+          <div class="swatch-role">Fond principal</div>
+        </div>
+        <div class="swatch sm swatch-light" style="background:#efebe6;">
+          <div class="swatch-name">Crème neutre</div>
+          <div class="swatch-hex">#EFEBE6</div>
+          <div class="swatch-role">Fond secondaire</div>
+        </div>
+        <div class="swatch sm swatch-light" style="background:#fdeae3;">
+          <div class="swatch-name">Pêche</div>
+          <div class="swatch-hex">#FDEAE3</div>
+          <div class="swatch-role">Zones d'accent doux</div>
+        </div>
+        <div class="swatch sm swatch-light" style="background:#f8cbca;">
+          <div class="swatch-name">Blush</div>
+          <div class="swatch-hex">#F8CBCA</div>
+          <div class="swatch-role">Blocs éditoriaux</div>
+        </div>
+        <div class="swatch sm swatch-light" style="background:#efebe6; border:1px solid rgba(44,31,28,0.1);">
+          <div class="swatch-name" style="opacity:0.5;">Lignes</div>
+          <div class="swatch-hex" style="opacity:0.4;">#2C1F1C · 14%</div>
+          <div class="swatch-role">Séparateurs · bordures</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TYPOGRAPHIE ══════════════════════════════════════ -->
+    <section id="typographie">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">03 — Typographie</div>
+          <h2>Deux voix,<br/><em>une harmonie</em></h2>
+        </div>
+        <p>Gloock apporte l'élégance éditoriale — ses italiques sont la signature émotionnelle de la marque. Figtree assure la lisibilité dans tous les contextes utilitaires.</p>
+      </div>
+
+      <div class="type-pair">
+        <div class="type-specimen">
+          <div class="specimen-label">Gloock — Affichage éditorial</div>
+          <div style="font-family:var(--serif); font-style:italic; font-size:88px; line-height:0.9; letter-spacing:-0.02em; margin-bottom:40px;">
+            L'art<br/>d'être<br/><em style="font-weight:400;">soi.</em>
+          </div>
+          <div class="type-scale">
+            <div class="type-row">
+              <div class="type-row-meta">96px</div>
+              <div style="font-family:var(--serif); font-size:48px; line-height:1;">Grande affiche</div>
+            </div>
+            <div class="type-row">
+              <div class="type-row-meta">64px</div>
+              <div style="font-family:var(--serif); font-style:italic; font-size:32px; line-height:1;">Titre éditorial en italique</div>
+            </div>
+            <div class="type-row">
+              <div class="type-row-meta">40px</div>
+              <div style="font-family:var(--serif); font-size:24px; line-height:1;">Sous-titre de section</div>
+            </div>
+            <div class="type-row">
+              <div class="type-row-meta">24px</div>
+              <div style="font-family:var(--serif); font-style:italic; font-size:18px; line-height:1.2;">Citation ou mise en valeur</div>
+            </div>
+          </div>
+        </div>
+        <div class="type-specimen dark">
+          <div class="specimen-label" style="color:rgba(201,138,135,0.65);">Inter — Corps & labels</div>
+          <div style="font-family:var(--sans); font-size:13px; font-weight:600; letter-spacing:0.38em; text-transform:uppercase; color:rgba(253,234,227,0.55); margin-bottom:40px;">
+            SOINS CAPILLAIRES · ESTHÉTIQUE · MTL
+          </div>
+          <div class="type-scale">
+            <div class="type-row" style="border-color:rgba(255,255,255,0.08);">
+              <div class="type-row-meta">16px 500</div>
+              <div style="font-size:16px; font-weight:500; color:var(--cream);">Texte de corps principal</div>
+            </div>
+            <div class="type-row" style="border-color:rgba(255,255,255,0.08);">
+              <div class="type-row-meta">14px 400</div>
+              <div style="font-size:14px; font-weight:400; color:var(--cream); opacity:.78;">Description de service ou détail</div>
+            </div>
+            <div class="type-row" style="border-color:rgba(255,255,255,0.08);">
+              <div class="type-row-meta">12px 500</div>
+              <div style="font-size:12px; font-weight:500; letter-spacing:0.2em; text-transform:uppercase; color:var(--cream); opacity:.6;">ÉTIQUETTE · CATÉGORIE</div>
+            </div>
+            <div class="type-row" style="border-bottom:none;">
+              <div class="type-row-meta">10px 600</div>
+              <div style="font-size:10px; font-weight:600; letter-spacing:0.4em; text-transform:uppercase; color:var(--cream); opacity:.45;">EYEBROW · SURTITRE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="font-detail-grid">
+        <div class="font-card">
+          <div class="font-card-label">Police d'affichage</div>
+          <div class="font-card-name" style="font-family:var(--serif);">Gloock</div>
+          <div class="font-card-weights">Regular 400 · Medium 500 · Bold 700 · Italic</div>
+          <div class="font-card-alphabet" style="font-family:var(--serif); font-style:italic;">
+            Aa Bb Cc Dd Ee<br/>Ff Gg Hh Ii Jj<br/>0123456789
+          </div>
+        </div>
+        <div class="font-card">
+          <div class="font-card-label">Police de corps</div>
+          <div class="font-card-name" style="font-family:var(--sans);">Figtree</div>
+          <div class="font-card-weights">Light 300 · Regular 400 · Medium 500 · Semi-Bold 600</div>
+          <div class="font-card-alphabet" style="font-family:var(--sans); font-weight:300;">
+            Aa Bb Cc Dd Ee<br/>Ff Gg Hh Ii Jj<br/>0123456789
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ VOIX ══════════════════════════════════════════════ -->
+    <section id="voix">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">04 — Voix & ton</div>
+          <h2>Comment<br/><em>nous parlons</em></h2>
+        </div>
+        <p>La voix des Belles Sœurs est chaude sans être familière, experte sans être condescendante. Elle célèbre la femme qui sait ce qu'elle veut.</p>
+      </div>
+
+      <div class="voice-grid">
+        <div class="voice-card">
+          <div class="voice-card-label">Mots qui nous définissent</div>
+          <div class="voice-card-title">Intime · Éditorial · Bienveillant · Précis</div>
+          <ul class="voice-list">
+            <li>On tutoie les clientes régulières, on vouvoie les nouvelles.</li>
+            <li>Phrases courtes. Respirations. Pas de bavardage.</li>
+            <li>Sensoriels : on décrit ce qu'on ressent, pas ce qu'on fait.</li>
+            <li>Jamais d'argot ni de superlatifs vides ("incroyable", "wow").</li>
+          </ul>
+        </div>
+        <div class="voice-card accent">
+          <div class="voice-card-label">La marque en une phrase</div>
+          <div class="voice-quote">"Sortez d'ici plus vous-même que jamais."</div>
+          <div style="height:1px; background:rgba(255,255,255,0.12); margin:32px 0;"></div>
+          <ul class="voice-list">
+            <li>On parle de soins comme d'une expérience, pas d'un service.</li>
+            <li>Les verbes d'action sont doux : révéler, cultiver, retrouver.</li>
+            <li>L'humour existe mais il est subtil — jamais au détriment.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="height:2px;"></div>
+
+      <div class="do-dont-grid">
+        <div class="do-card">
+          <div class="do-card-label">✓ À écrire</div>
+          <div class="ex-text">"Un rituel pensé pour vous, dans la douceur du matin."</div>
+          <div class="ex-note">Sensoriel · intime · précis · sans cliché</div>
+          <div style="height:28px;"></div>
+          <div class="ex-text">"Réservez votre moment."</div>
+          <div class="ex-note">CTA court, élégant, centré sur la cliente</div>
+        </div>
+        <div class="dont-card">
+          <div class="dont-card-label">✗ À éviter</div>
+          <div class="ex-text" style="opacity:0.55;">"Résultats INCROYABLES en une séance !!!"</div>
+          <div class="ex-note">Trop promotionnel · exclamatif · sans substance</div>
+          <div style="height:28px;"></div>
+          <div class="ex-text" style="opacity:0.55;">"Meilleur salon de Montréal ✨"</div>
+          <div class="ex-note">Non vérifiable · émojis non conformes · ton générique</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ GABARITS ══════════════════════════════════════════ -->
+    <section id="gabarits">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">05 — Kit de gabarits Instagram</div>
+          <h2>10 thèmes<br/><em>éditoriaux</em></h2>
+        </div>
+        <p>Chaque gabarit correspond à un moment de communication distinct. Utiliser le bon gabarit pour le bon message — jamais le plus spectaculaire, toujours le plus juste.</p>
+      </div>
+
+      <div class="templates-grid">
+        <div class="template-card template-bg-1">
+          <div class="template-preview">
+            <div class="template-preview-serif" style="color:var(--ink); opacity:.6;">H<br/><em>E</em></div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E01</div>
+            <div class="template-card-name">Hero salon</div>
+          </div>
+        </div>
+        <div class="template-card template-bg-2">
+          <div class="template-preview">
+            <div style="font-family:var(--sans); font-size:11px; font-weight:600; letter-spacing:0.3em; text-transform:uppercase; opacity:.5; color:var(--ink);">SOIN</div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E02</div>
+            <div class="template-card-name">Service · Soin</div>
+          </div>
+        </div>
+        <div class="template-card template-bg-3">
+          <div class="template-preview">
+            <div class="template-preview-serif" style="color:var(--rose); font-size:52px;">%</div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E03</div>
+            <div class="template-card-name">Promo · Offre</div>
+          </div>
+        </div>
+        <div class="template-card template-bg-4">
+          <div class="template-preview">
+            <div class="template-preview-serif" style="color:var(--cream); font-size:32px;">"</div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E04</div>
+            <div class="template-card-name">Témoignage</div>
+          </div>
+        </div>
+        <div class="template-card template-bg-1">
+          <div class="template-preview">
+            <div style="font-family:var(--sans); font-size:10px; font-weight:600; letter-spacing:0.35em; text-transform:uppercase; opacity:.4; color:var(--ink);">TIP</div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E05</div>
+            <div class="template-card-name">Conseil beauté</div>
+          </div>
+        </div>
+        <div class="template-card template-bg-5">
+          <div class="template-preview">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; padding:24px; justify-content:center;">
+              <div style="width:28px; height:28px; border-radius:50%; background:var(--blush);"></div>
+              <div style="width:28px; height:28px; border-radius:50%; background:var(--rose);"></div>
+              <div style="width:28px; height:28px; border-radius:50%; background:var(--peach);"></div>
+            </div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E06</div>
+            <div class="template-card-name">Tendances</div>
+          </div>
+        </div>
+        <div class="template-card template-bg-2">
+          <div class="template-preview">
+            <div style="font-family:var(--sans); font-size:10px; font-weight:600; letter-spacing:0.25em; text-transform:uppercase; opacity:.4; color:var(--ink); text-align:center; padding:16px;">LUN — VEN<br/>9H — 19H</div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E07</div>
+            <div class="template-card-name">Horaire</div>
+          </div>
+        </div>
+        <div class="template-card template-bg-3">
+          <div class="template-preview">
+            <div class="template-preview-serif" style="color:var(--ink); opacity:.5; font-size:28px; padding:16px;">"<em>L'élégance est</em> refus."</div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E08</div>
+            <div class="template-card-name">Citation</div>
+          </div>
+        </div>
+        <div class="template-card template-bg-1">
+          <div class="template-preview">
+            <div style="display:grid; grid-template-columns:1fr 1fr; height:100%; width:100%; position:absolute; inset:0;">
+              <div style="background:var(--cream-2); display:flex; align-items:center; justify-content:center; font-size:10px; letter-spacing:0.3em; text-transform:uppercase; opacity:.35; font-family:var(--sans);">AVANT</div>
+              <div style="background:var(--blush); display:flex; align-items:center; justify-content:center; font-size:10px; letter-spacing:0.3em; text-transform:uppercase; opacity:.35; font-family:var(--sans);">APRÈS</div>
+            </div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E09</div>
+            <div class="template-card-name">Avant · Après</div>
+          </div>
+        </div>
+        <div class="template-card template-bg-4">
+          <div class="template-preview">
+            <div class="template-preview-serif" style="color:var(--cream); font-size:24px; padding:16px; opacity:.7;"><em>le secret</em></div>
+          </div>
+          <div class="template-card-inner">
+            <div class="template-card-code">E10</div>
+            <div class="template-card-name">Polichinelle</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:48px; padding:40px; background:var(--cream-2); display:flex; align-items:center; justify-content:space-between; gap:32px;">
+        <div>
+          <div class="eyebrow" style="margin-bottom:10px;">Accéder au kit</div>
+          <div style="font-family:var(--serif); font-size:22px;">Kit de gabarits interactif</div>
+          <div style="font-size:13px; opacity:.6; margin-top:6px;">10 gabarits éditoriaux · Feed 1080² · Stories 9:16 · Export PNG</div>
+        </div>
+        <a href="index.html" style="display:inline-flex; align-items:center; gap:10px; padding:16px 32px; background:var(--ink); color:var(--cream); border-radius:999px; font-family:var(--sans); font-size:12px; font-weight:600; letter-spacing:0.28em; text-transform:uppercase; text-decoration:none;">
+          Ouvrir le kit →
+        </a>
+      </div>
+    </section>
+
+    <!-- ══ RÈGLES ══════════════════════════════════════════ -->
+    <section id="regles">
+      <div class="section-head">
+        <div>
+          <div class="eyebrow">06 — Règles d'usage</div>
+          <h2>Ce qui<br/><em>ne se discute pas</em></h2>
+        </div>
+        <p>Ces règles ne sont pas des contraintes — ce sont les garde-fous qui protègent la cohérence de la marque dans le temps.</p>
+      </div>
+
+      <div class="rules-list">
+        <div class="rule-item">
+          <div class="rule-number">1</div>
+          <div class="rule-title">Pas d'émojis dans les visuels</div>
+          <p class="rule-text">Les émojis sont réservés aux légendes Instagram et aux stories spontanées. Dans les gabarits, les visuels de marque et les communications formelles, ils n'ont pas leur place.</p>
+        </div>
+        <div class="rule-item">
+          <div class="rule-number">2</div>
+          <div class="rule-title">L'italique, avec intention</div>
+          <p class="rule-text">L'italique de Gloock est la signature émotionnelle de la marque. Ne l'utilisez pas sur plus d'un mot ou d'une courte expression par bloc. Sa rareté est sa force.</p>
+        </div>
+        <div class="rule-item">
+          <div class="rule-number">3</div>
+          <div class="rule-title">Couleurs d'accent : sparingly</div>
+          <p class="rule-text">Le rose (#C98A87) et le blush (#F8CBCA) sont des accents — pas des fonds de page. Utilisés en excès, ils perdent leur impact et banalisent l'identité.</p>
+        </div>
+        <div class="rule-item">
+          <div class="rule-number">4</div>
+          <div class="rule-title">Photos : qualité avant quantité</div>
+          <p class="rule-text">Une bonne photo vaut dix médiocres. Préférer des images lumineuses, à texture douce, avec des tons chauds compatibles avec la palette crème-rose-brun.</p>
+        </div>
+        <div class="rule-item">
+          <div class="rule-number">5</div>
+          <div class="rule-title">Espaces blancs = luxe</div>
+          <p class="rule-text">Ne pas remplir chaque centimètre. Le vide est un choix éditorial. Les gabarits prévoient des marges généreuses — les respecter.</p>
+        </div>
+        <div class="rule-item">
+          <div class="rule-number">6</div>
+          <div class="rule-title">URL toujours en majuscules</div>
+          <p class="rule-text">Dans les visuels, l'URL et le handle Instagram apparaissent toujours en petites capitales espacées : WWW.LESBELLESSOEURS.CA · @LESBELLESSOEURS.</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- ══ FOOTER ══════════════════════════════════════════════ -->
+  <footer class="guide-footer">
+    <div class="guide-footer-brand">Les Belles Sœurs</div>
+    <div class="guide-footer-meta">
+      Guide de marque v1.0<br/>
+      Produit par Cocktail Média<br/>
+      cocktailmedia.ca
+    </div>
+  </footer>
+
+</body>
+</html>

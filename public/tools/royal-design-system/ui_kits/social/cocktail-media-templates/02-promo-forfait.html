@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<style>
+/* FONTS_PLACEHOLDER */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1080px;
+  height: 1080px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow: hidden;
+  background: #2b2b2b;
+}
+
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 64px;
+  justify-content: space-between;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.logo img {
+  height: 48px;
+}
+
+.tag {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #e83b14;
+  background: rgba(232, 59, 20, 0.1);
+  padding: 8px 16px;
+  border-radius: 100px;
+}
+
+.middle {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 24px;
+}
+
+.service-label {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 5px;
+  text-transform: uppercase;
+  color: #9a9490;
+}
+
+.title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 86px;
+  line-height: 0.92;
+  color: #ffffff;
+  letter-spacing: 2px;
+}
+
+.price-block {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.price {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 96px;
+  color: #e83b14;
+  line-height: 1;
+}
+
+.price-detail {
+  font-size: 18px;
+  color: #9a9490;
+  font-weight: 500;
+}
+
+.divider {
+  width: 80px;
+  height: 4px;
+  background: #e83b14;
+  border-radius: 2px;
+  margin-top: 8px;
+}
+
+.subtitle {
+  font-size: 19px;
+  color: #9a9490;
+  line-height: 1.6;
+  max-width: 600px;
+  margin-top: 4px;
+}
+
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.cta {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: #e83b14;
+  padding: 16px 40px;
+  border-radius: 100px;
+  border: none;
+}
+
+.website {
+  font-size: 14px;
+  color: #9a9490;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top">
+    <div class="logo">
+      <img src="{{LOGO_CM_ICON_WHITE}}" alt="Cocktail Média" />
+    </div>
+    <!-- VARIABLE: TAG -->
+    <div class="tag">Forfait</div>
+  </div>
+
+  <div class="middle">
+    <!-- VARIABLE: SERVICE -->
+    <div class="service-label">Capsules vidéo</div>
+    <!-- VARIABLE: TITRE -->
+    <div class="title">10 CAPSULES<br/>RÉSEAUX SOCIAUX</div>
+    <div class="price-block">
+      <!-- VARIABLE: PRIX -->
+      <div class="price">300$</div>
+      <!-- VARIABLE: DETAIL PRIX -->
+      <div class="price-detail">au lieu de 750$ à l'unité</div>
+    </div>
+    <div class="divider"></div>
+    <!-- VARIABLE: SOUS-TITRE -->
+    <div class="subtitle">Montage, sous-titres et musique inclus. Prêt à publier sur tous vos réseaux.</div>
+  </div>
+
+  <div class="bottom">
+    <!-- VARIABLE: CTA -->
+    <div class="cta">Réservez maintenant</div>
+    <div class="website">cocktailmedia.ca</div>
+  </div>
+</div>
+</body>
+</html>

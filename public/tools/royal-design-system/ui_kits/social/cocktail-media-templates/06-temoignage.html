@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<style>
+/* FONTS_PLACEHOLDER */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1080px;
+  height: 1080px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow: hidden;
+  background: #FAF7F3;
+}
+
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 72px;
+  justify-content: space-between;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.stars {
+  font-size: 36px;
+  color: #e83b14;
+  letter-spacing: 4px;
+}
+
+.logo img {
+  height: 40px;
+}
+
+.middle {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.quote-mark {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 160px;
+  color: #e83b14;
+  opacity: 0.15;
+  line-height: 0.6;
+  margin-bottom: -20px;
+}
+
+.quote {
+  font-size: 32px;
+  font-weight: 600;
+  color: #2b2b2b;
+  line-height: 1.5;
+  max-width: 800px;
+  margin-bottom: 40px;
+}
+
+.divider {
+  width: 60px;
+  height: 4px;
+  background: #e83b14;
+  border-radius: 2px;
+  margin-bottom: 24px;
+}
+
+.client-name {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 28px;
+  color: #2b2b2b;
+  letter-spacing: 1px;
+}
+
+.client-business {
+  font-size: 15px;
+  color: #9a9490;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.service-tag {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #9a9490;
+  background: #e0d9d3;
+  padding: 10px 20px;
+  border-radius: 100px;
+}
+
+.website {
+  font-size: 14px;
+  color: #9a9490;
+  font-weight: 500;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top">
+    <div class="stars">★★★★★</div>
+    <div class="logo">
+      <img src="{{LOGO_COS_ICONE_NOIR}}" alt="Cocktail Média" />
+    </div>
+  </div>
+
+  <div class="middle">
+    <div class="quote-mark">"</div>
+    <!-- VARIABLE: CITATION -->
+    <div class="quote">Félix a compris notre vision dès le premier appel. Les photos sont exactement ce qu'on cherchait, professionnelles mais naturelles.</div>
+    <div class="divider"></div>
+    <!-- VARIABLE: NOM CLIENT -->
+    <div class="client-name">MARIE-ÈVE TREMBLAY</div>
+    <!-- VARIABLE: ENTREPRISE -->
+    <div class="client-business">Propriétaire, Salon Beauté Zen · Trois-Rivières</div>
+  </div>
+
+  <div class="bottom">
+    <!-- VARIABLE: SERVICE -->
+    <div class="service-tag">Photo corporative</div>
+    <div class="website">cocktailmedia.ca</div>
+  </div>
+</div>
+</body>
+</html>

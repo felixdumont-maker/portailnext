@@ -1,0 +1,60 @@
+/* Portail Cocktail Média — Design tokens partagés pour tous les outils standalone */
+
+@import url('https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap');
+
+:root {
+  --font-display: 'Bricolage Grotesque', 'Arial Black', sans-serif;
+  --font-body:    'Atkinson Hyperlegible', 'Arial', sans-serif;
+
+  --color-brand:       oklch(52% 0.21 32);
+  --color-brand-hover: oklch(46% 0.21 32);
+  --color-brand-muted: oklch(95% 0.04 55);
+
+  --color-dark-0:      oklch(13% 0.015 35);
+  --color-dark-1:      oklch(18% 0.015 35);
+  --color-dark-2:      oklch(23% 0.012 35);
+  --color-dark-3:      oklch(30% 0.010 38);
+  --color-dark-border: oklch(35% 0.010 40);
+  --color-dark-text:   oklch(92% 0.018 70);
+  --color-dark-text-2: oklch(62% 0.012 55);
+  --color-dark-text-3: oklch(42% 0.010 50);
+
+  --color-light-1:       oklch(97% 0.012 70);
+  --color-light-2:       oklch(99% 0.008 68);
+  --color-light-border:  oklch(87% 0.016 70);
+  --color-light-border-2:oklch(78% 0.018 65);
+  --color-light-text:    oklch(22% 0.015 35);
+  --color-light-text-2:  oklch(44% 0.013 45);
+  --color-light-text-3:  oklch(60% 0.010 50);
+
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-12: 48px;
+
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.25rem;
+
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-full: 9999px;
+
+  --duration-fast: 120ms;
+  --duration-base: 200ms;
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
+}

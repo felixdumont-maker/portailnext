@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<title>Templates génériques · 5 × 2 variantes</title>
+<link rel="stylesheet" href="tokens.css"/>
+<style>
+  html, body { margin:0; padding:0; height:100%; background:#0d0d0d; color:#fff; font-family: var(--font-body); overflow:hidden; }
+  #root { width:100vw; height:100vh; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+
+<script type="text/babel" src="templates/T1Event.jsx"></script>
+<script type="text/babel" src="templates/T2Promo.jsx"></script>
+<script type="text/babel" src="templates/T3Citation.jsx"></script>
+<script type="text/babel" src="templates/T4Horaire.jsx"></script>
+<script type="text/babel" src="templates/T5AvantApres.jsx"></script>
+
+<script>
+  /* Charge une police Google Fonts à la demande */
+  window.__loadedFontsG = new Set();
+  window.loadGFont = function(family) {
+    if (!family || window.__loadedFontsG.has(family)) return;
+    window.__loadedFontsG.add(family);
+    const l = document.createElement('link');
+    l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=' + encodeURIComponent(family).replace(/%20/g,'+') + ':wght@400;700;900&display=swap';
+    document.head.appendChild(l);
+  };
+</script>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "brand":        "#d62127",
+  "accent":       "#f4d35e",
+  "palette":      "rouge",
+  "brandCustom":  "",
+  "accentCustom": "",
+  "fontDisplay":  "",
+  "fontBody":     ""
+}/*EDITMODE-END*/;
+
+const PALETTES = {
+  "rouge":   { brand:"#d62127", accent:"#f4d35e", deep:"#9e1216" },
+  "bleu":    { brand:"#1a4fd6", accent:"#f4d35e", deep:"#0f3aa8" },
+  "vert":    { brand:"#0f7a4a", accent:"#f4d35e", deep:"#0a5a36" },
+  "violet":  { brand:"#5b2a86", accent:"#ffb84d", deep:"#3f1c5d" },
+  "noir":    { brand:"#0d0d0d", accent:"#ff5722", deep:"#000000" },
+  "magenta": { brand:"#d12b6e", accent:"#33d6c2", deep:"#9a1d50" },
+  "ocre":    { brand:"#c97a2a", accent:"#1f3a5f", deep:"#9a5a1d" },
+};
+
+const G_DISPLAY_FONTS = [
+  { label: 'Bebas Neue (défaut)',   value: '' },
+  { label: 'Oswald',               value: 'Oswald' },
+  { label: 'Barlow Condensed',     value: 'Barlow Condensed' },
+  { label: 'Anton',                value: 'Anton' },
+  { label: 'Teko',                 value: 'Teko' },
+  { label: 'Rajdhani',             value: 'Rajdhani' },
+  { label: 'Black Han Sans',       value: 'Black Han Sans' },
+];
+const G_BODY_FONTS = [
+  { label: 'Plus Jakarta Sans (défaut)', value: '' },
+  { label: 'Inter',        value: 'Inter' },
+  { label: 'Roboto',       value: 'Roboto' },
+  { label: 'Montserrat',   value: 'Montserrat' },
+  { label: 'Poppins',      value: 'Poppins' },
+  { label: 'Open Sans',    value: 'Open Sans' },
+  { label: 'Nunito',       value: 'Nunito' },
+];
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+
+  useEffect(() => {
+    // Couleur de marque : custom > palette
+    const p = PALETTES[t.palette] || PALETTES.rouge;
+    const brand  = t.brandCustom  || p.brand;
+    const accent = t.accentCustom || p.accent;
+    // Calcul d'une version sombre de la marque (assombrir de 15%)
+    const deepHex = t.brandCustom ? t.brandCustom : p.deep;
+
+    document.documentElement.style.setProperty('--brand',      brand);
+    document.documentElement.style.setProperty('--brand-deep', deepHex);
+    document.documentElement.style.setProperty('--accent',     accent);
+
+    // Polices
+    if (t.fontDisplay) {
+      window.loadGFont(t.fontDisplay);
+      document.documentElement.style.setProperty('--font-display', `'${t.fontDisplay}', Impact, 'Arial Narrow Bold', sans-serif`);
+    } else {
+      document.documentElement.style.removeProperty('--font-display');
+    }
+    if (t.fontBody) {
+      window.loadGFont(t.fontBody);
+      document.documentElement.style.setProperty('--font-body', `'${t.fontBody}', system-ui, -apple-system, sans-serif`);
+    } else {
+      document.documentElement.style.removeProperty('--font-body');
+    }
+  }, [t.palette, t.brandCustom, t.accentCustom, t.fontDisplay, t.fontBody]);
+
+  return (
+    <>
+      <DesignCanvas
+        title="Templates génériques · 5 × 2 variantes"
+        subtitle="Inspirés du système Royal de Shawinigan, généralisés pour toute entreprise"
+      >
+        <DCSection id="t1" title="T1 — Annonce / Événement" subtitle="Grande ouverture, portes ouvertes, lancement.">
+          <DCArtboard id="t1-a" label="A · Affichette signature" width={1080} height={1080}><T1EventA/></DCArtboard>
+          <DCArtboard id="t1-b" label="B · Date géante + cercle" width={1080} height={1080}><T1EventB/></DCArtboard>
+        </DCSection>
+        <DCSection id="t2" title="T2 — Promo / Offre" subtitle="Pourcentage géant ou liquidation typographique.">
+          <DCArtboard id="t2-a" label="A · Pourcentage hero" width={1080} height={1080}><T2PromoA/></DCArtboard>
+          <DCArtboard id="t2-b" label="B · Tout doit partir" width={1080} height={1080}><T2PromoB/></DCArtboard>
+        </DCSection>
+        <DCSection id="t3" title="T3 — Citation / Témoignage" subtitle="Grande citation client avec étoiles et signature.">
+          <DCArtboard id="t3-a" label="A · Guillemets accent" width={1080} height={1080}><T3CitationA/></DCArtboard>
+          <DCArtboard id="t3-b" label="B · Serif italique crème" width={1080} height={1080}><T3CitationB/></DCArtboard>
+        </DCSection>
+        <DCSection id="t4" title="T4 — Horaire / Heures d'ouverture" subtitle="Sept jours en grille ou en liste verticale.">
+          <DCArtboard id="t4-a" label="A · Grille 7 jours" width={1080} height={1080}><T4HoraireA/></DCArtboard>
+          <DCArtboard id="t4-b" label="B · Liste typographique" width={1080} height={1080}><T4HoraireB/></DCArtboard>
+        </DCSection>
+        <DCSection id="t5" title="T5 — Avant / Après" subtitle="Transformation, rénovation, métamorphose.">
+          <DCArtboard id="t5-a" label="A · Split vertical 50/50" width={1080} height={1080}><T5AvantApresA/></DCArtboard>
+          <DCArtboard id="t5-b" label="B · Split diagonal" width={1080} height={1080}><T5AvantApresB/></DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel title="Style">
+
+        <TweakSection label="Palettes rapides"/>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(7, 1fr)', gap:6, marginTop:-4}}>
+          {Object.entries(PALETTES).map(([k, v]) => (
+            <button key={k} onClick={() => { setTweak('palette', k); setTweak('brandCustom', ''); setTweak('accentCustom', ''); }}
+              title={k}
+              style={{
+                aspectRatio:'1', borderRadius:8,
+                border: (t.palette===k && !t.brandCustom) ? '2px solid #fff' : '1px solid rgba(255,255,255,0.15)',
+                background: `linear-gradient(135deg, ${v.brand} 0% 60%, ${v.accent} 60% 100%)`,
+                cursor:'pointer'
+              }}/>
+          ))}
+        </div>
+
+        <TweakSection label="Couleurs personnalisées"/>
+        {[
+          { key:'brandCustom',  label:'Couleur de marque', paletteKey:'brand'  },
+          { key:'accentCustom', label:'Couleur accent',    paletteKey:'accent' },
+        ].map(({ key, label, paletteKey }) => {
+          const pal = PALETTES[t.palette] || PALETTES.rouge;
+          const val = t[key] || pal[paletteKey];
+          return (
+            <div key={key} style={{display:'flex', flexDirection:'column', gap:4}}>
+              <span style={{fontSize:11, fontWeight:500, color:'rgba(41,38,27,0.72)'}}>{label}</span>
+              <div style={{display:'flex', gap:6, alignItems:'center'}}>
+                <input type="color" value={val}
+                  style={{width:36, height:28, padding:1, border:'1px solid rgba(0,0,0,0.12)', borderRadius:5, cursor:'pointer', flexShrink:0}}
+                  onChange={e => setTweak(key, e.target.value)} />
+                <input type="text" value={t[key] || ''}
+                  placeholder={pal[paletteKey]}
+                  style={{flex:1, fontSize:11, padding:'4px 7px', border:'1px solid rgba(0,0,0,0.14)', borderRadius:5, background:'rgba(255,255,255,0.6)', color:'#29261b', fontFamily:'monospace'}}
+                  onChange={e => setTweak(key, e.target.value)} />
+                {t[key] && (
+                  <button onClick={() => setTweak(key, '')}
+                    style={{fontSize:11, padding:'3px 7px', border:'1px solid rgba(0,0,0,0.14)', borderRadius:5, background:'transparent', cursor:'pointer', color:'rgba(41,38,27,0.55)'}}>✕</button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        <TweakSection label="Polices"/>
+        <TweakSelect
+          label="Police d'affichage (titres)"
+          value={t.fontDisplay}
+          onChange={(v) => setTweak('fontDisplay', v)}
+          options={G_DISPLAY_FONTS}
+        />
+        <TweakSelect
+          label="Police de texte (corps)"
+          value={t.fontBody}
+          onChange={(v) => setTweak('fontBody', v)}
+          options={G_BODY_FONTS}
+        />
+
+      </TweaksPanel>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>

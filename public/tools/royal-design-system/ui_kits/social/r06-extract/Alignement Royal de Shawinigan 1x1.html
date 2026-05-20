@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Alignement 1:1 — Royal de Shawinigan</title>
+<meta name="viewport" content="width=1200" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="image-slot.js"></script>
+
+<style>
+  :root{
+    --red:#c8141a;
+    --red-deep:#8a0e12;
+    --red-darker:#5e0a0d;
+    --red-card:rgba(0,0,0,0.22);
+    --red-card-border:rgba(0,0,0,0.32);
+    --cream:#f1eadb;
+    --cream-2:#e7dfcc;
+    --ink:#1a0608;
+    --white:#ffffff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0; background:#1a0608}
+  body{
+    font-family:'Manrope', system-ui, sans-serif;
+    color:var(--white);
+    min-height:100vh;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    padding:24px;
+  }
+
+  .square{
+    width:1200px;
+    height:1200px;
+    flex-shrink:0;
+    position:relative;
+    overflow:hidden;
+    background:var(--red);
+    background:
+      linear-gradient(135deg, #d31a20 0%, #b21015 60%, #8a0d12 100%);
+    box-shadow:0 30px 80px rgba(0,0,0,0.6);
+    border-radius:6px;
+  }
+  /* diagonal stripe pattern overlay */
+  .square::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      repeating-linear-gradient(
+        115deg,
+        rgba(255,255,255,0.0) 0 38px,
+        rgba(255,255,255,0.035) 38px 76px
+      );
+    pointer-events:none;
+  }
+  .square::after{
+    content:"";
+    position:absolute; inset:0;
+    background:
+      radial-gradient(900px 500px at 88% 12%, rgba(255,255,255,0.10), transparent 60%),
+      radial-gradient(700px 700px at -10% 110%, rgba(0,0,0,0.35), transparent 60%);
+    pointer-events:none;
+  }
+
+  .canvas{
+    position:absolute; inset:0;
+    padding:60px 70px 50px;
+    display:flex;
+    flex-direction:column;
+    z-index:2;
+  }
+
+  /* HEADER ============================================================ */
+  .eyebrow{
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:0.32em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.55);
+    margin-bottom:18px;
+  }
+  h1.title{
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:128px;
+    line-height:0.92;
+    margin:0;
+    letter-spacing:-0.005em;
+    text-transform:uppercase;
+    color:var(--white);
+    text-shadow:0 4px 0 rgba(0,0,0,0.12);
+  }
+  .subline{
+    margin-top:18px;
+    font-size:14px;
+    font-weight:700;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.55);
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .subline .dot{
+    width:5px;height:5px;background:rgba(255,255,255,0.45);border-radius:50%;
+  }
+  .subline .pill{
+    background:var(--white);
+    color:var(--red);
+    padding:4px 12px;
+    border-radius:999px;
+    font-size:11px;
+    letter-spacing:0.22em;
+    font-weight:800;
+  }
+
+  /* PLAYERS GRID ====================================================== */
+  .grid{
+    margin-top:34px;
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:14px;
+  }
+  .card{
+    background:var(--red-card);
+    border:1px solid var(--red-card-border);
+    border-radius:14px;
+    padding:12px 12px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    position:relative;
+    backdrop-filter: blur(2px);
+  }
+  .card .row1{
+    display:flex; justify-content:space-between; align-items:flex-start;
+    padding:0 2px;
+  }
+  .card .num{
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:32px;
+    line-height:0.85;
+    color:var(--white);
+    letter-spacing:-0.02em;
+  }
+  .card .pos{
+    font-family:'Manrope';
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.85);
+    background:rgba(0,0,0,0.35);
+    border:1px solid rgba(255,255,255,0.12);
+    padding:3px 7px;
+    border-radius:999px;
+    align-self:flex-start;
+  }
+  .card image-slot{
+    width:100%;
+    aspect-ratio: 1 / 1;
+    border-radius:10px;
+    overflow:hidden;
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.04) 0 6px, rgba(255,255,255,0.0) 6px 12px),
+      rgba(0,0,0,0.28);
+    border:1px dashed rgba(255,255,255,0.15);
+    --is-shape: rect;
+  }
+  .card .name{
+    font-family:'Oswald';
+    font-weight:600;
+    font-size:14px;
+    line-height:1.05;
+    text-transform:uppercase;
+    color:var(--white);
+    letter-spacing:0.01em;
+    padding:0 2px;
+  }
+  .card .name b{
+    display:block;
+    font-weight:700;
+    font-size:16px;
+    letter-spacing:0;
+  }
+
+  .card.cap{
+    background:var(--cream);
+    border-color:var(--cream-2);
+  }
+  .card.cap .num{ color:var(--red); }
+  .card.cap .pos{
+    background:var(--red);
+    color:var(--white);
+    border-color:transparent;
+  }
+  .card.cap image-slot{
+    background:
+      repeating-linear-gradient(135deg, rgba(0,0,0,0.05) 0 6px, rgba(0,0,0,0) 6px 12px),
+      rgba(0,0,0,0.06);
+    border-color:rgba(0,0,0,0.18);
+  }
+  .card.cap .name{ color:var(--ink); }
+  .card.cap .badge{
+    position:absolute; top:8px; left:8px;
+    background:var(--red);
+    color:var(--white);
+    width:22px; height:22px; border-radius:50%;
+    display:grid; place-items:center;
+    font-size:11px; font-weight:800; font-family:'Oswald';
+    box-shadow:0 0 0 2px var(--cream);
+  }
+
+  .card.goalie .pos{
+    background:var(--white);
+    color:var(--red);
+    border-color:transparent;
+    font-weight:800;
+  }
+
+  /* SCRATCHED ========================================================= */
+  .scratch{
+    margin-top:22px;
+    padding:18px 22px 18px;
+    background:rgba(0,0,0,0.18);
+    border:1px solid rgba(0,0,0,0.28);
+    border-radius:14px;
+  }
+  .scratch h3{
+    font-family:'Oswald';
+    font-size:18px;
+    margin:0 0 4px;
+    text-transform:uppercase;
+    letter-spacing:0.04em;
+    color:var(--white);
+  }
+  .scratch h3 small{
+    margin-left:10px;
+    font-family:'Manrope';
+    font-size:10px;
+    letter-spacing:0.22em;
+    color:rgba(255,255,255,0.55);
+    font-weight:700;
+  }
+  .scratch ul{
+    list-style:none;
+    margin:10px 0 0;
+    padding:0;
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  .scratch li{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 14px 7px 8px;
+    background:rgba(255,255,255,0.07);
+    border:1px solid rgba(255,255,255,0.16);
+    border-radius:999px;
+    font-size:13px;
+    color:var(--white);
+  }
+  .scratch li b{
+    font-family:'Oswald';
+    font-size:15px;
+    background:var(--white);
+    color:var(--red);
+    width:24px; height:24px; border-radius:50%;
+    display:grid; place-items:center;
+    font-weight:700;
+  }
+  .scratch li .nm{
+    text-transform:uppercase;
+    letter-spacing:0.05em;
+    font-weight:600;
+    font-size:12px;
+  }
+  .scratch li .tag{
+    font-size:9.5px;
+    font-weight:700;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.6);
+    border-left:1px solid rgba(255,255,255,0.2);
+    padding-left:8px;
+  }
+
+  /* FOOTER ============================================================ */
+  .foot{
+    margin-top:auto;
+    padding-top:24px;
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+  }
+  .partners .lab{
+    font-size:11px;
+    font-weight:800;
+    letter-spacing:0.28em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.55);
+    margin-bottom:10px;
+  }
+  .partners .row{
+    display:flex; align-items:center; gap:14px;
+  }
+  .logo{
+    height:40px;
+    padding:0 12px;
+    display:grid; place-items:center;
+    background:rgba(255,255,255,0.08);
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:6px;
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:13px;
+    letter-spacing:0.06em;
+    color:rgba(255,255,255,0.85);
+    text-transform:uppercase;
+  }
+  .footmark{
+    text-align:right;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:0.24em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,0.5);
+    line-height:1.8;
+  }
+  .footmark span{ display:block; }
+
+  /* CREST in corner */
+  .crest{
+    position:absolute;
+    right:60px;
+    top:60px;
+    width:96px; height:96px;
+    border-radius:50%;
+    background:rgba(0,0,0,0.25);
+    border:2px solid rgba(255,255,255,0.55);
+    display:grid; place-items:center;
+    font-family:'Oswald';
+    font-weight:700;
+    color:var(--white);
+    z-index:3;
+  }
+  .crest .R{ font-size:54px; line-height:1; }
+  .crest::after{
+    content:""; position:absolute; inset:5px;
+    border:1px solid rgba(255,255,255,0.25);
+    border-radius:50%;
+  }
+
+  @media print{
+    body{ background:#fff; padding:0; }
+    .square{ box-shadow:none; border-radius:0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="square" data-screen-label="Alignement 1:1">
+  <div class="canvas">
+
+    <!-- CREST -->
+    <div class="crest"><div class="R">R</div></div>
+
+    <!-- HEADER -->
+    <div class="eyebrow">Royal de Shawinigan · LNHBF</div>
+    <h1 class="title">Alignement<br/>de départ</h1>
+    <div class="subline">
+      <span>Match #01</span><span class="dot"></span>
+      <span>Sam. 11 Oct.</span><span class="dot"></span>
+      <span>19 H 30</span><span class="dot"></span>
+      <span>Centre Gervais Auto</span>
+      <span class="pill">Domicile</span>
+    </div>
+
+    <!-- GRID 5×3 = 15 -->
+    <div class="grid">
+
+      <!-- Row 1: Premier trio -->
+      <div class="card">
+        <div class="row1"><div class="num">11</div><div class="pos">AG</div></div>
+        <image-slot id="r11" placeholder="#11"></image-slot>
+        <div class="name">Émilie<b>Tremblay</b></div>
+      </div>
+      <div class="card cap">
+        <div class="badge">C</div>
+        <div class="row1"><div class="num">17</div><div class="pos">C</div></div>
+        <image-slot id="r17" placeholder="#17"></image-slot>
+        <div class="name">Camille<b>Bélanger</b></div>
+      </div>
+      <div class="card">
+        <div class="row1"><div class="num">22</div><div class="pos">AD</div></div>
+        <image-slot id="r22" placeholder="#22"></image-slot>
+        <div class="name">Maude<b>Lavoie</b></div>
+      </div>
+      <div class="card">
+        <div class="row1"><div class="num">9</div><div class="pos">AG</div></div>
+        <image-slot id="r9" placeholder="#9"></image-slot>
+        <div class="name">Sarah<b>Gauthier</b></div>
+      </div>
+      <div class="card">
+        <div class="row1"><div class="num">14</div><div class="pos">C</div></div>
+        <image-slot id="r14" placeholder="#14"></image-slot>
+        <div class="name">Jade<b>Pellerin</b></div>
+      </div>
+
+      <!-- Row 2 -->
+      <div class="card">
+        <div class="row1"><div class="num">19</div><div class="pos">AD</div></div>
+        <image-slot id="r19" placeholder="#19"></image-slot>
+        <div class="name">Léa<b>Boucher</b></div>
+      </div>
+      <div class="card">
+        <div class="row1"><div class="num">7</div><div class="pos">AG</div></div>
+        <image-slot id="r7" placeholder="#7"></image-slot>
+        <div class="name">Rosalie<b>Marchand</b></div>
+      </div>
+      <div class="card">
+        <div class="row1"><div class="num">23</div><div class="pos">C</div></div>
+        <image-slot id="r23" placeholder="#23"></image-slot>
+        <div class="name">Florence<b>Côté</b></div>
+      </div>
+      <div class="card">
+        <div class="row1"><div class="num">28</div><div class="pos">AD</div></div>
+        <image-slot id="r28" placeholder="#28"></image-slot>
+        <div class="name">Alice<b>Desjardins</b></div>
+      </div>
+      <div class="card">
+        <div class="row1"><div class="num">3</div><div class="pos">DG</div></div>
+        <image-slot id="r3" placeholder="#3"></image-slot>
+        <div class="name">Naomie<b>Bergeron</b></div>
+      </div>
+
+      <!-- Row 3 -->
+      <div class="card">
+        <div class="row1"><div class="num">5</div><div class="pos">DD</div></div>
+        <image-slot id="r5" placeholder="#5"></image-slot>
+        <div class="name">Charlotte<b>Roy</b></div>
+      </div>
+      <div class="card">
+        <div class="row1"><div class="num">44</div><div class="pos">DG</div></div>
+        <image-slot id="r44" placeholder="#44"></image-slot>
+        <div class="name">Olivia<b>Fortin</b></div>
+      </div>
+      <div class="card">
+        <div class="row1"><div class="num">55</div><div class="pos">DD</div></div>
+        <image-slot id="r55" placeholder="#55"></image-slot>
+        <div class="name">Mia<b>Lachance</b></div>
+      </div>
+      <div class="card goalie">
+        <div class="row1"><div class="num">31</div><div class="pos">G · Part.</div></div>
+        <image-slot id="r31" placeholder="Gardienne #31"></image-slot>
+        <div class="name">Béatrice<b>St-Pierre</b></div>
+      </div>
+      <div class="card goalie">
+        <div class="row1"><div class="num">35</div><div class="pos">G · Rés.</div></div>
+        <image-slot id="r35" placeholder="Gardienne #35"></image-slot>
+        <div class="name">Anaïs<b>Dubé</b></div>
+      </div>
+
+    </div>
+
+    <!-- EN CIVIL -->
+    <div class="scratch">
+      <h3>En civil <small>présentes au match · non en uniforme</small></h3>
+      <ul>
+        <li><b>8</b><span class="nm">Coralie Therrien</span><span class="tag">Blessure</span></li>
+        <li><b>12</b><span class="nm">Audrey Lemieux</span><span class="tag">Blessure</span></li>
+        <li><b>21</b><span class="nm">Justine Caron</span><span class="tag">Suspension</span></li>
+        <li><b>27</b><span class="nm">Mégane Pinard</span><span class="tag">Décision</span></li>
+        <li><b>33</b><span class="nm">Laurence Béliveau</span><span class="tag">Décision</span></li>
+        <li><b>42</b><span class="nm">Noémie Lavergne</span><span class="tag">Académique</span></li>
+      </ul>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="foot">
+      <div class="partners">
+        <div class="lab">Partenaires</div>
+        <div class="row">
+          <div class="logo">LPS</div>
+          <div class="logo">Royal LePage</div>
+          <div class="logo">Cocktail</div>
+        </div>
+      </div>
+      <div class="footmark">
+        <span>Royal de Shawinigan · LNHBF</span>
+        <span>Cocktail Média</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

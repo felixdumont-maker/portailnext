@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<style>
+/* FONTS_PLACEHOLDER */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1080px;
+  height: 1080px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow: hidden;
+  background: #1a1a1a;
+}
+
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.top-bar {
+  padding: 40px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.cos-logo img {
+  height: 36px;
+}
+
+.phase-badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #e83b14;
+  border: 2px solid rgba(232, 59, 20, 0.3);
+  padding: 8px 20px;
+  border-radius: 100px;
+}
+
+.visual-area {
+  flex: 1;
+  padding: 0 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.screenshot-frame {
+  width: 100%;
+  height: 100%;
+  background: #222;
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 30px 60px rgba(0,0,0,0.4);
+}
+
+.screenshot-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.placeholder {
+  color: #444;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.bottom-section {
+  padding: 32px 48px 44px 48px;
+  flex-shrink: 0;
+}
+
+.update-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: #e83b14;
+  margin-bottom: 10px;
+}
+
+.update-title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 56px;
+  color: #ffffff;
+  letter-spacing: 1px;
+  line-height: 0.95;
+  margin-bottom: 10px;
+}
+
+.update-desc {
+  font-size: 16px;
+  color: #666;
+  line-height: 1.5;
+  max-width: 700px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top-bar">
+    <div class="cos-logo">
+      <img src="{{LOGO_COS_BLANC}}" alt="CocktailOS" />
+    </div>
+    <!-- VARIABLE: PHASE -->
+    <div class="phase-badge">Phase 1</div>
+  </div>
+
+  <div class="visual-area">
+    <div class="screenshot-frame">
+      <!-- VARIABLE: SCREENSHOT -->
+      <span class="placeholder">[ Screenshot ]</span>
+    </div>
+  </div>
+
+  <div class="bottom-section">
+    <!-- VARIABLE: TAG -->
+    <div class="update-tag">Mise à jour</div>
+    <!-- VARIABLE: TITRE -->
+    <div class="update-title">NOUVEAU PORTAIL CLIENT</div>
+    <!-- VARIABLE: DESCRIPTION -->
+    <div class="update-desc">Vos projets, enfin au même endroit. Suivi en temps réel et approbation simplifiée.</div>
+  </div>
+</div>
+</body>
+</html>

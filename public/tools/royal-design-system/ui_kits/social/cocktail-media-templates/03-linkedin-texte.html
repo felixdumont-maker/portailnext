@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<style>
+/* FONTS_PLACEHOLDER */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1080px;
+  height: 1080px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow: hidden;
+  background: #FAF7F3;
+}
+
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 72px;
+  justify-content: space-between;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.accent-line {
+  width: 60px;
+  height: 5px;
+  background: #e83b14;
+  border-radius: 3px;
+}
+
+.logo img {
+  height: 40px;
+}
+
+.middle {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-right: 40px;
+}
+
+.quote {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 64px;
+  line-height: 1.05;
+  color: #2b2b2b;
+  letter-spacing: 1px;
+  margin-bottom: 32px;
+}
+
+.quote .highlight {
+  color: #e83b14;
+}
+
+.body-text {
+  font-size: 20px;
+  color: #9a9490;
+  line-height: 1.6;
+  max-width: 700px;
+}
+
+.bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.author {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.author-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #2b2b2b;
+}
+
+.author-title {
+  font-size: 14px;
+  color: #9a9490;
+  font-weight: 500;
+}
+
+.hashtag {
+  font-size: 13px;
+  color: #e83b14;
+  font-weight: 600;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="top">
+    <div class="accent-line"></div>
+    <div class="logo">
+      <img src="{{LOGO_COS_ICONE_NOIR}}" alt="CocktailOS" />
+    </div>
+  </div>
+
+  <div class="middle">
+    <!-- VARIABLE: CITATION -->
+    <div class="quote">LE CONTENU RÉGULIER,<br/>C'EST UN <span class="highlight">ACTIF.</span><br/>LA PUB SANS CONTENU,<br/>C'EST UNE DÉPENSE.</div>
+    <!-- VARIABLE: TEXTE -->
+    <div class="body-text">Avant d'investir en publicité, bâtis l'habitude de créer du contenu. La fondation avant la maison.</div>
+  </div>
+
+  <div class="bottom">
+    <div class="author">
+      <!-- VARIABLE: AUTEUR -->
+      <div class="author-name">Félix Dumont</div>
+      <div class="author-title">Fondateur, Cocktail Média</div>
+    </div>
+    <!-- VARIABLE: HASHTAG -->
+    <div class="hashtag">#marketingaccessible</div>
+  </div>
+</div>
+</body>
+</html>

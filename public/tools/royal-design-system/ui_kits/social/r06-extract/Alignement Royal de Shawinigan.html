@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<title>Alignement — Royal de Shawinigan</title>
+<meta name="viewport" content="width=1200" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="image-slot.js"></script>
+
+<style>
+  :root{
+    --ink:#0e1b3d;
+    --ink-2:#1a2a55;
+    --paper:#f4ecdc;
+    --paper-2:#ece1c8;
+    --gold:#c79a3a;
+    --gold-2:#a87f24;
+    --line:rgba(14,27,61,0.18);
+    --soft:rgba(14,27,61,0.06);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Manrope', system-ui, sans-serif;
+    color:var(--ink);
+    background:#1a2553;
+    background:
+      radial-gradient(1200px 600px at 20% 0%, #243878 0%, #16224d 60%, #0c1638 100%);
+    min-height:100vh;
+    padding:40px 20px 80px;
+  }
+  body[data-theme="white"]{
+    background:#e6dec9;
+    background:
+      radial-gradient(1000px 500px at 80% 0%, #f2e9d2 0%, #ddd2b4 100%);
+  }
+  body[data-theme="dark"]{
+    background:#0a1024;
+    background: radial-gradient(1100px 600px at 50% 0%, #15204a 0%, #060a1c 80%);
+  }
+
+  .sheet{
+    width:1100px;
+    max-width:100%;
+    margin:0 auto;
+    background:var(--paper);
+    color:var(--ink);
+    border-radius:6px;
+    box-shadow:0 30px 80px rgba(0,0,0,0.45), 0 2px 0 rgba(255,255,255,0.04) inset;
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* HEADER ============================================================ */
+  .topbar{
+    background:var(--ink);
+    color:var(--paper);
+    padding:14px 36px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    border-bottom:3px solid var(--gold);
+  }
+  .topbar .pill{
+    background:var(--gold);
+    color:var(--ink);
+    padding:3px 10px;
+    border-radius:2px;
+    font-weight:700;
+  }
+  .topbar .dot{
+    width:6px;height:6px;border-radius:50%;
+    background:var(--gold);
+    display:inline-block;
+    margin:0 10px;
+  }
+
+  .head{
+    padding:36px 36px 20px;
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    gap:28px;
+    align-items:center;
+    border-bottom:1px solid var(--line);
+  }
+  .crest{
+    width:96px;height:96px;
+    border-radius:50%;
+    background:var(--ink);
+    color:var(--paper);
+    display:grid;place-items:center;
+    border:3px solid var(--gold);
+    position:relative;
+    flex-shrink:0;
+  }
+  .crest::after{
+    content:"";
+    position:absolute;inset:6px;
+    border:1px solid rgba(255,255,255,0.18);
+    border-radius:50%;
+  }
+  .crest .R{
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:54px;
+    line-height:1;
+    letter-spacing:-0.02em;
+    color:var(--gold);
+  }
+
+  .titleblock h1{
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:46px;
+    line-height:0.95;
+    margin:0;
+    letter-spacing:-0.005em;
+    text-transform:uppercase;
+  }
+  .titleblock h1 em{
+    font-style:normal;
+    color:var(--gold-2);
+  }
+  .titleblock .sub{
+    margin-top:6px;
+    font-size:13px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+    color:var(--ink-2);
+    font-weight:600;
+    opacity:0.8;
+  }
+
+  .matchinfo{
+    text-align:right;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    line-height:1.6;
+    color:var(--ink-2);
+    text-transform:uppercase;
+    letter-spacing:0.08em;
+    border-left:1px solid var(--line);
+    padding-left:24px;
+  }
+  .matchinfo b{
+    display:block;
+    font-family:'Oswald';
+    font-size:24px;
+    color:var(--ink);
+    letter-spacing:0;
+    margin-bottom:4px;
+  }
+
+  .marquee{
+    background:var(--ink);
+    color:var(--paper);
+    padding:18px 36px;
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:24px;
+  }
+  .marquee .big{
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:64px;
+    line-height:0.9;
+    letter-spacing:-0.01em;
+    text-transform:uppercase;
+  }
+  .marquee .big span{ color:var(--gold); }
+  .marquee .vs{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    letter-spacing:0.2em;
+    text-align:right;
+    opacity:0.85;
+  }
+  .marquee .vs strong{
+    display:block;
+    font-family:'Oswald';
+    font-size:22px;
+    letter-spacing:0;
+    color:var(--paper);
+    margin-top:2px;
+  }
+
+  /* SECTIONS ========================================================== */
+  .section{
+    padding:30px 36px 10px;
+  }
+  .section + .section{ padding-top:14px; }
+  .sec-head{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:18px;
+  }
+  .sec-head .num{
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:32px;
+    color:var(--gold-2);
+    width:42px;
+    line-height:1;
+  }
+  .sec-head h2{
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:26px;
+    margin:0;
+    text-transform:uppercase;
+    letter-spacing:0.02em;
+  }
+  .sec-head .rule{
+    flex:1;
+    height:1px;
+    background:var(--line);
+    margin-top:6px;
+  }
+  .sec-head .meta{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color:var(--ink-2);
+    opacity:0.7;
+  }
+
+  /* PLAYER GRID ======================================================= */
+  .grid{ display:grid; gap:14px; }
+  .trios{ grid-template-columns:repeat(3, 1fr); }
+  .pairs{ grid-template-columns:repeat(4, 1fr); }
+  .goalies{ grid-template-columns:repeat(2, 1fr); gap:18px; }
+
+  .player{
+    background:#fbf5e7;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:14px 14px 12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    position:relative;
+    transition:transform 120ms ease;
+  }
+  .player::before{
+    content:"";
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:3px;
+    background:var(--gold);
+  }
+  .player.captain::before{ background:linear-gradient(var(--gold), var(--ink)); }
+  .player .row1{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .player .num{
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:38px;
+    line-height:0.85;
+    color:var(--ink);
+    letter-spacing:-0.02em;
+  }
+  .player .pos{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.16em;
+    background:var(--ink);
+    color:var(--paper);
+    padding:3px 7px;
+    border-radius:2px;
+    text-transform:uppercase;
+    align-self:flex-start;
+  }
+  .player .badge{
+    font-family:'JetBrains Mono', monospace;
+    font-size:9px;
+    letter-spacing:0.18em;
+    color:var(--gold-2);
+    border:1px solid var(--gold);
+    padding:2px 6px;
+    border-radius:2px;
+    text-transform:uppercase;
+    align-self:flex-start;
+    margin-left:6px;
+  }
+
+  .player image-slot{
+    width:100%;
+    aspect-ratio: 4 / 5;
+    border:1px dashed rgba(14,27,61,0.25);
+    background:
+      repeating-linear-gradient(45deg, transparent 0 8px, rgba(14,27,61,0.04) 8px 9px),
+      #efe6cf;
+    border-radius:2px;
+    overflow:hidden;
+    --is-shape: rect;
+  }
+
+  .player .name{
+    font-family:'Oswald';
+    font-weight:600;
+    font-size:18px;
+    line-height:1.05;
+    text-transform:uppercase;
+    letter-spacing:0.005em;
+  }
+  .player .name .last{
+    display:block;
+    font-weight:700;
+    font-size:21px;
+  }
+  .player .meta{
+    display:flex;
+    justify-content:space-between;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.1em;
+    color:var(--ink-2);
+    text-transform:uppercase;
+    opacity:0.75;
+    border-top:1px solid var(--line);
+    padding-top:8px;
+  }
+
+  /* Goalies bigger */
+  .goalies .player image-slot{ aspect-ratio: 3 / 2.4; }
+  .goalies .player{ background:var(--ink); color:var(--paper); }
+  .goalies .player::before{ background:var(--gold); }
+  .goalies .player .num{ color:var(--gold); font-size:54px; }
+  .goalies .player .pos{ background:var(--gold); color:var(--ink); }
+  .goalies .player .name{ color:var(--paper); }
+  .goalies .player image-slot{
+    background:
+      repeating-linear-gradient(45deg, transparent 0 8px, rgba(255,255,255,0.04) 8px 9px),
+      #182550;
+    border-color:rgba(255,255,255,0.2);
+  }
+  .goalies .player .meta{ color:rgba(244,236,220,0.7); border-color:rgba(255,255,255,0.15); }
+
+  /* TRIO LABEL ======================================================== */
+  .lineLabel{
+    grid-column: 1 / -1;
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.2em;
+    color:var(--ink-2);
+    text-transform:uppercase;
+    opacity:0.65;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:6px;
+  }
+  .lineLabel:first-child{ margin-top:0; }
+  .lineLabel::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:var(--line);
+  }
+
+  /* SCRATCHED ========================================================= */
+  .scratch{
+    background:var(--paper-2);
+    margin:24px 36px 0;
+    border:1px solid var(--line);
+    border-radius:4px;
+    padding:20px 24px 22px;
+  }
+  .scratch h3{
+    font-family:'Oswald';
+    font-size:18px;
+    text-transform:uppercase;
+    margin:0 0 4px;
+    letter-spacing:0.02em;
+  }
+  .scratch .sub{
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--ink-2);
+    opacity:0.75;
+    margin-bottom:14px;
+  }
+  .scratch ul{
+    list-style:none;
+    margin:0;padding:0;
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:10px 24px;
+  }
+  .scratch li{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    border-bottom:1px dotted var(--line);
+    padding:8px 0 6px;
+    font-size:14px;
+  }
+  .scratch li .n{
+    font-family:'Oswald';
+    font-weight:700;
+    font-size:18px;
+    width:34px;
+    color:var(--gold-2);
+  }
+  .scratch li .nm{
+    font-weight:600;
+    text-transform:uppercase;
+    letter-spacing:0.01em;
+    flex:1;
+  }
+  .scratch li .tag{
+    font-family:'JetBrains Mono', monospace;
+    font-size:9px;
+    letter-spacing:0.14em;
+    color:var(--ink-2);
+    background:rgba(14,27,61,0.07);
+    padding:2px 6px;
+    border-radius:2px;
+    text-transform:uppercase;
+  }
+
+  /* FOOTER ============================================================ */
+  .foot{
+    margin-top:30px;
+    padding:16px 36px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    border-top:3px solid var(--gold);
+    background:var(--ink);
+    color:var(--paper);
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+  }
+  .foot .sig{ opacity:0.6; }
+  .foot .marks{ display:flex; gap:14px; }
+  .foot .marks span{ opacity:0.85; }
+
+  /* Print */
+  @media print{
+    body{ background:#fff; padding:0; }
+    .sheet{ box-shadow:none; border-radius:0; }
+    #tweaks-root{ display:none; }
+  }
+
+  /* Edit caption helper for image slots */
+  image-slot::part(placeholder){
+    font-family:'JetBrains Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.14em;
+    text-transform:uppercase;
+    color: rgba(14,27,61,0.55);
+  }
+</style>
+</head>
+<body data-theme="navy">
+
+<div class="sheet" data-screen-label="Alignement">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>LHJAAAQ <span class="dot"></span> Saison 2025–2026 <span class="dot"></span> Match #01</div>
+    <div class="pill">Domicile</div>
+  </div>
+
+  <!-- HEADER -->
+  <div class="head">
+    <div class="crest"><div class="R">R</div></div>
+    <div class="titleblock">
+      <h1>Royal de <em>Shawinigan</em></h1>
+      <div class="sub">Feuille d'alignement officielle</div>
+    </div>
+    <div class="matchinfo">
+      Samedi
+      <b>11 Oct.</b>
+      19 H 30 — Centre Gervais Auto<br/>
+      Arbitre : M. Lévesque
+    </div>
+  </div>
+
+  <!-- MARQUEE -->
+  <div class="marquee">
+    <div class="big">Alignement<br/><span>de départ</span></div>
+    <div class="vs">
+      Royal de Shawinigan
+      <strong>vs Étoiles de Trois-Rivières</strong>
+    </div>
+  </div>
+
+  <!-- ATTAQUANTES -->
+  <div class="section">
+    <div class="sec-head">
+      <div class="num">01</div>
+      <h2>Attaquantes</h2>
+      <div class="rule"></div>
+      <div class="meta">9 joueuses · 3 trios</div>
+    </div>
+
+    <div class="grid trios">
+      <div class="lineLabel">Premier trio</div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">11</div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <div class="pos">AG</div>
+            <div class="badge">A</div>
+          </div>
+        </div>
+        <image-slot id="p11" placeholder="Photo · #11"></image-slot>
+        <div class="name">Émilie<span class="last">Tremblay</span></div>
+        <div class="meta"><span>5'7" · 19</span><span>G/PJ 0.0</span></div>
+      </div>
+
+      <div class="player captain">
+        <div class="row1">
+          <div class="num">17</div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <div class="pos">C</div>
+            <div class="badge">C</div>
+          </div>
+        </div>
+        <image-slot id="p17" placeholder="Photo · #17"></image-slot>
+        <div class="name">Camille<span class="last">Bélanger</span></div>
+        <div class="meta"><span>5'9" · 22</span><span>Capitaine</span></div>
+      </div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">22</div>
+          <div class="pos">AD</div>
+        </div>
+        <image-slot id="p22" placeholder="Photo · #22"></image-slot>
+        <div class="name">Maude<span class="last">Lavoie</span></div>
+        <div class="meta"><span>5'6" · 20</span><span>Tir D</span></div>
+      </div>
+
+      <div class="lineLabel">Deuxième trio</div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">9</div>
+          <div class="pos">AG</div>
+        </div>
+        <image-slot id="p9" placeholder="Photo · #9"></image-slot>
+        <div class="name">Sarah<span class="last">Gauthier</span></div>
+        <div class="meta"><span>5'5" · 18</span><span>Tir G</span></div>
+      </div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">14</div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <div class="pos">C</div>
+            <div class="badge">A</div>
+          </div>
+        </div>
+        <image-slot id="p14" placeholder="Photo · #14"></image-slot>
+        <div class="name">Jade<span class="last">Pellerin</span></div>
+        <div class="meta"><span>5'8" · 21</span><span>Adjointe</span></div>
+      </div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">19</div>
+          <div class="pos">AD</div>
+        </div>
+        <image-slot id="p19" placeholder="Photo · #19"></image-slot>
+        <div class="name">Léa<span class="last">Boucher</span></div>
+        <div class="meta"><span>5'7" · 19</span><span>Tir D</span></div>
+      </div>
+
+      <div class="lineLabel">Troisième trio</div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">7</div>
+          <div class="pos">AG</div>
+        </div>
+        <image-slot id="p7" placeholder="Photo · #7"></image-slot>
+        <div class="name">Rosalie<span class="last">Marchand</span></div>
+        <div class="meta"><span>5'4" · 17</span><span>Recrue</span></div>
+      </div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">23</div>
+          <div class="pos">C</div>
+        </div>
+        <image-slot id="p23" placeholder="Photo · #23"></image-slot>
+        <div class="name">Florence<span class="last">Côté</span></div>
+        <div class="meta"><span>5'6" · 20</span><span>Tir G</span></div>
+      </div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">28</div>
+          <div class="pos">AD</div>
+        </div>
+        <image-slot id="p28" placeholder="Photo · #28"></image-slot>
+        <div class="name">Alice<span class="last">Desjardins</span></div>
+        <div class="meta"><span>5'5" · 18</span><span>Tir D</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DÉFENSEURES -->
+  <div class="section">
+    <div class="sec-head">
+      <div class="num">02</div>
+      <h2>Défenseures</h2>
+      <div class="rule"></div>
+      <div class="meta">4 joueuses · 2 paires</div>
+    </div>
+
+    <div class="grid pairs">
+      <div class="player">
+        <div class="row1">
+          <div class="num">3</div>
+          <div class="pos">DG</div>
+        </div>
+        <image-slot id="p3" placeholder="Photo · #3"></image-slot>
+        <div class="name">Naomie<span class="last">Bergeron</span></div>
+        <div class="meta"><span>5'8" · 22</span><span>Tir G</span></div>
+      </div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">5</div>
+          <div class="pos">DD</div>
+        </div>
+        <image-slot id="p5" placeholder="Photo · #5"></image-slot>
+        <div class="name">Charlotte<span class="last">Roy</span></div>
+        <div class="meta"><span>5'10" · 23</span><span>Tir D</span></div>
+      </div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">44</div>
+          <div class="pos">DG</div>
+        </div>
+        <image-slot id="p44" placeholder="Photo · #44"></image-slot>
+        <div class="name">Olivia<span class="last">Fortin</span></div>
+        <div class="meta"><span>5'7" · 20</span><span>Tir G</span></div>
+      </div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">55</div>
+          <div class="pos">DD</div>
+        </div>
+        <image-slot id="p55" placeholder="Photo · #55"></image-slot>
+        <div class="name">Mia<span class="last">Lachance</span></div>
+        <div class="meta"><span>5'9" · 19</span><span>Tir D</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GARDIENNES -->
+  <div class="section">
+    <div class="sec-head">
+      <div class="num">03</div>
+      <h2>Gardiennes</h2>
+      <div class="rule"></div>
+      <div class="meta">2 joueuses</div>
+    </div>
+
+    <div class="grid goalies">
+      <div class="player">
+        <div class="row1">
+          <div class="num">31</div>
+          <div class="pos">G — Partante</div>
+        </div>
+        <image-slot id="p31" placeholder="Photo gardienne · #31"></image-slot>
+        <div class="name">Béatrice<span class="last">St-Pierre</span></div>
+        <div class="meta"><span>5'8" · 22 ans</span><span>Attrape G</span></div>
+      </div>
+
+      <div class="player">
+        <div class="row1">
+          <div class="num">35</div>
+          <div class="pos">G — Réserve</div>
+        </div>
+        <image-slot id="p35" placeholder="Photo gardienne · #35"></image-slot>
+        <div class="name">Anaïs<span class="last">Dubé</span></div>
+        <div class="meta"><span>5'7" · 20 ans</span><span>Attrape D</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- EN CIVIL -->
+  <div class="scratch">
+    <h3>En civil — présentes au match</h3>
+    <div class="sub">Joueuses non en uniforme · membres actives de l'équipe</div>
+    <ul>
+      <li><span class="n">8</span><span class="nm">Coralie Therrien</span><span class="tag">Blessure</span></li>
+      <li><span class="n">12</span><span class="nm">Audrey Lemieux</span><span class="tag">Blessure</span></li>
+      <li><span class="n">21</span><span class="nm">Justine Caron</span><span class="tag">Suspension</span></li>
+      <li><span class="n">27</span><span class="nm">Mégane Pinard</span><span class="tag">Décision</span></li>
+      <li><span class="n">33</span><span class="nm">Laurence Béliveau</span><span class="tag">Décision</span></li>
+      <li><span class="n">42</span><span class="nm">Noémie Lavergne</span><span class="tag">Académique</span></li>
+    </ul>
+  </div>
+
+  <!-- FOOT -->
+  <div class="foot">
+    <div class="sig">Entraîneuse-chef · M. Trudel</div>
+    <div class="marks">
+      <span>Adjointe · J. Pelletier</span>
+      <span>Soigneuse · K. Bertrand</span>
+      <span>Édition 01</span>
+    </div>
+  </div>
+
+</div>
+
+<div id="tweaks-root"></div>
+
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel">
+  const TWEAKS = /*EDITMODE-BEGIN*/{
+    "theme": "dark",
+    "accent": "#b6303c"
+  }/*EDITMODE-END*/;
+
+  // map hero accent to its darker twin (hover/secondary)
+  const ACCENT_DARK = {
+    "#c79a3a":"#a87f24",
+    "#b6303c":"#8a1d27",
+    "#9aa3b8":"#6e7791",
+    "#3a7d52":"#225637"
+  };
+
+  function App(){
+    const t = window.useTweaks ? window.useTweaks(TWEAKS) : [TWEAKS, ()=>{}];
+    const [v, setTweak] = t;
+
+    React.useEffect(()=>{
+      document.body.dataset.theme = v.theme;
+      document.documentElement.style.setProperty('--gold', v.accent);
+      document.documentElement.style.setProperty('--gold-2', ACCENT_DARK[v.accent] || v.accent);
+    }, [v.theme, v.accent]);
+
+    if(!window.TweaksPanel) return null;
+    const { TweaksPanel, TweakSection, TweakRadio, TweakColor } = window;
+
+    return (
+      <TweaksPanel title="Tweaks">
+        <TweakSection title="Fond">
+          <TweakRadio
+            label="Thème"
+            value={v.theme}
+            onChange={(x)=>setTweak('theme', x)}
+            options={[
+              {value:'navy',  label:'Marine'},
+              {value:'white', label:'Crème'},
+              {value:'dark',  label:'Sombre'}
+            ]}
+          />
+        </TweakSection>
+        <TweakSection title="Accent">
+          <TweakColor
+            label="Couleur"
+            value={v.accent}
+            onChange={(x)=>setTweak('accent', x)}
+            options={["#c79a3a","#b6303c","#9aa3b8","#3a7d52"]}
+          />
+        </TweakSection>
+      </TweaksPanel>
+    );
+  }
+
+  const root = ReactDOM.createRoot(document.getElementById('tweaks-root'));
+  root.render(<App />);
+</script>
+
+</body>
+</html>

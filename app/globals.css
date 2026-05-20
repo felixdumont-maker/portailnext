@@ -1,26 +1,171 @@
 @import "tailwindcss";
 
+/* ─── Tailwind theme tokens ────────────────────────────────── */
+
+@theme {
+  --font-display: var(--font-bricolage), 'Arial Black', sans-serif;
+  --font-body:    var(--font-atkinson), 'Arial', sans-serif;
+}
+
+/* ─── Design tokens ────────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand */
+  --color-brand:       oklch(52% 0.21 32);
+  --color-brand-hover: oklch(46% 0.21 32);
+  --color-brand-muted: oklch(95% 0.04 55);
+
+  /* Dark surfaces — admin navbar, login */
+  --color-dark-0:      oklch(13% 0.015 35);
+  --color-dark-1:      oklch(18% 0.015 35);
+  --color-dark-2:      oklch(23% 0.012 35);
+  --color-dark-3:      oklch(30% 0.010 38);
+  --color-dark-border: oklch(35% 0.010 40);
+  --color-dark-text:   oklch(92% 0.018 70);
+  --color-dark-text-2: oklch(62% 0.012 55);
+  --color-dark-text-3: oklch(42% 0.010 50);
+
+  /* Light surfaces — portail client, admin bg */
+  --color-light-0:       oklch(93% 0.016 72);
+  --color-light-1:       oklch(97% 0.012 70);
+  --color-light-2:       oklch(99% 0.008 68);
+  --color-light-border:  oklch(87% 0.016 70);
+  --color-light-border-2:oklch(78% 0.018 65);
+  --color-light-text:    oklch(22% 0.015 35);
+  --color-light-text-2:  oklch(44% 0.013 45);
+  --color-light-text-3:  oklch(60% 0.010 50);
+
+  /* Semantic */
+  --color-success:      oklch(56% 0.16 145);
+  --color-success-bg:   oklch(95% 0.06 145);
+  --color-success-text: oklch(32% 0.12 145);
+  --color-error:        oklch(54% 0.20 25);
+  --color-error-bg:     oklch(96% 0.05 25);
+  --color-error-text:   oklch(35% 0.16 25);
+  --color-warning:      oklch(66% 0.17 72);
+  --color-warning-bg:   oklch(96% 0.06 72);
+  --color-warning-text: oklch(40% 0.14 52);
+  --color-info:         oklch(52% 0.16 250);
+  --color-info-bg:      oklch(94% 0.05 250);
+  --color-info-text:    oklch(32% 0.14 250);
+
+  /* Spacing — 4pt scale */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-24: 96px;
+
+  /* Type scale — fixed rem for app UI */
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.25rem;
+  --text-xl:   1.5rem;
+  --text-2xl:  2rem;
+  --text-3xl:  2.75rem;
+
+  /* Line heights */
+  --leading-tight:   1.2;
+  --leading-snug:    1.35;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  /* Radius */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-full: 9999px;
+
+  /* Z-index */
+  --z-raised:   10;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-modal:    400;
+  --z-toast:    500;
+
+  /* Motion */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-fast:  120ms;
+  --duration-base:  200ms;
+  --duration-slow:  350ms;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+/* ─── Base ─────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-light-text);
+  min-height: 100dvh;
 }
+
+/* ─── Focus ─────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: oklch(72% 0.01 50); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(58% 0.015 45); }
+
+/* ─── Reduced motion ─────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Step slide animations ──────────────────────────────────── */
+
+@keyframes slideInRight {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-40px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes spin { from { transform: none; } to { transform: none; } }
+}
+
+/* ─── Helpers ────────────────────────────────────────────────── */
+
+/* Tabular numbers for all data/stats */
+.tabular { font-variant-numeric: tabular-nums; }

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"/>
+<style>
+/* FONTS_PLACEHOLDER */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  width: 1080px;
+  height: 1080px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  overflow: hidden;
+  background: #2b2b2b;
+}
+
+.container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.header {
+  padding: 40px 48px 24px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.header-title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 42px;
+  color: #ffffff;
+  letter-spacing: 2px;
+}
+
+.header-logo img {
+  height: 40px;
+}
+
+.split {
+  flex: 1;
+  display: flex;
+  gap: 12px;
+  padding: 0 48px;
+}
+
+.split-side {
+  flex: 1;
+  border-radius: 20px;
+  overflow: hidden;
+  position: relative;
+  background: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.split-side img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.split-label {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  border-radius: 100px;
+}
+
+.label-before {
+  background: rgba(154, 148, 144, 0.3);
+  color: #ffffff;
+  backdrop-filter: blur(8px);
+}
+
+.label-after {
+  background: rgba(232, 59, 20, 0.9);
+  color: #ffffff;
+}
+
+.placeholder {
+  color: #444;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.footer {
+  padding: 28px 48px 36px 48px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
+.footer-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.footer-title {
+  font-family: 'Bebas Neue', cursive;
+  font-size: 32px;
+  color: #ffffff;
+  letter-spacing: 1px;
+}
+
+.footer-sub {
+  font-size: 14px;
+  color: #9a9490;
+}
+
+.footer-cta {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: #ffffff;
+  background: #e83b14;
+  padding: 12px 28px;
+  border-radius: 100px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <!-- VARIABLE: TITRE HEADER -->
+    <div class="header-title">TRANSFORMATION</div>
+    <div class="header-logo">
+      <img src="{{LOGO_CM_ICON_WHITE}}" alt="Cocktail Média" />
+    </div>
+  </div>
+
+  <div class="split">
+    <div class="split-side">
+      <!-- VARIABLE: IMAGE BEFORE -->
+      <span class="placeholder">[ Avant ]</span>
+      <div class="split-label label-before">Avant</div>
+    </div>
+    <div class="split-side">
+      <!-- VARIABLE: IMAGE AFTER -->
+      <span class="placeholder">[ Après ]</span>
+      <div class="split-label label-after">Après</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-text">
+      <!-- VARIABLE: NOM PROJET -->
+      <div class="footer-title">IDENTITÉ VISUELLE — CLIENT</div>
+      <!-- VARIABLE: DESCRIPTION -->
+      <div class="footer-sub">Logo, palette de couleurs et guide de marque complet.</div>
+    </div>
+    <div class="footer-cta">Voir le projet</div>
+  </div>
+</div>
+</body>
+</html>

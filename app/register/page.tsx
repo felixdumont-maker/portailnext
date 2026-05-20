@@ -1,53 +1,106 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 
-const STEPS = [
-  { id: 1, title: 'Bienvenue', subtitle: 'Créez votre compte' },
-  { id: 2, title: 'Qui êtes-vous?', subtitle: 'Vos informations personnelles' },
-  { id: 3, title: 'Votre entreprise', subtitle: 'Informations professionnelles' },
-  { id: 4, title: 'Sécurité', subtitle: 'Choisissez un mot de passe' },
+const STEP_DEFS = [
+  { num: 1, label: 'Email',      title: 'Commençons.',        sub: 'Quelle est votre adresse email?' },
+  { num: 2, label: 'Identité',   title: 'Qui êtes-vous?',     sub: 'Vos informations personnelles' },
+  { num: 3, label: 'Entreprise', title: 'Votre entreprise.',  sub: 'Pour les travailleurs autonomes, inscrivez votre nom' },
+  { num: 4, label: 'Sécurité',   title: 'Mot de passe.',      sub: 'Choisissez un mot de passe fort' },
 ];
+
+function getPasswordStrength(pw: string): number {
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (/[A-Z]/.test(pw) && /[a-z]/.test(pw)) s++;
+  if (/\d/.test(pw)) s++;
+  if (/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(pw)) s++;
+  return s;
+}
+
+const strengthLabel = ['', 'Faible', 'Moyen', 'Bon', 'Fort'];
+const strengthColor = ['', 'var(--color-error)', 'var(--color-warning)', 'oklch(62% 0.16 145)', 'var(--color-success)'];
+
+const inputStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-body)',
+  fontSize: 'var(--text-base)',
+  color: 'var(--color-dark-text)',
+  background: 'var(--color-dark-2)',
+  border: '1px solid var(--color-dark-border)',
+  borderRadius: 'var(--radius-md)',
+  padding: 'var(--space-3) var(--space-4)',
+  outline: 'none',
+  width: '100%',
+  minHeight: '48px',
+  colorScheme: 'dark',
+  transition: 'border-color var(--duration-fast), background var(--duration-fast)',
+};
+
+const labelStyle: React.CSSProperties = {
+  fontFamily: 'var(--font-body)',
+  fontSize: 'var(--text-sm)',
+  fontWeight: 700,
+  color: 'var(--color-dark-text-2)',
+  display: 'block',
+  marginBottom: 'var(--space-2)',
+};
 
 export default function RegisterPage() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [step, setStep]           = useState(0);
+  const [direction, setDirection] = useState<'forward' | 'back'>('forward');
+  const [loading, setLoading]     = useState(false);
+  const [error, setError]         = useState('');
+  const [showPw, setShowPw]       = useState(false);
+  const [showPw2, setShowPw2]     = useState(false);
 
   const [form, setForm] = useState({
-    email: '',
-    nom_complet: '',
-    telephone: '',
+    email:          '',
+    nom_complet:    '',
+    telephone:      '',
     nom_entreprise: '',
-    password: '',
-    password2: '',
+    password:       '',
+    password2:      '',
   });
 
-  function update(field: string, value: string) {
+  const firstInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (step < 4) {
+      const t = setTimeout(() => firstInputRef.current?.focus(), 260);
+      return () => clearTimeout(t);
+    }
+  }, [step]);
+
+  function set(field: string, value: string) {
     setForm(prev => ({ ...prev, [field]: value }));
     setError('');
   }
 
   function next() {
-    // Validation par étape
-    if (step === 0 && !form.email) { setError('Email requis'); return; }
-    if (step === 1 && !form.nom_complet) { setError('Nom requis'); return; }
+    if (step === 0 && !form.email)          { setError('Adresse email requise'); return; }
+    if (step === 0 && !/\S+@\S+\.\S+/.test(form.email)) { setError('Adresse email invalide'); return; }
+    if (step === 1 && !form.nom_complet)    { setError('Nom complet requis'); return; }
     if (step === 2 && !form.nom_entreprise) { setError("Nom d'entreprise requis"); return; }
+    setDirection('forward');
     setStep(s => s + 1);
+    setError('');
   }
 
   function back() {
+    setDirection('back');
     setStep(s => s - 1);
     setError('');
   }
 
   async function submit() {
-    if (form.password !== form.password2) { setError('Les mots de passe ne correspondent pas'); return; }
+    if (form.password.length < 8)                       { setError('Minimum 8 caractères'); return; }
+    if (form.password !== form.password2)               { setError('Les mots de passe ne correspondent pas'); return; }
     setLoading(true);
     try {
-      const res = await fetch('https://portail.cocktailmedia.ca/api/v1/auth/register', {
+      const res  = await fetch('/api/v1/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -55,235 +108,616 @@ export default function RegisterPage() {
       });
       const data = await res.json();
       if (data.success) {
-        setStep(4); // Success screen
+        setDirection('forward');
+        setStep(4);
       } else {
-        setError(data.error || 'Erreur lors de l\'inscription');
+        setError(data.error || "Erreur lors de l'inscription");
       }
-    } catch (err) {
+    } catch {
       setError('Erreur de connexion au serveur');
     }
     setLoading(false);
   }
 
-  const progress = step >= 4 ? 100 : (step / 4) * 100;
+  const pwStrength = getPasswordStrength(form.password);
+
+  const slideAnim: React.CSSProperties = {
+    animation: `${direction === 'forward' ? 'slideInRight' : 'slideInLeft'} 250ms cubic-bezier(0.25, 1, 0.5, 1) both`,
+  };
 
   return (
-    <main className="min-h-screen flex items-center justify-center p-4" style={{background: 'radial-gradient(ellipse at top right, rgba(232,59,20,0.2) 0%, transparent 50%), radial-gradient(ellipse at bottom left, rgba(232,59,20,0.1) 0%, transparent 50%), #1a1a1a'}}>
-      {/* Card glassmorphism */}
-      <div className="w-full max-w-md relative">
-        
-        {/* Progress bar */}
+    <main style={{ minHeight: '100dvh', display: 'flex', background: 'var(--color-dark-1)' }}>
+
+      {/* ── Left panel (desktop) ── */}
+      <div
+        className="hidden md:flex"
+        style={{
+          width: '38%',
+          flexShrink: 0,
+          background: 'linear-gradient(170deg, var(--color-dark-0) 55%, oklch(15% 0.028 32) 100%)',
+          flexDirection: 'column',
+          padding: 'var(--space-8)',
+          boxShadow: '1px 0 0 0 var(--color-dark-border)',
+          position: 'relative',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Logo — pinned top */}
+        <Image
+          src="/cos-logo-blanc.png"
+          alt="CocktailOS"
+          width={120}
+          height={32}
+          priority
+          style={{ height: '22px', width: 'auto', objectFit: 'contain', flexShrink: 0 }}
+        />
+
+        {/* Spacer — pushes content into lower half */}
+        <div style={{ flex: 1 }} />
+
+        {/* Heading + step list — anchored in lower half */}
+        <div style={{ paddingBottom: 'var(--space-12)' }}>
+          <div style={{
+            width: '32px',
+            height: '3px',
+            background: 'var(--color-brand)',
+            borderRadius: '2px',
+            marginBottom: 'var(--space-6)',
+          }} />
+          <h1 style={{
+            fontFamily: 'var(--font-display)',
+            fontWeight: 800,
+            fontSize: 'clamp(2rem, 3vw, 2.75rem)',
+            lineHeight: 1.08,
+            color: 'var(--color-dark-text)',
+            margin: '0 0 var(--space-8)',
+            letterSpacing: '-0.02em',
+          }}>
+            Créez votre<br />
+            <span style={{ color: 'var(--color-brand)' }}>compte.</span>
+          </h1>
+
+          {/* Step list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', position: 'relative' }}>
+            {/* Vertical connecting line */}
+            <div style={{
+              position: 'absolute',
+              left: '13px',
+              top: '28px',
+              width: '1px',
+              height: 'calc(100% - 40px)',
+              background: 'var(--color-dark-border)',
+            }} />
+
+            {STEP_DEFS.map((s, i) => {
+              const done    = step > i || step === 4;
+              const current = step === i;
+              return (
+                <div key={s.num} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', position: 'relative' }}>
+                  <div style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '50%',
+                    flexShrink: 0,
+                    background: done ? 'var(--color-brand)' : current ? 'var(--color-dark-2)' : 'var(--color-dark-1)',
+                    border: `1px solid ${done || current ? 'var(--color-brand)' : 'var(--color-dark-border)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all var(--duration-base)',
+                    zIndex: 1,
+                  }}>
+                    {done
+                      ? <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'white' }}>check</span>
+                      : <span style={{
+                          fontFamily: 'var(--font-display)',
+                          fontWeight: 700,
+                          fontSize: 'var(--text-xs)',
+                          color: current ? 'var(--color-brand)' : 'var(--color-dark-text-3)',
+                        }}>{s.num}</span>
+                    }
+                  </div>
+                  <span style={{
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 'var(--text-sm)',
+                    color: done ? 'var(--color-dark-text-2)' : current ? 'var(--color-dark-text)' : 'var(--color-dark-text-3)',
+                    fontWeight: current ? 700 : 400,
+                    transition: 'color var(--duration-base)',
+                  }}>
+                    {s.label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        <p style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: 'var(--text-xs)',
+          color: 'var(--color-dark-text-3)',
+          margin: 0,
+          flexShrink: 0,
+        }}>
+          © {new Date().getFullYear()} Cocktail Média
+        </p>
+
+        {/* Watermark */}
+        <div style={{
+          position: 'absolute',
+          bottom: '-40px',
+          right: '-40px',
+          width: '300px',
+          height: '300px',
+          opacity: 0.06,
+          pointerEvents: 'none',
+        }}>
+          <Image src="/cos-icone-blanc.png" alt="" fill style={{ objectFit: 'contain' }} />
+        </div>
+      </div>
+
+      {/* ── Right panel — form ── */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 'var(--space-8) var(--space-6)',
+      }}>
+
+        {/* Mobile logo */}
+        <div className="flex md:hidden" style={{ marginBottom: 'var(--space-6)' }}>
+          <Image
+            src="/cos-logo-blanc.png"
+            alt="CocktailOS"
+            width={120}
+            height={32}
+            priority
+            style={{ height: '22px', width: 'auto', objectFit: 'contain' }}
+          />
+        </div>
+
+        {/* Mobile step dots */}
         {step < 4 && (
-          <div className="mb-6">
-          
-          <div className="flex justify-between mb-2 items-center">
-              {STEPS.map((s, i) => (
-                <img
-                  key={s.id}
-                  src="/cos-icone-blanc.png"
-                  alt=""
-                  className={`h-4 w-4 transition-all duration-500 ${
-                    i <= step ? 'opacity-100 scale-110' : 'opacity-20'
-                  }`}
-                />
-              ))}
-            </div>
-
-
-            <div className="h-1 bg-white/20 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-[#e83b14] to-[#ff6f3d] rounded-full transition-all duration-700"
-                style={{ width: `${progress}%` }}
-              />
-            </div>
+          <div className="flex md:hidden" style={{ gap: 'var(--space-2)', marginBottom: 'var(--space-6)', display: 'flex' }}>
+            {STEP_DEFS.map((_, i) => (
+              <div key={i} style={{
+                width: i === step ? '20px' : '8px',
+                height: '8px',
+                borderRadius: 'var(--radius-full)',
+                background: i < step ? 'var(--color-brand)' : i === step ? 'var(--color-brand)' : 'var(--color-dark-border)',
+                transition: 'all var(--duration-base)',
+              }} />
+            ))}
           </div>
         )}
 
-        {/* Glass card */}
-        <div className="backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl">
-          
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <img 
-              src="/cos-logo-blanc.png" 
-              alt="CocktailOS" 
-              className="h-8 w-auto"
-            />
-          </div>
-          {/* Step 0 — Email */}
-          {step === 0 && (
-            <div className="animate-fadeIn">
-              <div className="mb-8">
-                <p className="text-white/60 text-sm font-medium tracking-widest uppercase mb-1">Étape 1 sur 4</p>
-                <h2 className="text-white text-3xl font-bold">Bienvenue 👋</h2>
-                <p className="text-white/50 mt-1">Commençons par votre email</p>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-white/70 text-sm font-medium block mb-2">Adresse email</label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={e => update('email', e.target.value)}
-                    placeholder="vous@exemple.com"
-                    className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-4 text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all"
-                  />
-                </div>
-                {error && <p className="text-red-400 text-sm">{error}</p>}
-                <button
-                  onClick={next}
-                  className="w-full bg-gradient-to-r from-[#e83b14] to-[#ff6f3d] text-white font-bold py-4 rounded-2xl hover:opacity-90 transition-all hover:scale-[1.02] active:scale-[0.98]"
-                >
-                  Continuer →
-                </button>
-                <p className="text-center text-white/40 text-sm">
-                  Déjà un compte?{' '}
-                  <button onClick={() => router.push('/')} className="text-white/70 hover:text-white underline">
-                    Se connecter
-                  </button>
+        <div style={{ width: '100%', maxWidth: '400px' }}>
+
+          {/* ── Animated card ── */}
+          <div key={step} style={slideAnim}>
+
+            {/* Steps 0–3 */}
+            {step < 4 && (
+              <>
+                {/* Step label */}
+                <p style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 700,
+                  letterSpacing: '0.08em',
+                  textTransform: 'uppercase',
+                  color: 'var(--color-dark-text-3)',
+                  margin: '0 0 var(--space-3)',
+                }}>
+                  Étape {step + 1} sur 4
                 </p>
-              </div>
-            </div>
-          )}
 
-          {/* Step 1 — Nom */}
-          {step === 1 && (
-            <div className="animate-fadeIn">
-              <div className="mb-8">
-                <p className="text-white/60 text-sm font-medium tracking-widest uppercase mb-1">Étape 2 sur 4</p>
-                <h2 className="text-white text-3xl font-bold">Qui êtes-vous? 🙋</h2>
-                <p className="text-white/50 mt-1">Vos informations personnelles</p>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-white/70 text-sm font-medium block mb-2">Nom complet</label>
-                  <input
-                    type="text"
-                    value={form.nom_complet}
-                    onChange={e => update('nom_complet', e.target.value)}
-                    placeholder="Prénom Nom"
-                    className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-4 text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="text-white/70 text-sm font-medium block mb-2">Téléphone <span className="text-white/30">(optionnel)</span></label>
-                  <input
-                    type="tel"
-                    value={form.telephone}
-                    onChange={e => update('telephone', e.target.value)}
-                    placeholder="514-000-0000"
-                    className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-4 text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all"
-                  />
-                </div>
-                {error && <p className="text-red-400 text-sm">{error}</p>}
-                <div className="flex gap-3">
-                  <button onClick={back} className="flex-1 bg-white/10 border border-white/20 text-white font-bold py-4 rounded-2xl hover:bg-white/20 transition-all">
-                    ← Retour
-                  </button>
-                  <button onClick={next} className="flex-1 bg-gradient-to-r from-[#e83b14] to-[#ff6f3d] text-white font-bold py-4 rounded-2xl hover:opacity-90 transition-all hover:scale-[1.02]">
-                    Continuer →
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+                {/* Heading */}
+                <h2 style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: 'var(--text-2xl)',
+                  color: 'var(--color-dark-text)',
+                  margin: '0 0 var(--space-2)',
+                  letterSpacing: '-0.02em',
+                  lineHeight: 'var(--leading-tight)',
+                }}>
+                  {STEP_DEFS[step].title}
+                </h2>
+                <p style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-dark-text-2)',
+                  lineHeight: 'var(--leading-normal)',
+                  margin: '0 0 var(--space-12)',
+                }}>
+                  {STEP_DEFS[step].sub}
+                </p>
 
-          {/* Step 2 — Entreprise */}
-          {step === 2 && (
-            <div className="animate-fadeIn">
-              <div className="mb-8">
-                <p className="text-white/60 text-sm font-medium tracking-widest uppercase mb-1">Étape 3 sur 4</p>
-                <h2 className="text-white text-3xl font-bold">Votre entreprise 🏢</h2>
-                <p className="text-white/50 mt-1">Pour les travailleurs autonomes, inscrivez votre nom</p>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-white/70 text-sm font-medium block mb-2">Nom d'entreprise</label>
-                  <input
-                    type="text"
-                    value={form.nom_entreprise}
-                    onChange={e => update('nom_entreprise', e.target.value)}
-                    placeholder="Mon Entreprise Inc."
-                    className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-4 text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all"
-                  />
-                </div>
-                {error && <p className="text-red-400 text-sm">{error}</p>}
-                <div className="flex gap-3">
-                  <button onClick={back} className="flex-1 bg-white/10 border border-white/20 text-white font-bold py-4 rounded-2xl hover:bg-white/20 transition-all">
-                    ← Retour
-                  </button>
-                  <button onClick={next} className="flex-1 bg-gradient-to-r from-[#e83b14] to-[#ff6f3d] text-white font-bold py-4 rounded-2xl hover:opacity-90 transition-all hover:scale-[1.02]">
-                    Continuer →
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+                {/* Error */}
+                {error && (
+                  <div role="alert" style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: 'var(--space-2)',
+                    background: 'oklch(54% 0.20 25 / 0.12)',
+                    border: '1px solid oklch(54% 0.20 25 / 0.35)',
+                    color: 'oklch(78% 0.10 25)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: 'var(--space-3) var(--space-4)',
+                    marginBottom: 'var(--space-4)',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 'var(--text-sm)',
+                    lineHeight: 'var(--leading-normal)',
+                  }}>
+                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px', flexShrink: 0, marginTop: '1px' }}>
+                      error
+                    </span>
+                    {error}
+                  </div>
+                )}
 
-          {/* Step 3 — Mot de passe */}
-          {step === 3 && (
-            <div className="animate-fadeIn">
-              <div className="mb-8">
-                <p className="text-white/60 text-sm font-medium tracking-widest uppercase mb-1">Étape 4 sur 4</p>
-                <h2 className="text-white text-3xl font-bold">Sécurité 🔒</h2>
-                <p className="text-white/50 mt-1">Choisissez un mot de passe fort</p>
-              </div>
-              <div className="space-y-4">
-                <div>
-                  <label className="text-white/70 text-sm font-medium block mb-2">Mot de passe</label>
-                  <input
-                    type="password"
-                    value={form.password}
-                    onChange={e => update('password', e.target.value)}
-                    placeholder="Min. 8 caractères"
-                    className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-4 text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="text-white/70 text-sm font-medium block mb-2">Confirmer le mot de passe</label>
-                  <input
-                    type="password"
-                    value={form.password2}
-                    onChange={e => update('password2', e.target.value)}
-                    placeholder="Répétez le mot de passe"
-                    className="w-full bg-white/10 border border-white/20 rounded-2xl px-4 py-4 text-white placeholder-white/30 focus:outline-none focus:border-white/50 focus:bg-white/15 transition-all"
-                  />
-                </div>
-                <p className="text-white/30 text-xs">Doit contenir: majuscule, minuscule, chiffre et caractère spécial (!@#$%^&*)</p>
-                {error && <p className="text-red-400 text-sm">{error}</p>}
-                <div className="flex gap-3">
-                  <button onClick={back} className="flex-1 bg-white/10 border border-white/20 text-white font-bold py-4 rounded-2xl hover:bg-white/20 transition-all">
-                    ← Retour
-                  </button>
-                  <button
-                    onClick={submit}
-                    disabled={loading}
-                    className="flex-1 bg-gradient-to-r from-[#e83b14] to-[#ff6f3d] text-white font-bold py-4 rounded-2xl hover:opacity-90 transition-all hover:scale-[1.02] disabled:opacity-50"
-                  >
-                    {loading ? 'Création...' : 'Créer mon compte'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+                {/* ── Step 0: Email ── */}
+                {step === 0 && (
+                  <form onSubmit={e => { e.preventDefault(); next(); }} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                    <div>
+                      <label htmlFor="email" style={labelStyle}>Adresse email</label>
+                      <input
+                        ref={firstInputRef}
+                        id="email"
+                        type="email"
+                        value={form.email}
+                        onChange={e => set('email', e.target.value)}
+                        placeholder="vous@exemple.com"
+                        autoComplete="email"
+                        required
+                        style={inputStyle}
+                        onFocus={e  => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                        onBlur={e   => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
+                      />
+                    </div>
+                    <Btn type="submit">Continuer</Btn>
+                    <p style={{ textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-dark-text-3)', margin: 0 }}>
+                      Déjà un compte?{' '}
+                      <InlineLink onClick={() => router.push('/')}>Se connecter</InlineLink>
+                    </p>
+                  </form>
+                )}
 
-          {/* Step 4 — Succès */}
-          {step === 4 && (
-            <div className="animate-fadeIn text-center py-8">
-              <div className="text-6xl mb-6">🎉</div>
-              <h2 className="text-white text-3xl font-bold mb-3">Compte créé!</h2>
-              <p className="text-white/60 mb-8">Vérifiez votre email pour confirmer votre compte avant de vous connecter.</p>
-              <button
-                onClick={() => router.push('/')}
-                className="w-full bg-gradient-to-r from-[#e83b14] to-[#ff6f3d] text-white font-bold py-4 rounded-2xl hover:opacity-90 transition-all"
-              >
-                Se connecter →
-              </button>
-            </div>
-          )}
+                {/* ── Step 1: Identité ── */}
+                {step === 1 && (
+                  <form onSubmit={e => { e.preventDefault(); next(); }} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                    <div>
+                      <label htmlFor="nom" style={labelStyle}>Nom complet</label>
+                      <input
+                        ref={firstInputRef}
+                        id="nom"
+                        type="text"
+                        value={form.nom_complet}
+                        onChange={e => set('nom_complet', e.target.value)}
+                        placeholder="Prénom Nom"
+                        autoComplete="name"
+                        required
+                        style={inputStyle}
+                        onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                        onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
+                      />
+                    </div>
+                    <div>
+                      <label htmlFor="tel" style={labelStyle}>
+                        Téléphone{' '}
+                        <span style={{ fontWeight: 400, color: 'var(--color-dark-text-3)' }}>(optionnel)</span>
+                      </label>
+                      <input
+                        id="tel"
+                        type="tel"
+                        value={form.telephone}
+                        onChange={e => set('telephone', e.target.value)}
+                        placeholder="514 000-0000"
+                        autoComplete="tel"
+                        style={inputStyle}
+                        onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                        onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
+                      />
+                    </div>
+                    <BtnRow onBack={back}><Btn type="submit">Continuer</Btn></BtnRow>
+                  </form>
+                )}
+
+                {/* ── Step 2: Entreprise ── */}
+                {step === 2 && (
+                  <form onSubmit={e => { e.preventDefault(); next(); }} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                    <div>
+                      <label htmlFor="entreprise" style={labelStyle}>Nom d'entreprise</label>
+                      <input
+                        ref={firstInputRef}
+                        id="entreprise"
+                        type="text"
+                        value={form.nom_entreprise}
+                        onChange={e => set('nom_entreprise', e.target.value)}
+                        placeholder="Mon Entreprise Inc."
+                        autoComplete="organization"
+                        required
+                        style={inputStyle}
+                        onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                        onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
+                      />
+                    </div>
+                    <BtnRow onBack={back}><Btn type="submit">Continuer</Btn></BtnRow>
+                  </form>
+                )}
+
+                {/* ── Step 3: Mot de passe ── */}
+                {step === 3 && (
+                  <form onSubmit={e => { e.preventDefault(); submit(); }} aria-busy={loading} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-6)' }}>
+                    <div>
+                      <label htmlFor="pw" style={labelStyle}>Mot de passe</label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          ref={firstInputRef}
+                          id="pw"
+                          type={showPw ? 'text' : 'password'}
+                          value={form.password}
+                          onChange={e => set('password', e.target.value)}
+                          placeholder="Min. 8 caractères"
+                          autoComplete="new-password"
+                          style={{ ...inputStyle, paddingRight: 'var(--space-12)' }}
+                          onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                          onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
+                        />
+                        <ToggleVis show={showPw} onClick={() => setShowPw(s => !s)} />
+                      </div>
+
+                      {/* Strength indicator */}
+                      {form.password.length > 0 && (
+                        <div style={{ marginTop: 'var(--space-2)' }}>
+                          <div style={{ display: 'flex', gap: 'var(--space-1)', marginBottom: 'var(--space-1)' }}>
+                            {[1,2,3,4].map(n => (
+                              <div key={n} style={{
+                                height: '3px',
+                                flex: 1,
+                                borderRadius: '2px',
+                                background: pwStrength >= n ? strengthColor[pwStrength] : 'var(--color-dark-border)',
+                                transition: 'background var(--duration-base)',
+                              }} />
+                            ))}
+                          </div>
+                          <p style={{
+                            fontFamily: 'var(--font-body)',
+                            fontSize: 'var(--text-xs)',
+                            color: strengthColor[pwStrength],
+                            margin: 0,
+                            transition: 'color var(--duration-base)',
+                          }}>
+                            {strengthLabel[pwStrength]}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div>
+                      <label htmlFor="pw2" style={labelStyle}>Confirmer le mot de passe</label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          id="pw2"
+                          type={showPw2 ? 'text' : 'password'}
+                          value={form.password2}
+                          onChange={e => set('password2', e.target.value)}
+                          placeholder="Répétez le mot de passe"
+                          autoComplete="new-password"
+                          style={{ ...inputStyle, paddingRight: 'var(--space-12)' }}
+                          onFocus={e => { e.target.style.borderColor = 'var(--color-brand)'; e.target.style.background = 'oklch(24% 0.018 33)' }}
+                          onBlur={e  => { e.target.style.borderColor = 'var(--color-dark-border)'; e.target.style.background = 'var(--color-dark-2)' }}
+                        />
+                        <ToggleVis show={showPw2} onClick={() => setShowPw2(s => !s)} />
+                      </div>
+                    </div>
+
+                    <BtnRow onBack={back} disabled={loading}>
+                      <Btn type="submit" loading={loading}>Créer mon compte</Btn>
+                    </BtnRow>
+                  </form>
+                )}
+              </>
+            )}
+
+            {/* ── Step 4: Succès ── */}
+            {step === 4 && (
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '50%',
+                  background: 'oklch(56% 0.16 145 / 0.15)',
+                  border: '1px solid oklch(56% 0.16 145 / 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto var(--space-6)',
+                }}>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '32px', color: 'var(--color-success)' }}>
+                    check
+                  </span>
+                </div>
+                <h2 style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 800,
+                  fontSize: 'var(--text-2xl)',
+                  color: 'var(--color-dark-text)',
+                  margin: '0 0 var(--space-3)',
+                  letterSpacing: '-0.02em',
+                  lineHeight: 'var(--leading-tight)',
+                }}>
+                  Compte créé.
+                </h2>
+                <p style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: 'var(--text-sm)',
+                  color: 'var(--color-dark-text-2)',
+                  margin: '0 0 var(--space-8)',
+                  lineHeight: 'var(--leading-relaxed)',
+                }}>
+                  Vérifiez votre email pour confirmer votre compte avant de vous connecter.
+                </p>
+                <Btn onClick={() => router.push('/')}>Se connecter</Btn>
+              </div>
+            )}
+
+          </div>
+          {/* end animated card */}
 
         </div>
       </div>
+
     </main>
+  );
+}
+
+/* ── Small shared sub-components ── */
+
+function Btn({ children, type = 'button', disabled, loading, onClick }: {
+  children: React.ReactNode;
+  type?: 'button' | 'submit';
+  disabled?: boolean;
+  loading?: boolean;
+  onClick?: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const inactive = disabled || loading;
+  return (
+    <button
+      type={type}
+      disabled={inactive}
+      onClick={onClick}
+      style={{
+        fontFamily: 'var(--font-display)',
+        fontWeight: 700,
+        fontSize: 'var(--text-base)',
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase',
+        color: 'white',
+        background: inactive ? 'var(--color-dark-3)' : hovered ? 'var(--color-brand-hover)' : 'var(--color-brand)',
+        border: 'none',
+        borderRadius: 'var(--radius-md)',
+        padding: 'var(--space-4)',
+        cursor: inactive ? 'not-allowed' : 'pointer',
+        width: '100%',
+        minHeight: '52px',
+        transition: 'background var(--duration-fast)',
+        flex: 1,
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {loading ? (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'center' }}>
+          <span className="animate-spin" style={{
+            display: 'inline-block',
+            width: '16px',
+            height: '16px',
+            borderRadius: '50%',
+            border: '2px solid rgba(255,255,255,0.25)',
+            borderTopColor: 'white',
+            flexShrink: 0,
+          }} />
+          {children}
+        </span>
+      ) : children}
+    </button>
+  );
+}
+
+function BtnRow({ children, onBack, disabled }: { children: React.ReactNode; onBack: () => void; disabled?: boolean }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
+      <button
+        type="button"
+        onClick={onBack}
+        disabled={disabled}
+        style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: 'var(--text-sm)',
+          color: disabled ? 'var(--color-dark-text-3)' : hovered ? 'var(--color-dark-text)' : 'var(--color-dark-text-2)',
+          background: 'none',
+          border: `1px solid ${hovered && !disabled ? 'var(--color-dark-text-3)' : 'var(--color-dark-border)'}`,
+          borderRadius: 'var(--radius-md)',
+          padding: 'var(--space-3) var(--space-4)',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          minHeight: '48px',
+          transition: 'color var(--duration-fast), border-color var(--duration-fast)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-1)',
+          flexShrink: 0,
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+      >
+        <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>arrow_back</span>
+      </button>
+      {children}
+    </div>
+  );
+}
+
+function ToggleVis({ show, onClick }: { show: boolean; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={show ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+      style={{
+        position: 'absolute',
+        right: 'var(--space-3)',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        color: hovered ? 'var(--color-dark-text)' : 'var(--color-dark-text-3)',
+        display: 'flex',
+        alignItems: 'center',
+        padding: 'var(--space-2)',
+        minHeight: '44px',
+        transition: 'color var(--duration-fast)',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+        {show ? 'visibility_off' : 'visibility'}
+      </span>
+    </button>
+  );
+}
+
+function InlineLink({ children, onClick }: { children: React.ReactNode; onClick: () => void }) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      style={{
+        fontFamily: 'var(--font-body)',
+        fontSize: 'inherit',
+        color: hovered ? 'oklch(84% 0.13 32)' : 'oklch(72% 0.18 32)',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 0,
+        textDecoration: 'underline',
+        textUnderlineOffset: '3px',
+        textDecorationColor: hovered ? 'oklch(84% 0.13 32 / 0.5)' : 'oklch(72% 0.18 32 / 0.45)',
+        transition: 'color var(--duration-fast), text-decoration-color var(--duration-fast)',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      {children}
+    </button>
   );
 }

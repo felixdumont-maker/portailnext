@@ -1,0 +1,177 @@
+/* Les Belles Soeurs — Salon Template Kit
+   Palette base : crème / camel / brun foncé · serif éditorial + sans body
+   Variables surchargeables par template via inline style.
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Gloock:ital@0;1&family=Figtree:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --bs-cream:    oklch(99% 0.005 75);    /* off-white principal teinté chaud */
+  --bs-cream-2:  oklch(94% 0.010 72);    /* cream neutre */
+  --bs-peach:    oklch(93% 0.025 35);    /* pêche pâle */
+  --bs-blush:    oklch(87% 0.045 15);    /* rose poudré */
+  --bs-camel:    oklch(80% 0.095 52);    /* camel miel chaud — accent principal */
+  --bs-camel-d:  #f9d0ce;                 /* rose accent principal */
+  --bs-ink:      oklch(20% 0.022 30);    /* brun sombre chaud */
+  --bs-ink-2:    oklch(14% 0.016 30);    /* brun très foncé */
+  --bs-line:     color-mix(in oklch, var(--bs-ink) 18%, transparent);
+  --bs-line-soft:color-mix(in oklch, var(--bs-ink) 10%, transparent);
+
+  --bs-serif:    'Gloock', 'Times New Roman', serif;
+  --bs-sans:     'Figtree', system-ui, sans-serif;
+}
+
+.bs-stage {
+  width: 1080px;
+  height: 1080px;
+  position: relative;
+  overflow: hidden;
+  background: var(--bs-cream);
+  color: var(--bs-ink);
+  font-family: var(--bs-sans);
+  -webkit-font-smoothing: antialiased;
+}
+.bs-stage-9x16,
+.bs-stage.bs-stage--story {
+  width: 1080px;
+  height: 1920px;
+  position: relative;
+  overflow: hidden;
+  background: var(--bs-cream);
+  color: var(--bs-ink);
+  font-family: var(--bs-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* —— Type primitives ——————————————————————— */
+.bs-eyebrow {
+  font-family: var(--bs-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--bs-ink);
+  opacity: 0.72;
+}
+.bs-serif-display {
+  font-family: var(--bs-serif);
+  font-weight: 400;
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  color: var(--bs-ink);
+}
+.bs-serif-italic {
+  font-family: var(--bs-serif);
+  font-style: italic;
+  font-weight: 400;
+}
+.bs-body {
+  font-family: var(--bs-sans);
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--bs-ink);
+}
+.bs-meta {
+  font-family: var(--bs-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bs-ink);
+  opacity: 0.62;
+}
+
+/* —— Photo placeholder ——————————————————————— */
+.bs-photo {
+  position: relative;
+  background: linear-gradient(135deg, #fdeae3 0%, #f8cbca 100%);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bs-photo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent 0 14px,
+    rgba(255, 255, 255, 0.06) 14px 28px
+  );
+  pointer-events: none;
+}
+.bs-photo-label {
+  position: relative;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.75);
+  text-align: center;
+  z-index: 1;
+}
+.bs-photo img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* —— CTA pills / buttons ——————————————————————— */
+.bs-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  border: 1px solid var(--bs-ink);
+  border-radius: 999px;
+  font-family: var(--bs-sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bs-ink);
+  background: transparent;
+}
+.bs-pill-filled {
+  background: var(--bs-camel);
+  color: var(--bs-cream);
+  border-color: var(--bs-camel);
+}
+.bs-pill-dark {
+  background: var(--bs-ink);
+  color: var(--bs-cream);
+  border-color: var(--bs-ink);
+}
+
+/* —— Footer / signature ——————————————————————— */
+.bs-footer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: var(--bs-sans);
+  font-size: 12px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--bs-ink);
+  opacity: 0.7;
+}
+.bs-rule {
+  height: 1px;
+  background: var(--bs-line);
+  width: 100%;
+}
+.bs-rule-thin {
+  height: 1px;
+  background: var(--bs-line-soft);
+  width: 100%;
+}
+
+/* Polaroid-style frame */
+.bs-frame {
+  background: #fff;
+  padding: 16px 16px 24px;
+  box-shadow: 0 24px 60px rgba(61, 44, 32, 0.18), 0 6px 14px rgba(61,44,32,0.08);
+}
