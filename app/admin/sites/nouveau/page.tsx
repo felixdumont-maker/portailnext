@@ -73,10 +73,10 @@ const INITIAL: FormData = {
 function Label({ children, optional }: { children: React.ReactNode; optional?: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: var(--color-light-text-2) }}>
+      <label style={{ display: 'block', fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', color: 'var(--color-light-text-2)' }}>
         {children}
       </label>
-      {optional && <span style={{ fontSize: 'var(--text-xs)', color: var(--color-dark-text-2), textTransform: 'uppercase', letterSpacing: '0.05em' }}>Optionnel</span>}
+      {optional && <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-dark-text-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Optionnel</span>}
     </div>
   )
 }

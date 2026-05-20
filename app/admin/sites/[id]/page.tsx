@@ -39,7 +39,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; icon: string
   active:    { label: 'Prêt',         color: 'var(--color-success)', icon: 'check_circle'  },
   deployed:  { label: 'Déployé',      color: 'var(--color-info)', icon: 'cloud_done'    },
   error:     { label: 'Erreur',       color: 'var(--color-brand)', icon: 'error'         },
-  draft:     { label: 'Brouillon',    color: var(--color-dark-text-2), icon: 'draft'         },
+  draft:     { label: 'Brouillon',    color: 'var(--color-dark-text-2)', icon: 'draft'         },
 }
 
 function InfoRow({ label, value, href }: { label: string; value?: string | null; href?: string }) {
@@ -215,7 +215,7 @@ export default function SiteDetailPage() {
   if (loading) return <p style={{ color: 'var(--color-light-text-3)', fontSize: 'var(--text-sm)' }}>Chargement…</p>
   if (!site) return <p style={{ color: 'var(--color-light-text-3)', fontSize: 'var(--text-sm)' }}>Site introuvable.</p>
 
-  const st = STATUS_CONFIG[site.status] ?? { label: site.status, color: var(--color-dark-text-2), icon: 'info' }
+  const st = STATUS_CONFIG[site.status] ?? { label: site.status, color: 'var(--color-dark-text-2)', icon: 'info' }
   const isReservation = site.template === 'reservation'
 
   return (
@@ -306,7 +306,7 @@ export default function SiteDetailPage() {
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: var(--color-light-text-2) }}>
+                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-light-text-2)' }}>
                     URL du site
                   </label>
                   <input
@@ -318,7 +318,7 @@ export default function SiteDetailPage() {
                   />
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: var(--color-light-text-2) }}>
+                  <label style={{ fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-light-text-2)' }}>
                     Clé Resend
                   </label>
                   <input

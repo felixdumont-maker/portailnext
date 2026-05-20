@@ -63,7 +63,7 @@ export default function Profile() {
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh' }}>
-      <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: var(--color-dark-text-2), letterSpacing: '0.1em' }}>CHARGEMENT...</div>
+      <div style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'var(--color-dark-text-2)', letterSpacing: '0.1em' }}>CHARGEMENT...</div>
     </div>
   );
 
@@ -84,13 +84,13 @@ export default function Profile() {
             {initiales(data.nom_complet)}
           </span>
         </div>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(3rem, 10vw, 5rem)', lineHeight: 1, color: var(--color-dark-1), marginBottom: '0.5rem' }}>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(3rem, 10vw, 5rem)', lineHeight: 1, color: 'var(--color-dark-1)', marginBottom: '0.5rem' }}>
           {data.nom_complet.toUpperCase()}
         </h1>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: var(--color-dark-text-2), textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '4px' }}>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-dark-text-2)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '4px' }}>
           {data.nom_entreprise}
         </p>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: var(--color-dark-text-2) }}>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)' }}>
           {data.email}
         </p>
       </header>
@@ -105,7 +105,7 @@ export default function Profile() {
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {data.projets.length === 0 ? (
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: var(--color-dark-text-2), fontStyle: 'italic' }}>Aucun projet pour le moment.</p>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', fontStyle: 'italic' }}>Aucun projet pour le moment.</p>
             ) : data.projets.map(projet => {
               const nomAffiche = projet.nom_projet.split(' — ')[1] || projet.nom_projet;
               const style = STATUS_PROJET[projet.statut] || { bg: 'var(--color-light-border)', text: 'var(--color-dark-text-2)' };
@@ -114,7 +114,7 @@ export default function Profile() {
                   style={{ background: 'var(--color-light-1)', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer', border: '1px solid transparent', transition: 'all 0.2s' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'white'; e.currentTarget.style.borderColor = 'var(--color-light-border-2)'; }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'var(--color-light-1)'; e.currentTarget.style.borderColor = 'transparent'; }}>
-                  <span style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: var(--color-dark-1) }}>{nomAffiche.toUpperCase()}</span>
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 500, color: 'var(--color-dark-1)' }}>{nomAffiche.toUpperCase()}</span>
                   <span style={{ background: style.bg, color: style.text, padding: '3px 12px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', marginLeft: '8px' }}>
                     {projet.statut}
                   </span>
@@ -130,18 +130,18 @@ export default function Profile() {
           </h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {data.factures.length === 0 ? (
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: var(--color-dark-text-2), fontStyle: 'italic' }}>Aucune facture pour le moment.</p>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', fontStyle: 'italic' }}>Aucune facture pour le moment.</p>
             ) : data.factures.map(facture => {
               const style = STATUS_FACTURE[facture.statut] || { bg: 'var(--color-light-border)', text: 'var(--color-dark-text-2)' };
               return (
                 <div key={facture.id}
                   style={{ background: 'white', borderRadius: '12px', padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--color-light-border-2)', gap: '12px' }}>
                   <div>
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: var(--color-dark-1) }}>{facture.numero}</div>
-                    <div style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: var(--color-dark-text-2), textTransform: 'uppercase', letterSpacing: '0.05em' }}>{facture.date_emission}</div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--color-dark-1)' }}>{facture.numero}</div>
+                    <div style={{ fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--color-dark-text-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{facture.date_emission}</div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 700, color: var(--color-dark-1) }}>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 700, color: 'var(--color-dark-1)' }}>
                       {(facture.total ?? 0).toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}
                     </span>
                     <span style={{ background: style.bg, color: style.text, padding: '2px 10px', borderRadius: '999px', fontSize: '10px', fontWeight: 700, fontFamily: 'var(--font-body)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>

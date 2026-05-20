@@ -17,8 +17,8 @@ const TYPOS = [
 ]
 
 const PALETTES = [
-  { id: 'feu', label: 'CONTRASTE NOIR & FEU', colors: [var(--color-dark-1), 'var(--color-brand-hover)', '#e6beb5', 'var(--color-light-1)'] },
-  { id: 'sable', label: 'SABLE & MINÉRAUX', colors: ['#4a4643', var(--color-dark-text-2), 'var(--color-light-border)', 'var(--color-light-1)'] },
+  { id: 'feu', label: 'CONTRASTE NOIR & FEU', colors: ['var(--color-dark-1)', 'var(--color-brand-hover)', '#e6beb5', 'var(--color-light-1)'] },
+  { id: 'sable', label: 'SABLE & MINÉRAUX', colors: ['#4a4643', 'var(--color-dark-text-2)', 'var(--color-light-border)', 'var(--color-light-1)'] },
 ]
 
 export default function DecisionBoardClientPage() {

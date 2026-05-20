@@ -256,7 +256,7 @@ export default function RoadmapDetailPage() {
                   <div className="space-y-2 mb-4">
                     {phase.todos.map(todo => (
                       <div key={todo.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${todo.est_coche ? 'bg-[#f0faf4]' : 'bg-[#f9f6f2]'}`}>
-                        <input type="checkbox" checked={!!todo.est_coche} onChange={() => toggleTodo(phase.id, todo.id)} className="accent-[var(--color-brand)] cursor-pointer" />
+                        <input type="checkbox" checked={!!todo.est_coche} onChange={() => toggleTodo(phase.id, todo.id)} className="accent-['var(--color-brand)'] cursor-pointer" />
                         <span className={`text-sm flex-1 ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-0)]'}`}>{todo.texte}</span>
                         <button onClick={() => deleteTodo(phase.id, todo.id)} className="text-[#ccc] hover:text-red-400 text-xs transition-colors">✕</button>
                       </div>

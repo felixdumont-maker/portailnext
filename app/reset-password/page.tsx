@@ -190,7 +190,7 @@ function ResetPasswordForm() {
                     type="checkbox"
                     checked={showPasswords}
                     onChange={e => setShowPasswords(e.target.checked)}
-                    className="w-4 h-4 rounded accent-[var(--color-brand)]"
+                    className="w-4 h-4 rounded accent-['var(--color-brand)']"
                   />
                   <span className="font-body text-[12px] text-[var(--color-dark-text-2)]">
                     Afficher les mots de passe

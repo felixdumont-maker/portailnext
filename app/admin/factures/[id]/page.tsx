@@ -258,7 +258,7 @@ export default function FactureDetailPage() {
                   <th className="pb-3 w-20" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-light-0)]">
+              <tbody className="divide-y divide-['var(--color-light-0)']">
                 {facture.lignes.map(l => (
                   <tr key={l.id} className="group">
                     {editingId === l.id ? (

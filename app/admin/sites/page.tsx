@@ -21,7 +21,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
   active:    { label: 'Prêt',         color: 'var(--color-success)' },
   deployed:  { label: 'Déployé',      color: 'var(--color-info)' },
   error:     { label: 'Erreur',       color: 'var(--color-brand)' },
-  draft:     { label: 'Brouillon',    color: var(--color-dark-text-2) },
+  draft:     { label: 'Brouillon',    color: 'var(--color-dark-text-2)' },
 }
 
 const TEMPLATE_LABEL: Record<string, string> = {
@@ -94,7 +94,7 @@ export default function AdminSitesPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
           {sites.map(site => {
-            const st = STATUS_LABEL[site.status] ?? { label: site.status, color: var(--color-dark-text-2) }
+            const st = STATUS_LABEL[site.status] ?? { label: site.status, color: 'var(--color-dark-text-2)' }
             return (
               <div
                 key={site.id}

@@ -78,7 +78,7 @@ export default function AdminPigistesPage() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--color-light-0)]">
+            <tbody className="divide-y divide-['var(--color-light-0)']">
               {pigistes.map(p => {
                 const initiales = p.nom_complet.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
                 return (

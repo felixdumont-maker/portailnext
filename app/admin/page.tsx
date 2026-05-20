@@ -268,7 +268,7 @@ export default function AdminDashboardPage() {
                             type="checkbox"
                             checked={!!todo.est_coche}
                             onChange={() => toggleTodo(todo.id)}
-                            className="mt-0.5 w-4 h-4 accent-[var(--color-brand)] cursor-pointer flex-shrink-0"
+                            className="mt-0.5 w-4 h-4 accent-['var(--color-brand)'] cursor-pointer flex-shrink-0"
                           />
                           <div className="flex-1 min-w-0">
                             <p className={`text-sm font-body font-semibold leading-snug truncate ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
@@ -315,7 +315,7 @@ export default function AdminDashboardPage() {
                           type="checkbox"
                           checked={false}
                           onChange={() => toggleVisuel(p.id)}
-                          className="mt-0.5 w-4 h-4 accent-[var(--color-brand)] cursor-pointer flex-shrink-0"
+                          className="mt-0.5 w-4 h-4 accent-['var(--color-brand)'] cursor-pointer flex-shrink-0"
                         />
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-body font-semibold text-[var(--color-dark-1)] leading-tight">{p.titre}</p>
@@ -399,7 +399,7 @@ export default function AdminDashboardPage() {
                         type="checkbox"
                         checked={true}
                         onChange={() => toggleTodo(todo.id)}
-                        className="w-4 h-4 accent-[var(--color-brand)] cursor-pointer flex-shrink-0"
+                        className="w-4 h-4 accent-['var(--color-brand)'] cursor-pointer flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-xs text-[var(--color-dark-text-2)] font-body line-through truncate">{todo.texte}</p>
@@ -466,7 +466,7 @@ export default function AdminDashboardPage() {
                   <th className="px-5 py-3" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-light-border-2)]/40">
+              <tbody className="divide-y divide-['var(--color-light-border-2)']/40">
                 {data.projets_recents.map(p => {
                   const style = STATUT_STYLES[p.statut] || STATUT_STYLES['Annulé']
                   return (

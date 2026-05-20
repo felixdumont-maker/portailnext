@@ -143,7 +143,7 @@ export default function AdminProjetsPage() {
                 <th className="px-6 py-4" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--color-light-0)]">
+            <tbody className="divide-y divide-['var(--color-light-0)']">
               {filtered.map(p => {
                 const style = STATUT_STYLES[p.statut] || { bg: 'var(--color-light-border)', text: 'var(--color-dark-text-2)' }
                 const nomService = p.nom_projet.split(' — ')[1] || p.nom_projet

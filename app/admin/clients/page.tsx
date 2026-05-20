@@ -109,7 +109,7 @@ export default function AdminClientsPage() {
                 <th className="px-6 py-4" />
               </tr>
             </thead>
-            <tbody className="divide-y divide-[var(--color-light-0)]">
+            <tbody className="divide-y divide-['var(--color-light-0)']">
               {filtered.map(client => {
                 const initiales = client.nom_complet
                   .split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)

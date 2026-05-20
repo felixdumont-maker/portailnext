@@ -79,7 +79,7 @@ function NouvelleFactureForm() {
       <style>{`
         @keyframes pg-fade-up { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
         @media (prefers-reduced-motion:reduce) { .pg-anim { animation:none !important } }
-        .pg-input:focus { border-color: var(--color-brand) !important; }
+        .pg-input:focus { border-color: 'var(--color-brand)' !important; }
       `}</style>
 
       <div className="pg-anim" style={{ maxWidth: '760px', animation: 'pg-fade-up 350ms var(--ease-out-quart) both' }}>

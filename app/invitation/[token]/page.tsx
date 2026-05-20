@@ -112,7 +112,7 @@ function InvitationForm() {
       minHeight: '100dvh',
       background: `radial-gradient(circle at 60% 20%, rgba(232,59,20,0.12) 0%, transparent 50%),
                    radial-gradient(circle at 0% 100%, rgba(61,6,0,0.35) 0%, transparent 50%),
-                   linear-gradient(160deg, var(--color-dark-0) 0%, var(--color-dark-0) 100%)`,
+                   linear-gradient(160deg, var(--color-dark-0) 0%, 'var(--color-dark-0)' 100%)`,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '2rem 1rem',
     }}>
@@ -132,7 +132,7 @@ function InvitationForm() {
   if (loadingInfo) return (
     <Wrapper>
       <div style={{ background: 'rgba(28,28,26,0.7)', backdropFilter: 'blur(40px)', borderRadius: '24px', padding: '3rem', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-body)', color: var(--color-dark-text-2), fontSize: '14px' }}>Vérification du lien...</p>
+        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-dark-text-2)', fontSize: '14px' }}>Vérification du lien...</p>
       </div>
     </Wrapper>
   )
@@ -145,7 +145,7 @@ function InvitationForm() {
           <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-error)', fontSize: '28px', fontVariationSettings: "'FILL' 1" }}>error</span>
         </div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'white', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>LIEN INVALIDE</h1>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: var(--color-dark-text-2), lineHeight: 1.6 }}>{tokenError}</p>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', lineHeight: 1.6 }}>{tokenError}</p>
         <a href="/" style={{ display: 'inline-block', marginTop: '1.5rem', fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 700, color: 'var(--color-dark-text-2)', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
           ← Retour à la connexion
         </a>
@@ -161,7 +161,7 @@ function InvitationForm() {
           <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-success)', fontSize: '32px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
         </div>
         <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.25rem', color: 'white', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>COMPTE ACTIVÉ !</h2>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: var(--color-dark-text-2), lineHeight: 1.6 }}>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', lineHeight: 1.6 }}>
           Bienvenue, {info?.nom}. Redirection vers votre portail...
         </p>
       </div>
@@ -193,7 +193,7 @@ function InvitationForm() {
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.25rem', color: 'white', letterSpacing: '0.1em', lineHeight: 1, marginBottom: '0.5rem' }}>
             BIENVENUE, {(info?.nom || '').toUpperCase().split(' ')[0]} !
           </h1>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: var(--color-dark-text-2), lineHeight: 1.6 }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', lineHeight: 1.6 }}>
             Complétez votre profil et créez votre mot de passe pour accéder à votre portail client.
           </p>
           <div style={{ marginTop: '0.75rem', padding: '8px 14px', background: 'rgba(232,59,20,0.08)', borderRadius: '8px', display: 'inline-block' }}>
@@ -204,7 +204,7 @@ function InvitationForm() {
         <form onSubmit={handleSubmit}>
 
           {/* ─ Section Entreprise ─ */}
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: var(--color-dark-text-2), letterSpacing: '0.15em', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--color-dark-text-2)', letterSpacing: '0.15em', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             VOTRE ENTREPRISE
           </p>
 
@@ -241,7 +241,7 @@ function InvitationForm() {
           </div>
 
           {/* ─ Section Mot de passe ─ */}
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: var(--color-dark-text-2), letterSpacing: '0.15em', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--color-dark-text-2)', letterSpacing: '0.15em', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             VOTRE MOT DE PASSE
           </p>
 
@@ -286,7 +286,7 @@ function InvitationForm() {
           {/* Toggle afficher */}
           <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', marginBottom: '1.5rem' }}>
             <input type="checkbox" checked={showPasswords} onChange={e => setShowPasswords(e.target.checked)} style={{ width: '16px', height: '16px', accentColor: 'var(--color-brand)' }} />
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: var(--color-dark-text-2) }}>Afficher les mots de passe</span>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--color-dark-text-2)' }}>Afficher les mots de passe</span>
           </label>
 
           {/* Erreur globale */}

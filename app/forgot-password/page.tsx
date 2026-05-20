@@ -74,7 +74,7 @@ export default function ForgotPassword() {
                 <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.25rem', color: 'white', letterSpacing: '0.1em', lineHeight: 1, marginBottom: '1rem' }}>
                   MOT DE PASSE OUBLIÉ
                 </h1>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: var(--color-dark-text-2), lineHeight: 1.6, maxWidth: '280px', margin: '0 auto' }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', lineHeight: 1.6, maxWidth: '280px', margin: '0 auto' }}>
                   Entrez votre email pour recevoir un lien de réinitialisation
                 </p>
               </div>
@@ -108,7 +108,7 @@ export default function ForgotPassword() {
             <div style={{ textAlign: 'center', padding: '1rem 0' }}>
               <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📬</div>
               <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'white', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>EMAIL ENVOYÉ</h2>
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: var(--color-dark-text-2), lineHeight: 1.6 }}>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', lineHeight: 1.6 }}>
                 Si un compte existe avec cette adresse, vous recevrez un lien sous peu.
               </p>
             </div>

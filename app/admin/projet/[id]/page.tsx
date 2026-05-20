@@ -576,7 +576,7 @@ export default function AdminProjetDetailPage() {
                       type="checkbox"
                       checked={item.is_required}
                       onChange={e => setEditedItems(prev => { const n = [...prev]; n[idx] = { ...n[idx], is_required: e.target.checked }; return n })}
-                      className="w-4 h-4 accent-[var(--color-brand)]"
+                      className="w-4 h-4 accent-['var(--color-brand)']"
                     />
                     Obligatoire
                   </label>
