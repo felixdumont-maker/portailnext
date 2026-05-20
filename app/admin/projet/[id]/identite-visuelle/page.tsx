@@ -149,8 +149,8 @@ function LogoCard({ variantKey, label, bg, dark, logo, projetId, onUploaded }: {
 
 // ─── Image upload zone (déclinaisons / mockups) ───────────────
 
-function ImageUploadZone({ endpoint, accept, onUploaded }: {
-  endpoint: string; accept: string; onUploaded: (asset: ImageAsset) => void
+function ImageUploadZone({ endpoint, accept, onUploaded, label: zoneLabel = 'Zone de dépôt de fichier' }: {
+  endpoint: string; accept: string; onUploaded: (asset: ImageAsset) => void; label?: string
 }) {
   const ref  = useRef<HTMLInputElement>(null)
   const [label,     setLabel]     = useState('')
@@ -177,6 +177,7 @@ function ImageUploadZone({ endpoint, accept, onUploaded }: {
       />
       <div
         role="button" tabIndex={0}
+        aria-label={uploading ? 'Téléversement en cours…' : zoneLabel}
         onClick={() => !uploading && ref.current?.click()}
         onKeyDown={e => e.key === 'Enter' && !uploading && ref.current?.click()}
         onDragOver={e => { e.preventDefault(); setDragOver(true) }}
@@ -456,6 +457,7 @@ export default function AdminIdentiteVisuellePage() {
         <ImageUploadZone
           endpoint={`/api/v1/admin/projet/${id}/identite/declinaison`}
           accept="image/png,image/jpeg,image/webp,image/svg+xml"
+          label="Ajouter une déclinaison de logo (PNG, SVG, JPG, WebP)"
           onUploaded={asset => setData(d => d ? { ...d, declinaisons: [...d.declinaisons, asset] } : d)}
         />
       </section>
@@ -477,6 +479,7 @@ export default function AdminIdentiteVisuellePage() {
         <ImageUploadZone
           endpoint={`/api/v1/admin/projet/${id}/identite/mockup`}
           accept="image/png,image/jpeg,image/webp"
+          label="Ajouter un mockup (PNG, JPG, WebP)"
           onUploaded={asset => setData(d => d ? { ...d, mockups: [...d.mockups, asset] } : d)}
         />
       </section>

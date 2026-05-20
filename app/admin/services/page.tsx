@@ -802,7 +802,7 @@ export default function AdminServicesPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl font-body text-sm font-bold flex items-center gap-3 ${toast.ok ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
+        <div role="status" aria-live="polite" aria-atomic="true" className={`fixed top-6 right-6 z-50 px-6 py-4 rounded-2xl shadow-2xl font-body text-sm font-bold flex items-center gap-3 ${toast.ok ? 'bg-emerald-600 text-white' : 'bg-red-600 text-white'}`}>
           <span aria-hidden="true" className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>
             {toast.ok ? 'check_circle' : 'error'}
           </span>
@@ -1097,7 +1097,7 @@ export default function AdminServicesPage() {
                 <p className="font-display text-[var(--text-xl)]">{services.length}</p>
                 <p className="font-body text-[10px] uppercase font-bold tracking-widest opacity-80">Services actifs</p>
               </div>
-              <div className="bg-white/10 backdrop-blur px-6 py-4 rounded-2xl">
+              <div className="bg-white/5 px-6 py-4 rounded-2xl">
                 <p className="font-display text-[var(--text-xl)]">
                   {services.reduce((s, sv) => s + sv.nb_items, 0)}
                 </p>
