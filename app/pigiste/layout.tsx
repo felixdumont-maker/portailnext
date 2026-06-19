@@ -6,7 +6,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 const navLinks = [
-  { label: 'Tableau de bord', icon: 'grid_view',    href: '/pigiste/dashboard' },
+  { label: 'Accueil',          icon: 'grid_view',    href: '/pigiste/dashboard' },
   { label: 'Mandats',         icon: 'work',          href: '/pigiste/mandats' },
   { label: 'Factures',        icon: 'receipt_long',  href: '/pigiste/factures' },
   { label: 'Outils',          icon: 'widgets',       href: '/pigiste/outils' },
@@ -21,6 +21,7 @@ export default function PigisteLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname()
   const [nom, setNom]           = useState('')
   const [dropdown, setDropdown] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     fetch('/api/v1/auth/me', { credentials: 'include' })
@@ -199,31 +200,66 @@ export default function PigisteLayout({ children }: { children: React.ReactNode 
         {navLinks.map(link => {
           const active = isLinkActive(link.href, pathname)
           return (
-            <Link
-              key={link.href}
-              href={link.href}
+            <Link key={link.href} href={link.href}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center',
                 gap: '2px', padding: 'var(--space-2) var(--space-3)',
                 color: active ? 'var(--color-brand)' : 'var(--color-dark-text-2)',
-                textDecoration: 'none',
-                transition: `color var(--duration-fast)`,
-                minHeight: '44px', justifyContent: 'center',
+                textDecoration: 'none', transition: `color var(--duration-fast)`,
+                minHeight: '44px', justifyContent: 'center', flex: 1,
               }}
             >
-              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px' }}>
-                {link.icon}
-              </span>
-              <span style={{
-                fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em',
-                textTransform: 'uppercase', fontFamily: 'var(--font-display)',
-              }}>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px' }}>{link.icon}</span>
+              <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>
                 {link.label}
               </span>
             </Link>
           )
         })}
+        {/* Compte */}
+        <button onClick={() => setMobileMenuOpen(true)}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+            padding: 'var(--space-2) var(--space-3)',
+            color: mobileMenuOpen ? 'var(--color-brand)' : 'var(--color-dark-text-2)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            minHeight: '44px', justifyContent: 'center', flex: 1,
+          }}
+        >
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px' }}>account_circle</span>
+          <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>Compte</span>
+        </button>
       </nav>
+
+      {/* ── Mobile compte drawer ── */}
+      {mobileMenuOpen && (
+        <div className="md:hidden" style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+          <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'var(--color-dark-1)',
+            borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
+            paddingBottom: 'calc(var(--space-4) + env(safe-area-inset-bottom, 0px))',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-3) 0 var(--space-2)' }}>
+              <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'var(--color-dark-border)' }} />
+            </div>
+            {nom && (
+              <div style={{ padding: 'var(--space-3) var(--space-5) var(--space-4)', borderBottom: '1px solid var(--color-dark-border)' }}>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)', color: 'white', margin: 0 }}>{nom}</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-dark-text-2)', margin: 0 }}>Pigiste</p>
+              </div>
+            )}
+            <div style={{ borderTop: '1px solid var(--color-dark-border)' }}>
+              <button onClick={logout}
+                style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-4) var(--space-5)', color: 'var(--color-brand)', background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)' }}>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '20px' }}>logout</span>
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <main id="main-content" style={{

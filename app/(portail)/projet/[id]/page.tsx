@@ -37,6 +37,7 @@ interface Projet {
   date_livraison_estimee: string | null;
   has_identite_visuelle: boolean;
   has_decision_board: boolean;
+  logo_fichiers: { id: number; filename: string }[];
   items: ChecklistItem[];
   dossiers_drive: DriveFolder[];
 }
@@ -71,7 +72,7 @@ function formatDate(iso: string) {
 
 // ─── Item type classifier ─────────────────────────────────────
 
-type ItemVariant = 'upload-pending' | 'video' | 'text-input' | 'members' | 'task' | 'done' | 'file-or-textarea' | 'color-palette';
+type ItemVariant = 'upload-pending' | 'video' | 'text-input' | 'members' | 'task' | 'done' | 'file-or-textarea' | 'color-palette' | 'review';
 
 function hasAnyMember(tv: string | null): boolean {
   if (!tv) return false;
@@ -95,6 +96,7 @@ function getVariant(item: ChecklistItem): ItemVariant {
   if (item.field_type === 'members') return hasAnyMember(item.text_value) ? 'done' : 'members';
   if (item.est_coche || item.file_path || item.text_value) return 'done';
   if (item.item_type === 'video' && item.video_url) return 'video';
+  if (item.field_type === 'review') return 'review';
   if (item.requires_file) return 'upload-pending';
   if (item.field_type === 'file-or-textarea') return 'file-or-textarea';
   if (['text', 'textarea', 'url'].includes(item.field_type || 'check')) return 'text-input';
@@ -400,6 +402,86 @@ function FileOrTextareaItem({
           onChange={e => handleChange(e.target.value)}
           placeholder="Ou saisissez le texte directement…"
           rows={3}
+          style={{ flex: 1, fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text)', background: 'transparent', border: 'none', outline: 'none', resize: 'none', padding: 0, paddingTop: 'var(--space-1)', minWidth: 0 }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function ReviewItem({
+  item,
+  uploading,
+  onUpload,
+  onSave,
+  onToggle,
+}: {
+  item: ChecklistItem;
+  uploading: boolean;
+  onUpload: (file: File) => void;
+  onSave: (value: string) => Promise<void>;
+  onToggle: () => void;
+}) {
+  const [value, setValue] = useState(item.text_value || '');
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleChange = (v: string) => {
+    setValue(v);
+    setSaved(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(async () => {
+      setSaving(true);
+      await onSave(v);
+      setSaving(false);
+      setSaved(true);
+    }, 900);
+  };
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
+      padding: 'var(--space-4) var(--space-6)',
+      background: 'var(--color-light-2)', borderRadius: 'var(--radius-md)',
+      border: '1px solid var(--color-light-border)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flex: 1, minWidth: 0, cursor: 'pointer' }}>
+          <input type="checkbox" checked={item.est_coche} onChange={onToggle}
+            style={{ width: '20px', height: '20px', accentColor: 'var(--color-brand)', cursor: 'pointer', flexShrink: 0 }} />
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 600, color: 'var(--color-light-text)' }}>
+            {item.nom_item}
+          </span>
+        </label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
+          {saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-light-text-3)', animation: 'spin 1s linear infinite' }}>progress_activity</span>}
+          {saved && !saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-success)' }}>check_circle</span>}
+          <label style={{
+            display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)',
+            padding: 'var(--space-1) var(--space-3)',
+            background: uploading ? 'var(--color-light-text-3)' : 'var(--color-light-0)',
+            border: '1px solid var(--color-light-border-2)',
+            color: 'var(--color-light-text-2)', borderRadius: 'var(--radius-full)',
+            fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
+            textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+            cursor: uploading ? 'default' : 'pointer', minHeight: '36px', whiteSpace: 'nowrap' as const,
+          }}>
+            {uploading
+              ? <><span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '12px', animation: 'spin 1s linear infinite' }}>progress_activity</span>Envoi…</>
+              : <><span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '12px' }}>attach_file</span>Fichier</>
+            }
+            <input type="file" accept="image/*,.pdf,.doc,.docx" style={{ display: 'none' }} disabled={uploading}
+              onChange={e => { if (e.target.files?.[0]) onUpload(e.target.files[0]); }} />
+          </label>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-light-0)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-light-border)', minHeight: '56px' }}>
+        <textarea
+          value={value}
+          onChange={e => handleChange(e.target.value)}
+          placeholder="Rien à signaler ? Cochez la case. Sinon, décrivez ici ce qui doit changer (ou joignez une image)…"
+          rows={2}
           style={{ flex: 1, fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text)', background: 'transparent', border: 'none', outline: 'none', resize: 'none', padding: 0, paddingTop: 'var(--space-1)', minWidth: 0 }}
         />
       </div>
@@ -889,8 +971,29 @@ export default function ProjetDetail() {
   const doneItems = projet.items.filter(i => getVariant(i) === 'done');
   const total = projet.items.length;
   const done = doneItems.length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  const allDone = total > 0 && pct === 100;
+
+  // Progression combinée : pipeline (étape) + checklist
+  const STATUT_BASE: Record<string, number> = {
+    'Documents à donner':        0,   // checklist drive cette étape
+    'En attente de rendez-vous': 25,
+    'Documents reçus':           40,
+    'Travaux en cours':          60,
+    'En révision':               80,
+    'Complété':                  100,
+    'Travaux terminés':          90,
+    'Annulé':                    0,
+  };
+  const statut = projet.statut;
+  const basePct = STATUT_BASE[statut] ?? 0;
+  const checklistPct = total > 0 ? Math.round((done / total) * 100) : 0;
+  // Pendant "Documents à donner", la barre reflète la checklist (max 35%)
+  // Pour les autres étapes, le statut est la source principale + bonus checklist
+  const pct = statut === 'Complété'
+    ? 100
+    : statut === 'Documents à donner'
+      ? Math.max(Math.round(checklistPct * 0.35), total > 0 ? 5 : 0)
+      : Math.min(basePct + (total > 0 ? Math.round(checklistPct * 0.15) : 0), 99);
+  const allDone = pct === 100;
 
   // ── Page ───────────────────────────────────────────────────
 
@@ -1020,6 +1123,11 @@ export default function ProjetDetail() {
                 <FileOrTextareaItem key={item.id} item={item} uploading={uploading === item.id}
                   onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)} />
               );
+              if (variant === 'review') return (
+                <ReviewItem key={item.id} item={item} uploading={uploading === item.id}
+                  onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)}
+                  onToggle={() => toggleItem(item.id)} />
+              );
               if (variant === 'members') return (
                 <MembersItem key={item.id} item={item} onSave={v => saveText(item.id, v)} />
               );
@@ -1095,6 +1203,10 @@ export default function ProjetDetail() {
                 } else if (item.field_type === 'file-or-textarea') {
                   editComponent = <FileOrTextareaItem item={item} uploading={uploading === item.id}
                     onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)} />;
+                } else if (item.field_type === 'review') {
+                  editComponent = <ReviewItem item={item} uploading={uploading === item.id}
+                    onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)}
+                    onToggle={() => toggleItem(item.id)} />;
                 } else if (['text', 'textarea', 'url'].includes(item.field_type || '')) {
                   editComponent = <TextInputItem item={item} onSave={v => saveText(item.id, v)} />;
                 } else if (item.requires_file) {
@@ -1205,6 +1317,28 @@ export default function ProjetDetail() {
             Voir dans Google Drive
             <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--color-light-text-3)' }}>open_in_new</span>
           </a>
+        </div>
+      )}
+
+      {/* Logo vectorisé */}
+      {projet.logo_fichiers && projet.logo_fichiers.length > 0 && (
+        <div style={{ paddingTop: 'var(--space-4)', display: 'flex', flexWrap: 'wrap' as const, gap: 'var(--space-3)' }}>
+          {projet.logo_fichiers.map(f => (
+            <a key={f.id} href={`${API}/api/v1/projet/${id}/logo/${f.id}`} target="_blank" rel="noreferrer" style={{
+              display: 'inline-flex', alignItems: 'center', gap: 'var(--space-3)',
+              padding: 'var(--space-3) var(--space-6)', background: 'var(--color-light-2)',
+              border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-full)',
+              fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 600,
+              color: 'var(--color-light-text)', textDecoration: 'none', minHeight: '48px',
+              transition: `border-color var(--duration-fast), background var(--duration-fast)`,
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-light-border-2)'; e.currentTarget.style.background = 'var(--color-light-0)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-light-border)'; e.currentTarget.style.background = 'var(--color-light-2)'; }}
+            >
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px', color: 'var(--color-brand)' }}>download</span>
+              {f.filename}
+            </a>
+          ))}
         </div>
       )}
 

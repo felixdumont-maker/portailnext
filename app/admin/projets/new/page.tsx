@@ -93,6 +93,8 @@ export default function NouveauProjetPage() {
   const [heureReunion, setHeureReunion] = useState('');
   const [selectedExtras, setSelectedExtras] = useState<SelectedExtra[]>([]);
   const [deplacementKm, setDeplacementKm] = useState('');
+  const [facturer, setFacturer] = useState(true);
+  const [facturationMode, setFacturationMode] = useState<'deja_paye' | 'quickbooks' | 'forfait'>('deja_paye');
 
   const displayServices = services.filter(s => s.slug !== 'site-web-shopify');
   const shopifyServiceId = services.find(s => s.slug === 'site-web-shopify')?.id;
@@ -186,6 +188,7 @@ export default function NouveauProjetPage() {
             prix: e.catalogId === 'deplacement' ? deplacementPrix : e.prix,
             km: e.km,
           })),
+          facturation_mode: facturer ? null : facturationMode,
         }),
       });
       const data = await res.json();
@@ -524,6 +527,40 @@ export default function NouveauProjetPage() {
               </div>
             </>
           )}
+
+          <div className="h-px bg-[var(--color-light-0)] w-full" />
+
+          {/* Facturation */}
+          <div className="space-y-4">
+            <label className="block text-xs font-bold uppercase tracking-widest text-[var(--color-light-text-2)]">
+              Facturation
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer group">
+              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${facturer ? 'bg-[var(--color-brand)] border-[var(--color-brand)]' : 'border-[var(--color-light-border-2)] group-hover:border-[var(--color-brand)]'}`}>
+                {facturer && (
+                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </div>
+              <input type="checkbox" checked={facturer} onChange={e => setFacturer(e.target.checked)} className="sr-only" />
+              <span className="text-sm text-[var(--color-dark-3)]">Facturer au client</span>
+            </label>
+            {!facturer && (
+              <div className="space-y-2 pl-8">
+                <label className="block text-xs text-[var(--color-dark-text-2)] font-medium">Raison de non-facturation</label>
+                <select
+                  value={facturationMode}
+                  onChange={e => setFacturationMode(e.target.value as 'deja_paye' | 'quickbooks' | 'forfait')}
+                  className="w-full bg-[var(--color-light-0)] border-none rounded-lg px-5 py-3 text-[var(--color-dark-0)] focus:ring-2 focus:ring-[var(--color-brand)]/40 outline-none transition-all appearance-none text-sm"
+                >
+                  <option value="deja_paye">Déjà payé</option>
+                  <option value="quickbooks">QuickBooks</option>
+                  <option value="forfait">Forfait</option>
+                </select>
+              </div>
+            )}
+          </div>
 
           <div className="h-px bg-[var(--color-light-0)] w-full" />
 

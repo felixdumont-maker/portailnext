@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import CocktailOSVision from './CocktailOSVision';
+
+const TABS = [
+  { id: 'roadmaps', label: 'Roadmaps' },
+  { id: 'cocktailos', label: 'CocktailOS' },
+] as const;
 
 interface Roadmap {
   id: number;
@@ -13,6 +19,7 @@ interface Roadmap {
 
 export default function RoadmapsPage() {
   const router = useRouter();
+  const [tab, setTab] = useState<typeof TABS[number]['id']>('roadmaps');
   const [actives, setActives] = useState<Roadmap[]>([]);
   const [archivees, setArchivees] = useState<Roadmap[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,14 +55,33 @@ export default function RoadmapsPage() {
     }
   }
 
-  if (loading) return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="w-8 h-8 border-2 border-[var(--color-brand)] border-t-transparent rounded-full animate-spin" />
-    </div>
-  );
-
   return (
     <div className="max-w-4xl mx-auto px-6 pt-10 pb-32">
+
+      {/* Onglets */}
+      <div className="flex items-center gap-2 mb-12">
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`px-6 py-2.5 rounded-full text-xs font-bold tracking-widest uppercase transition-colors ${
+              tab === t.id
+                ? 'bg-[var(--color-brand)] text-white'
+                : 'bg-white text-[var(--color-dark-text-2)] border border-[var(--color-light-border-2)] hover:border-[var(--color-brand)]'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'roadmaps' && (
+        loading ? (
+          <div className="flex items-center justify-center py-32">
+            <div className="w-8 h-8 border-2 border-[var(--color-brand)] border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+        <>
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16">
@@ -141,6 +167,13 @@ export default function RoadmapsPage() {
           </div>
         </section>
       )}
+
+        </>
+        )
+      )}
+
+      {tab === 'cocktailos' && <CocktailOSVision />}
+
     </div>
   );
 }

@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+
+const API = process.env.NEXT_PUBLIC_API_URL || ''
 
 /* ─── Types ─────────────────────────────────────────────── */
-type Template = 'reservation' | 'sante'
+type Template = 'reservation' | 'vitrine'
 
 interface FormData {
   // Étape 1 — Base
@@ -14,7 +16,7 @@ interface FormData {
   resend_api_key: string
   // Étape 2 — Responsable + Textes
   owner_name: string
-  owner_title: string       // sante
+  owner_title: string       // vitrine
   owner_title_fr: string   // reservation
   owner_title_en: string
   tagline: string
@@ -24,6 +26,9 @@ interface FormData {
   description_fr: string
   description_en: string
   hero_style: string
+  theme_font_pair: string
+  theme_accent_color: string
+  theme_bg_color: string
   // Étape 3 — Coordonnées
   address: string
   city: string
@@ -53,19 +58,20 @@ interface FormData {
 
 /* ─── Valeurs par défaut ─────────────────────────────────── */
 const INITIAL: FormData = {
-  template: 'reservation',
+  template: 'vitrine',
   business_name: '', client_email: '', resend_api_key: '',
   owner_name: '', owner_title: '', owner_title_fr: '', owner_title_en: '',
   tagline: '', tagline_fr: '', tagline_en: '',
   description: '', description_fr: '', description_en: '',
   hero_style: 'A',
+  theme_font_pair: 'actuel', theme_accent_color: '#37596e', theme_bg_color: '#ece4d3',
   address: '', city: '', province: 'QC', postal_code: '',
   phone: '', email: '', acuity_url: '',
   instagram: '', facebook: '', linkedin: '',
   seo_meta_title: '', seo_meta_title_fr: '', seo_meta_title_en: '',
   seo_meta_description: '', seo_meta_description_fr: '', seo_meta_description_en: '',
   seo_keywords: '', seo_keywords_fr: '', seo_keywords_en: '',
-  seo_business_type: 'BeautySalon', seo_price_range: '$$',
+  seo_business_type: 'LocalBusiness', seo_price_range: '$$',
   seo_twitter_handle: '', site_url: '',
 }
 
@@ -178,15 +184,50 @@ function HeroStylePicker({ template, value, onChange }: { template: Template; va
 /* ─── Page principale ───────────────────────────────────── */
 export default function NouveauSitePage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromProjet = searchParams.get('from_projet')
+
   const [step, setStep]     = useState(1)
   const [form, setForm]     = useState<FormData>(INITIAL)
   const [loading, setLoading] = useState(false)
+  const [prefilling, setPrefilling] = useState(false)
   const [error, setError]   = useState('')
   const [createdId, setCreatedId] = useState<number | null>(null)
 
   const set = (key: keyof FormData) => (val: string) => setForm(f => ({ ...f, [key]: val }))
 
+  // Pré-remplir depuis le projet si from_projet est présent
+  useEffect(() => {
+    if (!fromProjet) return
+    setPrefilling(true)
+    fetch(`${API}/api/v1/admin/projet/${fromProjet}/site-prefill`, { credentials: 'include' })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (!data) return
+        setForm(f => ({
+          ...f,
+          business_name: data.business_name || f.business_name,
+          client_email:  data.client_email  || f.client_email,
+          email:         data.email         || f.email,
+          phone:         data.phone         || f.phone,
+          address:       data.address       || f.address,
+          city:          data.city          || f.city,
+          province:      data.province      || f.province,
+          postal_code:   data.postal_code   || f.postal_code,
+          description:   data.description   || f.description,
+          tagline:       data.tagline       || f.tagline,
+          owner_name:    data.owner_name    || f.owner_name,
+          owner_title:   data.owner_title   || f.owner_title,
+          instagram:     data.instagram     || f.instagram,
+          facebook:      data.facebook      || f.facebook,
+          linkedin:      data.linkedin      || f.linkedin,
+        }))
+      })
+      .finally(() => setPrefilling(false))
+  }, [fromProjet])
+
   const isReservation = form.template === 'reservation'
+  const isVitrine = form.template === 'vitrine'
 
   /* ─── Soumission ─────────────────────────────────────── */
   async function handleSubmit() {
@@ -272,6 +313,12 @@ export default function NouveauSitePage() {
         <p style={{ color: 'var(--color-light-text-3)', marginTop: 'var(--space-2)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)' }}>
           Étape {step} sur {STEPS.length} — {STEPS[step - 1]}
         </p>
+        {fromProjet && (
+          <div className="flex items-center gap-2 mt-3 px-4 py-2 bg-emerald-50 border border-emerald-200 rounded-lg text-xs font-bold text-emerald-700 w-fit" style={{ fontFamily: 'var(--font-body)' }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">auto_fix_high</span>
+            {prefilling ? 'Pré-remplissage en cours…' : `Données pré-remplies depuis le projet #${fromProjet}`}
+          </div>
+        )}
       </div>
 
       {/* Barre de progression */}
@@ -297,29 +344,29 @@ export default function NouveauSitePage() {
             {/* Choix du template */}
             <Field label="Template">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
-                {(['reservation', 'sante'] as Template[]).map(t => (
+                {([
+                  { id: 'vitrine',     icon: 'web',            label: 'Vitrine',     desc: 'Site présence web · toute entreprise' },
+                  { id: 'reservation', icon: 'event_available', label: 'Réservation', desc: 'Spa · Salon · Massothérapie · Bilingue' },
+                ] as { id: Template; icon: string; label: string; desc: string }[]).map(t => (
                   <button
-                    key={t}
+                    key={t.id}
                     type="button"
-                    onClick={() => {
-                      set('template')(t)
-                      setForm(f => ({ ...f, template: t, hero_style: t === 'reservation' ? 'A' : 'luxe', seo_business_type: t === 'reservation' ? 'BeautySalon' : 'Physician' }))
-                    }}
+                    onClick={() => setForm(f => ({ ...f, template: t.id, hero_style: t.id === 'reservation' ? 'A' : 'A' }))}
                     style={{
                       padding: 'var(--space-5)', borderRadius: 'var(--radius-md)',
-                      border: `2px solid ${form.template === t ? 'var(--color-brand)' : 'var(--color-light-border)'}`,
-                      background: form.template === t ? 'var(--color-error-bg)' : 'var(--color-light-2)',
+                      border: `2px solid ${form.template === t.id ? 'var(--color-brand)' : 'var(--color-light-border)'}`,
+                      background: form.template === t.id ? 'var(--color-error-bg)' : 'var(--color-light-2)',
                       cursor: 'pointer', transition: 'all var(--duration-fast)', textAlign: 'left',
                     }}
                   >
-                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 28, color: form.template === t ? 'var(--color-brand)' : 'var(--color-light-text-3)', display: 'block', marginBottom: 'var(--space-2)' }}>
-                      {t === 'reservation' ? 'spa' : 'local_hospital'}
+                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 28, color: form.template === t.id ? 'var(--color-brand)' : 'var(--color-light-text-3)', display: 'block', marginBottom: 'var(--space-2)' }}>
+                      {t.icon}
                     </span>
-                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)', color: form.template === t ? 'var(--color-brand)' : 'var(--color-light-text)', margin: '0 0 4px', textTransform: 'uppercase' }}>
-                      {t === 'reservation' ? 'Réservation' : 'Santé'}
+                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)', color: form.template === t.id ? 'var(--color-brand)' : 'var(--color-light-text)', margin: '0 0 4px', textTransform: 'uppercase' }}>
+                      {t.label}
                     </p>
                     <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: 0, fontFamily: 'var(--font-body)' }}>
-                      {t === 'reservation' ? 'Spa · Salon · Massothérapie' : 'Médecin · Dentiste · Chiro'}
+                      {t.desc}
                     </p>
                   </button>
                 ))}
@@ -389,7 +436,7 @@ export default function NouveauSitePage() {
             ) : (
               <>
                 <Field label="Accroche">
-                  <Input value={form.tagline} onChange={set('tagline')} placeholder="Votre santé, notre priorité" />
+                  <Input value={form.tagline} onChange={set('tagline')} placeholder="Votre accroche principale" />
                 </Field>
                 <Field label="Description">
                   <Textarea value={form.description} onChange={set('description')} placeholder="Description de la clinique..." rows={4} />
@@ -402,6 +449,49 @@ export default function NouveauSitePage() {
             <Field label="Style du hero">
               <HeroStylePicker template={form.template} value={form.hero_style} onChange={set('hero_style')} />
             </Field>
+
+            {!isReservation && (
+              <>
+                <Divider />
+
+                <Field label="Police">
+                  <select
+                    value={form.theme_font_pair}
+                    onChange={e => set('theme_font_pair')(e.target.value)}
+                    className="w-full bg-[var(--color-light-0)] border-none rounded-lg px-5 py-4 text-[var(--color-dark-0)] focus:ring-2 focus:ring-[var(--color-brand)]/40 outline-none"
+                    style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)' }}
+                  >
+                    <option value="actuel">Actuel (Spectral / Jost)</option>
+                    <option value="classique">Classique (Lora / Source Sans 3)</option>
+                    <option value="elegant">Élégant (Playfair Display / Inter)</option>
+                    <option value="moderne">Moderne (Poppins / Inter)</option>
+                    <option value="chaleureux">Chaleureux (Fraunces / Karla)</option>
+                    <option value="minimal">Minimal (Space Grotesk / Work Sans)</option>
+                    <option value="corporatif">Corporatif (Montserrat / Open Sans)</option>
+                    <option value="doux">Doux (Cormorant Garamond / Nunito)</option>
+                  </select>
+                </Field>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
+                  <Field label="Couleur d'accent">
+                    <input
+                      type="color"
+                      value={form.theme_accent_color}
+                      onChange={e => set('theme_accent_color')(e.target.value)}
+                      className="w-full h-14 bg-[var(--color-light-0)] border-none rounded-lg cursor-pointer"
+                    />
+                  </Field>
+                  <Field label="Couleur de fond">
+                    <input
+                      type="color"
+                      value={form.theme_bg_color}
+                      onChange={e => set('theme_bg_color')(e.target.value)}
+                      className="w-full h-14 bg-[var(--color-light-0)] border-none rounded-lg cursor-pointer"
+                    />
+                  </Field>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -512,22 +602,93 @@ export default function NouveauSitePage() {
                   className="w-full bg-[var(--color-light-0)] border-none rounded-lg px-5 py-4 text-[var(--color-dark-0)] focus:ring-2 focus:ring-[var(--color-brand)]/40 outline-none"
                   style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)' }}
                 >
-                  {isReservation ? (
-                    <>
-                      <option value="BeautySalon">Salon de beauté</option>
-                      <option value="HairSalon">Salon coiffure</option>
-                      <option value="MassageTherapist">Massothérapeute</option>
-                      <option value="SpaLocation">Spa</option>
-                      <option value="HealthAndBeautyBusiness">Santé & beauté</option>
-                    </>
-                  ) : (
-                    <>
-                      <option value="Physician">Médecin</option>
-                      <option value="Dentist">Dentiste</option>
-                      <option value="Chiropractor">Chiropraticien</option>
-                      <option value="MedicalClinic">Clinique médicale</option>
-                    </>
-                  )}
+                  <optgroup label="── Beauté & Bien-être">
+                    <option value="BeautySalon">Salon de beauté</option>
+                    <option value="HairSalon">Salon de coiffure</option>
+                    <option value="NailSalon">Salon d'ongles</option>
+                    <option value="MassageTherapist">Massothérapeute</option>
+                    <option value="SpaLocation">Spa</option>
+                    <option value="Tattooist">Tatoueur / Perceur</option>
+                    <option value="HealthAndBeautyBusiness">Santé & beauté (général)</option>
+                  </optgroup>
+                  <optgroup label="── Santé">
+                    <option value="Physician">Médecin</option>
+                    <option value="Dentist">Dentiste</option>
+                    <option value="Chiropractor">Chiropraticien</option>
+                    <option value="Optician">Optométriste / Opticien</option>
+                    <option value="Physiotherapist">Physiothérapeute</option>
+                    <option value="Psychologist">Psychologue / Thérapeute</option>
+                    <option value="MedicalClinic">Clinique médicale</option>
+                    <option value="Pharmacy">Pharmacie</option>
+                  </optgroup>
+                  <optgroup label="── Restauration & Alimentation">
+                    <option value="Restaurant">Restaurant</option>
+                    <option value="CafeOrCoffeeShop">Café</option>
+                    <option value="Bakery">Boulangerie / Pâtisserie</option>
+                    <option value="BarOrPub">Bar / Pub</option>
+                    <option value="FastFoodRestaurant">Restauration rapide</option>
+                    <option value="FoodEstablishment">Traiteur / Alimentation</option>
+                  </optgroup>
+                  <optgroup label="── Commerce & Détail">
+                    <option value="ClothingStore">Boutique vêtements</option>
+                    <option value="HomeGoodsStore">Maison & décoration</option>
+                    <option value="ElectronicsStore">Électronique</option>
+                    <option value="BookStore">Librairie</option>
+                    <option value="PetStore">Animalerie</option>
+                    <option value="GroceryStore">Épicerie / Dépanneur</option>
+                    <option value="Store">Commerce au détail (général)</option>
+                  </optgroup>
+                  <optgroup label="── Construction & Rénovation">
+                    <option value="GeneralContractor">Entrepreneur général</option>
+                    <option value="HVACBusiness">Chauffage / Climatisation / Plomberie</option>
+                    <option value="Electrician">Électricien</option>
+                    <option value="Plumber">Plombier</option>
+                    <option value="Painter">Peintre</option>
+                    <option value="RoofingContractor">Couvreur</option>
+                    <option value="Landscaper">Paysagiste / Entretien extérieur</option>
+                    <option value="HomeAndConstructionBusiness">Construction (général)</option>
+                  </optgroup>
+                  <optgroup label="── Nettoyage & Entretien">
+                    <option value="HouseCleaning">Entretien ménager / Nettoyage commercial</option>
+                    <option value="Laundry">Buanderie / Nettoyage à sec</option>
+                    <option value="AutomotiveBusiness">Entretien automobile</option>
+                  </optgroup>
+                  <optgroup label="── Services aux entreprises">
+                    <option value="AccountingService">Comptable / Fiscaliste</option>
+                    <option value="LegalService">Avocat / Notaire</option>
+                    <option value="FinancialService">Conseiller financier</option>
+                    <option value="InsuranceAgency">Assurances</option>
+                    <option value="MarketingAgency">Agence marketing / Com</option>
+                    <option value="ITService">Services informatiques / TI</option>
+                    <option value="ConsultingService">Consultant (général)</option>
+                    <option value="ProfessionalService">Services professionnels</option>
+                  </optgroup>
+                  <optgroup label="── Immobilier & Hébergement">
+                    <option value="RealEstateAgent">Agent immobilier</option>
+                    <option value="LodgingBusiness">Hébergement / Gîte</option>
+                    <option value="Hotel">Hôtel / Auberge</option>
+                  </optgroup>
+                  <optgroup label="── Arts, Médias & Événements">
+                    <option value="PhotographyStudio">Photographe / Vidéaste</option>
+                    <option value="MusicGroup">Musicien / Groupe</option>
+                    <option value="EventVenue">Salle d'événements</option>
+                    <option value="EntertainmentBusiness">Divertissement (général)</option>
+                    <option value="PerformingArts">Arts de la scène</option>
+                  </optgroup>
+                  <optgroup label="── Éducation & Formation">
+                    <option value="EducationalOrganization">École / Centre de formation</option>
+                    <option value="DayCare">Garderie / CPE</option>
+                    <option value="TutoringService">Tutorat / Cours privés</option>
+                  </optgroup>
+                  <optgroup label="── Fitness & Sport">
+                    <option value="GymOrHealthClub">Gym / Centre fitness</option>
+                    <option value="SportsClub">Club sportif</option>
+                    <option value="SportsActivityLocation">Studio yoga / Pilates / Danse</option>
+                  </optgroup>
+                  <optgroup label="── Autre">
+                    <option value="LocalBusiness">Entreprise locale (général)</option>
+                    <option value="Organization">Organisation / OBNL</option>
+                  </optgroup>
                 </select>
               </Field>
               <Field label="Gamme de prix">
@@ -555,8 +716,8 @@ export default function NouveauSitePage() {
                   Prêt à créer
                 </p>
                 <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-dark-text-2)', margin: 0, fontFamily: 'var(--font-body)' }}>
-                  Un repo GitHub <strong>site-{form.business_name ? form.business_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40) : '…'}</strong> sera créé,
-                  le projet Sanity initialisé et le client invité par email.
+                  Un repo GitHub <strong>site-{form.business_name ? form.business_name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '').slice(0, 40) : '…'}</strong> sera créé
+                  et le client invité par email dans Sanity.
                 </p>
               </div>
             </div>

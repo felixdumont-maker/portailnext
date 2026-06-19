@@ -26,7 +26,7 @@ const STATUS_LABEL: Record<string, { label: string; color: string }> = {
 
 const TEMPLATE_LABEL: Record<string, string> = {
   reservation: 'Réservation',
-  sante:       'Santé',
+  vitrine:     'Vitrine',
 }
 
 export default function AdminSitesPage() {
@@ -111,11 +111,11 @@ export default function AdminSitesPage() {
                 {/* Icône template */}
                 <div style={{
                   width: 40, height: 40, borderRadius: 'var(--radius-sm)',
-                  background: site.template === 'reservation' ? '#fdf2f8' : '#eff6ff',
+                  background: site.template === 'reservation' ? '#fdf2f8' : '#f0fdf4',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
-                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20, color: site.template === 'reservation' ? '#c026d3' : 'var(--color-info)' }}>
-                    {site.template === 'reservation' ? 'spa' : 'local_hospital'}
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 20, color: site.template === 'reservation' ? '#c026d3' : '#16a34a' }}>
+                    {site.template === 'reservation' ? 'event_available' : 'web'}
                   </span>
                 </div>
 

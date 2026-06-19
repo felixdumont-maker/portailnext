@@ -4,18 +4,156 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
+function ForceChangePasswordModal({ redirectTo }: { redirectTo: string }) {
+  const router = useRouter();
+  const [newPassword, setNewPassword]     = useState('');
+  const [confirm, setConfirm]             = useState('');
+  const [showNew, setShowNew]             = useState(false);
+  const [showConfirm, setShowConfirm]     = useState(false);
+  const [error, setError]                 = useState('');
+  const [loading, setLoading]             = useState(false);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (newPassword !== confirm) { setError('Les mots de passe ne correspondent pas.'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/v1/auth/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        router.push(redirectTo);
+      } else {
+        setError(data.error || 'Erreur lors du changement.');
+        setLoading(false);
+      }
+    } catch {
+      setError('Impossible de joindre le serveur.');
+      setLoading(false);
+    }
+  }
+
+  const inputStyle: React.CSSProperties = {
+    width: '100%', background: 'var(--color-dark-2)',
+    border: '1px solid var(--color-dark-border)', borderRadius: 'var(--radius-md)',
+    padding: '12px 14px', color: 'var(--color-dark-text)',
+    fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', outline: 'none',
+    boxSizing: 'border-box',
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 1000,
+      background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 'var(--space-4)',
+    }}>
+      <div style={{
+        background: 'var(--color-dark-1)', borderRadius: 'var(--radius-xl)',
+        border: '1px solid var(--color-dark-border)',
+        padding: 'var(--space-8)', width: '100%', maxWidth: '420px',
+        boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: 'var(--space-6)' }}>
+          <div style={{
+            width: '48px', height: '48px', borderRadius: '50%', margin: '0 auto var(--space-4)',
+            background: 'rgba(var(--color-brand-rgb), 0.12)',
+            border: '1px solid rgba(var(--color-brand-rgb), 0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span className="material-symbols-outlined" style={{ fontSize: '24px', color: 'var(--color-brand)', fontVariationSettings: "'FILL' 1" }}>lock_reset</span>
+          </div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-xl)', color: 'var(--color-dark-text)', margin: '0 0 var(--space-2)', letterSpacing: '-0.02em' }}>
+            Choisissez votre mot de passe
+          </h2>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-dark-text-2)', margin: 0, lineHeight: 'var(--leading-relaxed)' }}>
+            Votre compte utilise un mot de passe temporaire. Veuillez en choisir un nouveau pour continuer.
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showNew ? 'text' : 'password'}
+              value={newPassword}
+              onChange={e => setNewPassword(e.target.value)}
+              placeholder="Nouveau mot de passe"
+              required
+              autoFocus
+              style={{ ...inputStyle, paddingRight: '44px' }}
+            />
+            <button type="button" onClick={() => setShowNew(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-dark-text-2)', padding: 0 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{showNew ? 'visibility_off' : 'visibility'}</span>
+            </button>
+          </div>
+
+          <div style={{ position: 'relative' }}>
+            <input
+              type={showConfirm ? 'text' : 'password'}
+              value={confirm}
+              onChange={e => setConfirm(e.target.value)}
+              placeholder="Confirmer le mot de passe"
+              required
+              style={{ ...inputStyle, paddingRight: '44px' }}
+            />
+            <button type="button" onClick={() => setShowConfirm(v => !v)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-dark-text-2)', padding: 0 }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>{showConfirm ? 'visibility_off' : 'visibility'}</span>
+            </button>
+          </div>
+
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-dark-text-3)', margin: '0' }}>
+            Min. 8 caractères · majuscule · minuscule · chiffre · caractère spécial
+          </p>
+
+          {error && (
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-error)', margin: 0 }}>
+              {error}
+            </p>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !newPassword || !confirm}
+            style={{
+              marginTop: 'var(--space-2)',
+              minHeight: '52px', borderRadius: 'var(--radius-md)',
+              background: 'var(--color-brand)', color: 'white', border: 'none',
+              fontFamily: 'var(--font-display)', fontWeight: 700,
+              fontSize: 'var(--text-base)', letterSpacing: '0.06em', textTransform: 'uppercase',
+              cursor: loading || !newPassword || !confirm ? 'not-allowed' : 'pointer',
+              opacity: loading || !newPassword || !confirm ? 0.5 : 1,
+              transition: 'opacity var(--duration-fast)',
+            }}
+          >
+            {loading ? 'Enregistrement…' : 'Enregistrer et accéder au portail'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail]           = useState('');
-  const [password, setPassword]     = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError]           = useState('');
-  const [loading, setLoading]       = useState(false);
+  const [email, setEmail]                   = useState('');
+  const [password, setPassword]             = useState('');
+  const [showPassword, setShowPassword]     = useState(false);
+  const [error, setError]                   = useState('');
+  const [loading, setLoading]               = useState(false);
+  const [emailUnconfirmed, setEmailUnconfirmed] = useState(false);
+  const [resendStatus, setResendStatus]     = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [forceChangeRedirect, setForceChangeRedirect] = useState<string | null>(null);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setEmailUnconfirmed(false);
     try {
       const res  = await fetch('/api/v1/auth/login', {
         method: 'POST',
@@ -26,9 +164,16 @@ export default function LoginPage() {
       const data = await res.json();
       setLoading(false);
       if (data.success) {
-        if (data.user.role === 'pigiste') router.push('/pigiste/dashboard');
-        else router.push(data.user.is_admin ? '/admin' : '/dashboard');
+        const dest = data.user.role === 'pigiste' ? '/pigiste/dashboard' : (data.user.is_admin ? '/admin' : '/dashboard');
+        if (data.force_password_change) {
+          setForceChangeRedirect(dest);
+        } else {
+          router.push(dest);
+        }
       } else {
+        if (res.status === 403 && data.error?.toLowerCase().includes('confirmé')) {
+          setEmailUnconfirmed(true);
+        }
         setError(data.error || 'Identifiants incorrects.');
       }
     } catch {
@@ -37,12 +182,32 @@ export default function LoginPage() {
     }
   }
 
+  async function handleResendConfirmation() {
+    if (resendStatus !== 'idle') return;
+    setResendStatus('sending');
+    try {
+      await fetch('/api/v1/auth/resend-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email }),
+      });
+      setResendStatus('sent');
+    } catch {
+      setResendStatus('idle');
+    }
+  }
+
   return (
-    <main style={{
+    <>
+    {forceChangeRedirect && <ForceChangePasswordModal redirectTo={forceChangeRedirect} />}
+    <main id="main-content" style={{
       minHeight: '100dvh',
       display: 'flex',
       background: 'var(--color-dark-1)',
     }}>
+      {/* h1 sr-only pour la hiérarchie mobile (le panel gauche avec h1 est hidden md:flex) */}
+      <h1 className="sr-only">CocktailOS — Portail Client</h1>
 
       {/* ── Left panel — brand statement (desktop only) ── */}
       <div
@@ -186,7 +351,7 @@ export default function LoginPage() {
           {error && (
             <div role="alert" style={{
               display: 'flex',
-              alignItems: 'flex-start',
+              flexDirection: 'column',
               gap: 'var(--space-2)',
               background: 'var(--color-error-glow)',
               border: '1px solid var(--color-error-border)',
@@ -198,10 +363,37 @@ export default function LoginPage() {
               fontSize: 'var(--text-sm)',
               lineHeight: 'var(--leading-normal)',
             }}>
-              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px', flexShrink: 0, marginTop: '1px' }}>
-                error
-              </span>
-              {error}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px', flexShrink: 0, marginTop: '1px' }}>
+                  error
+                </span>
+                {error}
+              </div>
+              {emailUnconfirmed && (
+                <button
+                  type="button"
+                  onClick={handleResendConfirmation}
+                  disabled={resendStatus !== 'idle'}
+                  style={{
+                    marginTop: 'var(--space-1)',
+                    alignSelf: 'flex-start',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
+                    cursor: resendStatus !== 'idle' ? 'default' : 'pointer',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: 600,
+                    color: resendStatus === 'sent' ? 'var(--color-success)' : 'var(--color-brand-text-hover)',
+                    textDecoration: resendStatus === 'idle' ? 'underline' : 'none',
+                    textUnderlineOffset: '3px',
+                  }}
+                >
+                  {resendStatus === 'idle' && '→ Renvoyer le courriel de confirmation'}
+                  {resendStatus === 'sending' && 'Envoi en cours…'}
+                  {resendStatus === 'sent' && '✓ Courriel envoyé — vérifiez votre boîte'}
+                </button>
+              )}
             </div>
           )}
 
@@ -425,5 +617,6 @@ export default function LoginPage() {
       </div>
 
     </main>
+    </>
   );
 }

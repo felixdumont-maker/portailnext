@@ -42,9 +42,17 @@ function R08JoueurSemaine({ data = R08JoueurSemaine.defaults }) {
     colorVars['--font-body'] = `'${fonts.body}', system-ui, -apple-system, sans-serif`;
   }
 
+  // ── Multi-joueurs : une seule photo, plusieurs noms (ex. 2 joueurs du match) ──
+  const extraPlayers = (data.extraPlayers || []).filter(p => p && (p.firstName || p.lastName || p.number));
+  const playerList = [
+    { firstName: data.firstName, lastName: data.lastName, number: data.number, position: data.position },
+    ...extraPlayers,
+  ];
+  const multi = playerList.length > 1;
+
   const award    = data.awardType || 'offensif';
   const isMatch  = award === 'match';
-  const awardWho = isX ? 'JOUEUR'  : 'JOUEUSE';
+  const awardWho = (isX ? 'JOUEUR' : 'JOUEUSE') + (multi ? 'S' : '');
   const awardType = isMatch
     ? 'DU MATCH'
     : isX
@@ -135,8 +143,8 @@ function R08JoueurSemaine({ data = R08JoueurSemaine.defaults }) {
           borderRadius: 3,
         }}/>
 
-        {/* Numéro watermark — toujours centré dans le panneau */}
-        {data.number && (
+        {/* Numéro watermark — toujours centré dans le panneau (masqué en multi-joueurs) */}
+        {data.number && !multi && (
           <div style={{
             position: 'absolute',
             top: '50%', transform: 'translateY(-50%)',
@@ -200,46 +208,89 @@ function R08JoueurSemaine({ data = R08JoueurSemaine.defaults }) {
             )}
           </div>
 
-          {/* Nom */}
-          <div style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 64, lineHeight: 0.88,
-            letterSpacing: '0.02em', textTransform: 'uppercase',
-            textShadow: 'var(--shadow-press)',
-          }}>
-            {data.firstName}
-          </div>
-          <div style={{
-            fontFamily: 'var(--font-display)',
-            fontSize: 84, lineHeight: 0.86,
-            letterSpacing: '0.02em', textTransform: 'uppercase',
-            color: 'var(--fg-tertiary)',
-            textShadow: 'var(--shadow-press)',
-            marginBottom: 18,
-          }}>
-            {data.lastName}
-          </div>
-
-          {/* Numéro + position */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 14,
-            paddingBottom: 14, marginBottom: 14,
-            borderBottom: '1px solid rgba(255,255,255,0.10)',
-          }}>
-            {data.number && (
-              <span style={{ fontFamily: 'var(--font-display)', fontSize: 38, lineHeight: 1, opacity: 0.55 }}>
-                #{data.number}
-              </span>
-            )}
-            {data.position && (
-              <span style={{
-                fontSize: 12, fontWeight: 700, letterSpacing: '0.20em',
-                textTransform: 'uppercase', color: 'var(--fg-tertiary)',
+          {/* Nom(s) — 1 joueur (grand format) ou plusieurs (compact, même photo) */}
+          {multi ? (
+            <div style={{ marginBottom: 18 }}>
+              {playerList.map((pl, i) => (
+                <div key={i} style={{
+                  display: 'flex', alignItems: 'baseline', gap: 12,
+                  paddingBottom: 12, marginBottom: 12,
+                  borderBottom: i < playerList.length - 1 ? '1px solid rgba(255,255,255,0.12)' : 'none',
+                }}>
+                  {pl.number && (
+                    <span style={{ fontFamily: 'var(--font-display)', fontSize: 34, lineHeight: 1, opacity: 0.5, flexShrink: 0 }}>
+                      #{pl.number}
+                    </span>
+                  )}
+                  <div>
+                    <div style={{
+                      fontFamily: 'var(--font-display)', fontSize: 30, lineHeight: 0.9,
+                      letterSpacing: '0.02em', textTransform: 'uppercase', color: 'var(--fg-tertiary)',
+                    }}>
+                      {pl.firstName}
+                    </div>
+                    <div style={{
+                      fontFamily: 'var(--font-display)', fontSize: 46, lineHeight: 0.86,
+                      letterSpacing: '0.02em', textTransform: 'uppercase', textShadow: 'var(--shadow-press)',
+                    }}>
+                      {pl.lastName}
+                    </div>
+                    {pl.position && (
+                      <div style={{
+                        fontSize: 10, fontWeight: 700, letterSpacing: '0.20em',
+                        textTransform: 'uppercase', color: 'var(--fg-tertiary)', marginTop: 5,
+                      }}>
+                        {pl.position}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <React.Fragment>
+              {/* Nom */}
+              <div style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 64, lineHeight: 0.88,
+                letterSpacing: '0.02em', textTransform: 'uppercase',
+                textShadow: 'var(--shadow-press)',
               }}>
-                {data.position}
-              </span>
-            )}
-          </div>
+                {data.firstName}
+              </div>
+              <div style={{
+                fontFamily: 'var(--font-display)',
+                fontSize: 84, lineHeight: 0.86,
+                letterSpacing: '0.02em', textTransform: 'uppercase',
+                color: 'var(--fg-tertiary)',
+                textShadow: 'var(--shadow-press)',
+                marginBottom: 18,
+              }}>
+                {data.lastName}
+              </div>
+
+              {/* Numéro + position */}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                paddingBottom: 14, marginBottom: 14,
+                borderBottom: '1px solid rgba(255,255,255,0.10)',
+              }}>
+                {data.number && (
+                  <span style={{ fontFamily: 'var(--font-display)', fontSize: 38, lineHeight: 1, opacity: 0.55 }}>
+                    #{data.number}
+                  </span>
+                )}
+                {data.position && (
+                  <span style={{
+                    fontSize: 12, fontWeight: 700, letterSpacing: '0.20em',
+                    textTransform: 'uppercase', color: 'var(--fg-tertiary)',
+                  }}>
+                    {data.position}
+                  </span>
+                )}
+              </div>
+            </React.Fragment>
+          )}
 
           {/* Contexte */}
           {data.matchContext && (
@@ -329,6 +380,7 @@ R08JoueurSemaine.defaults = {
   lastName: 'LAVOIE',
   number: '17',
   position: 'ATTAQUE',
+  extraPlayers: [],
   photo: '',
   photoPosition: 'center top',
   matchContext: 'SEMAINE DU 10 MAI 2026',

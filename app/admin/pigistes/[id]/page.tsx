@@ -19,7 +19,6 @@ const STATUT_FACTURE: Record<string, { bg: string; text: string; label: string }
   'payée':     { bg: 'var(--color-success-bg)', text: 'var(--color-success-text)', label: 'Payée' },
 }
 
-// ── Définition des templates disponibles ──────────────────────────────────
 const SOCIAL_GROUPS = [
   { label: 'Cocktail Média', ids: ['T01','T02','T03','T04','T05','T06','T07'],
     names: ['Annonce Service','Promo Forfait','LinkedIn Texte','Before/After','Update CocktailOS','Témoignage','Story/Reel'] },
@@ -43,14 +42,15 @@ export default function AdminPigisteDetail() {
   const router = useRouter()
   const [pigiste, setPigiste] = useState<Pigiste | null>(null)
   const [showMandat, setShowMandat] = useState(false)
-  const [mandatForm, setMandatForm] = useState({ titre: '', description: '', id_projet: '', date_debut: '', date_echeance: '', montant_convenu: '', notes_admin: '' })
+  const [mandatForm, setMandatForm] = useState({ titre: '', description: '', id_projet: '', date_debut: '', date_echeance: '', type_prestation: '', quantite: '1', notes_admin: '' })
   const [projets, setProjets] = useState<{ id: number; nom_projet: string }[]>([])
+  const [tarifs, setTarifs] = useState<{ id: string; categorie: string; label: string; prix: number; unite: string }[]>([])
   const [savingMandat, setSavingMandat] = useState(false)
   const [approvingId, setApprovingId] = useState<number | null>(null)
   const [payingId, setPayingId] = useState<number | null>(null)
+  const [togglingActif, setTogglingActif] = useState(false)
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
 
-  // Outils
   const [tools, setTools] = useState<ToolsConfig>({ social: null, pdf: null })
   const [toolsSaving, setToolsSaving] = useState(false)
 
@@ -58,7 +58,8 @@ export default function AdminPigisteDetail() {
 
   const load = () => fetch(`/api/v1/admin/pigistes/${id}`, { credentials: 'include' })
     .then(r => { if (!r.ok) { router.push('/admin/pigistes'); return null } return r.json() })
-    .then(data => { if (data) setPigiste(data) })
+    .then(data => { if (data) setPigiste({ ...data, mandats: data.mandats ?? [], factures: data.factures ?? [] }) })
+    .catch(() => router.push('/admin/pigistes'))
 
   const loadTools = () => fetch(`/api/v1/admin/pigistes/${id}/tools`, { credentials: 'include' })
     .then(r => r.ok ? r.json() : null)
@@ -69,7 +70,24 @@ export default function AdminPigisteDetail() {
     load()
     loadTools()
     fetch('/api/v1/admin/projets', { credentials: 'include' }).then(r => r.json()).then(data => setProjets(Array.isArray(data) ? data : [])).catch(() => {})
+    fetch('/api/v1/admin/tarifs-pigiste', { credentials: 'include' }).then(r => r.json()).then(data => setTarifs(Array.isArray(data) ? data : [])).catch(() => {})
   }, [id])
+
+  const handleToggleActif = async () => {
+    if (!pigiste) return
+    setTogglingActif(true)
+    try {
+      const res = await fetch(`/api/v1/admin/pigistes/${id}`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_active: !pigiste.is_active }),
+      })
+      if (res.ok) { showToast(pigiste.is_active ? 'Pigiste désactivé.' : 'Pigiste activé.'); load() }
+      else showToast('Erreur lors du changement de statut', false)
+    } catch { showToast('Erreur de connexion', false) }
+    finally { setTogglingActif(false) }
+  }
 
   const saveTools = async () => {
     setToolsSaving(true)
@@ -115,13 +133,27 @@ export default function AdminPigisteDetail() {
     e.preventDefault()
     setSavingMandat(true)
     try {
-      const res = await fetch('/api/v1/admin/mandats', {
+      const res = await fetch('/api/v1/admin/mandats-pigistes', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...mandatForm, id_pigiste: Number(id), montant_convenu: parseFloat(mandatForm.montant_convenu) || 0, id_projet: mandatForm.id_projet ? Number(mandatForm.id_projet) : null }),
+        body: JSON.stringify({
+          id_pigiste:      Number(id),
+          titre:           mandatForm.titre,
+          description:     mandatForm.description || null,
+          id_projet:       mandatForm.id_projet ? Number(mandatForm.id_projet) : null,
+          date_debut:      mandatForm.date_debut || null,
+          date_echeance:   mandatForm.date_echeance || null,
+          type_prestation: mandatForm.type_prestation || null,
+          quantite:        parseInt(mandatForm.quantite) || 1,
+          notes_admin:     mandatForm.notes_admin || null,
+        }),
       })
-      if (res.ok) { showToast('Mandat créé.'); setShowMandat(false); setMandatForm({ titre: '', description: '', id_projet: '', date_debut: '', date_echeance: '', montant_convenu: '', notes_admin: '' }); load() }
-      else showToast('Erreur création', false)
+      if (res.ok) {
+        showToast('Mandat créé.')
+        setShowMandat(false)
+        setMandatForm({ titre: '', description: '', id_projet: '', date_debut: '', date_echeance: '', type_prestation: '', quantite: '1', notes_admin: '' })
+        load()
+      } else showToast('Erreur création', false)
     } catch { showToast('Erreur de connexion', false) }
     finally { setSavingMandat(false) }
   }
@@ -129,9 +161,12 @@ export default function AdminPigisteDetail() {
   const handleApprouverMandat = async (mandatId: number) => {
     setApprovingId(mandatId)
     try {
-      const res = await fetch(`/api/v1/admin/mandats/${mandatId}/approuver`, { method: 'POST', credentials: 'include' })
-      if (res.ok) { showToast('Mandat approuvé.'); load() }
-      else showToast('Erreur', false)
+      const res = await fetch(`/api/v1/admin/mandats-pigistes/${mandatId}/approuver`, { method: 'POST', credentials: 'include' })
+      if (res.ok) {
+        const d = await res.json()
+        showToast(d.facture_numero ? `Mandat approuvé — facture ${d.facture_numero} créée.` : 'Mandat approuvé.')
+        load()
+      } else showToast('Erreur', false)
     } catch { showToast('Erreur', false) }
     finally { setApprovingId(null) }
   }
@@ -149,6 +184,15 @@ export default function AdminPigisteDetail() {
   if (!pigiste) return <p className="text-[var(--color-dark-text-2)] font-body p-8">Chargement...</p>
 
   const initiales = pigiste.nom_complet.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+
+  // Calculs pour le formulaire inline de mandat
+  const tarifChoisi  = tarifs.find(t => t.id === mandatForm.type_prestation) ?? null
+  const montantAuto  = tarifChoisi ? tarifChoisi.prix * (parseInt(mandatForm.quantite) || 1) : null
+  const tarifCatMap  = tarifs.reduce<Record<string, typeof tarifs>>((acc, t) => {
+    if (!acc[t.categorie]) acc[t.categorie] = []
+    acc[t.categorie].push(t)
+    return acc
+  }, {})
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -176,9 +220,23 @@ export default function AdminPigisteDetail() {
             </p>
           )}
         </div>
-        <span className={`px-4 py-2 rounded-full text-xs font-bold font-body uppercase ${pigiste.is_active ? 'bg-[var(--color-success-bg)] text-[var(--color-success-text)]' : 'bg-[var(--color-light-0)] text-[var(--color-dark-text-2)]'}`}>
-          {pigiste.is_active ? 'Actif' : 'Inactif'}
-        </span>
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <Link href={`/admin/pigistes/${id}/edit`}
+            className="flex items-center gap-1.5 bg-[var(--color-light-1)] text-[var(--color-dark-1)] px-4 py-2 rounded-full font-body font-bold text-xs uppercase tracking-wide hover:bg-[var(--color-light-0)] transition-colors border border-[var(--color-light-border)]">
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">edit</span>
+            Modifier
+          </Link>
+          <button
+            onClick={handleToggleActif}
+            disabled={togglingActif}
+            className={`px-4 py-2 rounded-full text-xs font-bold font-body uppercase transition-colors disabled:opacity-50 ${pigiste.is_active
+              ? 'bg-[var(--color-success-bg)] text-[var(--color-success-text)] hover:bg-red-100 hover:text-red-700'
+              : 'bg-[var(--color-light-0)] text-[var(--color-dark-text-2)] hover:bg-[var(--color-success-bg)] hover:text-[var(--color-success-text)]'
+            }`}
+          >
+            {togglingActif ? '...' : pigiste.is_active ? 'Actif' : 'Inactif'}
+          </button>
+        </div>
       </div>
 
       {/* ── Outils assignés ─────────────────────────────────── */}
@@ -196,7 +254,6 @@ export default function AdminPigisteDetail() {
         </div>
 
         <div className="space-y-5">
-          {/* Social Kit */}
           <div>
             <div className="flex items-center gap-3 mb-3">
               <span className="font-display text-sm tracking-widest text-[var(--color-brand)] uppercase">Social Kit</span>
@@ -204,7 +261,6 @@ export default function AdminPigisteDetail() {
                 className="text-[10px] font-bold font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)] underline">Accès complet</button>
             </div>
             {SOCIAL_GROUPS.map(group => {
-              const allChosen = tools.social === null || group.ids.every(gid => tools.social!.includes(gid))
               const activeSocial = tools.social ?? SOCIAL_GROUPS.flatMap(g => g.ids)
               return (
                 <div key={group.label} className="mb-3">
@@ -232,7 +288,6 @@ export default function AdminPigisteDetail() {
             })}
           </div>
 
-          {/* PDF */}
           <div className="border-t border-[var(--color-light-0)] pt-4">
             <div className="flex items-center gap-3 mb-3">
               <span className="font-display text-sm tracking-widest text-[var(--color-brand)] uppercase">Générateur PDF</span>
@@ -272,21 +327,45 @@ export default function AdminPigisteDetail() {
             <form onSubmit={handleCreateMandat} className="mb-5 p-4 bg-[var(--color-light-1)] rounded-2xl space-y-3">
               <input required value={mandatForm.titre} onChange={e => setMandatForm(p => ({ ...p, titre: e.target.value }))} placeholder="Titre du mandat *" aria-label="Titre du mandat"
                 className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]" />
-              <textarea value={mandatForm.description} onChange={e => setMandatForm(p => ({ ...p, description: e.target.value }))} placeholder="Description" rows={2}
-                className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)] resize-none" />
+
+              <select value={mandatForm.type_prestation} onChange={e => setMandatForm(p => ({ ...p, type_prestation: e.target.value }))}
+                aria-label="Type de prestation" className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]">
+                <option value="">Type de prestation…</option>
+                {Object.entries(tarifCatMap).map(([cat, items]) => (
+                  <optgroup key={cat} label={cat}>
+                    {items.map(t => <option key={t.id} value={t.id}>{t.label} — {t.prix}$/{t.unite}</option>)}
+                  </optgroup>
+                ))}
+              </select>
+
+              {tarifChoisi && (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1">
+                    <label className="text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body ml-1">Quantité ({tarifChoisi.unite})</label>
+                    <input type="number" value={mandatForm.quantite} onChange={e => setMandatForm(p => ({ ...p, quantite: e.target.value }))}
+                      min="1" step="1" aria-label="Quantité"
+                      className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)] mt-1" />
+                  </div>
+                  <div className="flex-1 bg-[var(--color-success-bg)] rounded-xl px-3 py-2 mt-5">
+                    <p className="text-[10px] font-bold uppercase text-[var(--color-success-text)] font-body">Montant auto</p>
+                    <p className="font-display text-lg text-[var(--color-success-text)]">
+                      {montantAuto?.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               <select value={mandatForm.id_projet} onChange={e => setMandatForm(p => ({ ...p, id_projet: e.target.value }))}
                 className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]">
                 <option value="">Lier à un projet (optionnel)</option>
                 {projets.map(p => <option key={p.id} value={p.id}>{p.nom_projet}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-3">
-                <input type="date" value={mandatForm.date_debut} onChange={e => setMandatForm(p => ({ ...p, date_debut: e.target.value }))} placeholder="Début" aria-label="Date de début"
+                <input type="date" value={mandatForm.date_debut} onChange={e => setMandatForm(p => ({ ...p, date_debut: e.target.value }))} aria-label="Date de début"
                   className="bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]" />
-                <input type="date" value={mandatForm.date_echeance} onChange={e => setMandatForm(p => ({ ...p, date_echeance: e.target.value }))} placeholder="Échéance" aria-label="Date d'échéance"
+                <input type="date" value={mandatForm.date_echeance} onChange={e => setMandatForm(p => ({ ...p, date_echeance: e.target.value }))} aria-label="Date d'échéance"
                   className="bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]" />
               </div>
-              <input type="number" value={mandatForm.montant_convenu} onChange={e => setMandatForm(p => ({ ...p, montant_convenu: e.target.value }))} placeholder="Montant convenu" aria-label="Montant convenu" step="0.01" min="0"
-                className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]" />
               <textarea value={mandatForm.notes_admin} onChange={e => setMandatForm(p => ({ ...p, notes_admin: e.target.value }))} placeholder="Notes pour le pigiste" rows={2}
                 className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)] resize-none" />
               <div className="flex gap-2">

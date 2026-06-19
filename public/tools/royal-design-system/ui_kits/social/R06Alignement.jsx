@@ -8,22 +8,13 @@ function R06Alignement({ data = R06Alignement.defaults }) {
   const cream  = colors.cream || '#f1eadb';
   const cream2 = colors.cream2|| '#e7dfcc';
   const red    = colors.accent|| '#c8141a';
+  const onBg   = colors.onBg  || '#fff';   // couleur du texte sur le fond — à passer en sombre si fond clair
 
   const players      = data.players   || [];
   const scratches    = data.scratches || [];
-  const fieldPlayers = players.filter(p => !p.isCap);
-  const goalies      = players.filter(p =>  p.isCap);
 
   const OSWALD  = "'Oswald','Impact',sans-serif";
   const MANROPE = "'Manrope','Plus Jakarta Sans',system-ui,sans-serif";
-
-  // ── Découpage du lineup ────────────────────────────────────────────────────
-  // 3 rangées de 4 : [p1 p2 p3 | G1] · [p4 p5 p6 | G2] · [p7 p8 p9 | +1]
-  const lineRows = [
-    { field: fieldPlayers.slice(0, 3), special: goalies[0]      || null },
-    { field: fieldPlayers.slice(3, 6), special: goalies[1]      || null },
-    { field: fieldPlayers.slice(6, 9), special: fieldPlayers[9] || null },
-  ];
 
   // ── Dimensions des cartes ─────────────────────────────────────────────────
   // 4 cartes/rangée + 1 séparateur visuel (11 px) · 3 rangées
@@ -47,7 +38,7 @@ function R06Alignement({ data = R06Alignement.defaults }) {
         border: `1px solid ${p.isCap ? cream2 : 'rgba(0,0,0,0.32)'}`,
         borderRadius: 13, padding: 7,
         display: 'flex', flexDirection: 'column',
-        position: 'relative', backdropFilter: 'blur(2px)',
+        position: 'relative',
         overflow: 'hidden', boxSizing: 'border-box',
       }}>
         {!p.photo && (
@@ -106,9 +97,36 @@ function R06Alignement({ data = R06Alignement.defaults }) {
     );
   }
 
+  // ── Lineup mémoïsé ── recalculé seulement si roster / dimensions / couleurs changent.
+  // Taper dans un champ texte (match, date, footer…) ne re-rend plus les 12 cartes + photos.
+  const lineupGrid = React.useMemo(() => {
+    const fieldPlayers = players.filter(p => !p.isCap);
+    const goalies      = players.filter(p =>  p.isCap);
+    const lineRows = [
+      { field: fieldPlayers.slice(0, 3), special: goalies[0]      || null },
+      { field: fieldPlayers.slice(3, 6), special: goalies[1]      || null },
+      { field: fieldPlayers.slice(6, 9), special: fieldPlayers[9] || null },
+    ];
+    return (
+      <div style={{ marginTop:'auto', display:'flex', flexDirection:'column', gap:5 }}>
+        {lineRows.map((row, ri) => (
+          <div key={ri} style={{ display:'flex', gap:5, justifyContent:'center', alignItems:'flex-start' }}>
+            {row.field.map((p, i) => <PlayerCard key={i} p={p} />)}
+            {row.special && (
+              <React.Fragment>
+                <div style={{ width:1, background:'rgba(255,255,255,0.28)', alignSelf:'stretch', flexShrink:0, margin:'0 5px' }} />
+                <PlayerCard p={row.special} />
+              </React.Fragment>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  }, [players, cardW, cardH, cream, cream2, red]);
+
   // ── Rendu ─────────────────────────────────────────────────────────────────
   return (
-    <div style={{ width:1080, height:1080, overflow:'hidden', position:'relative', fontFamily:MANROPE, color:'#fff', background:bgGrad }}>
+    <div style={{ width:1080, height:1080, overflow:'hidden', position:'relative', fontFamily:MANROPE, color:onBg, background:bgGrad }}>
       <div style={{ position:'absolute', inset:0, pointerEvents:'none',
         backgroundImage:'repeating-linear-gradient(115deg,rgba(255,255,255,0) 0 34px,rgba(255,255,255,0.035) 34px 68px)' }} />
       <div style={{ position:'absolute', inset:0, pointerEvents:'none',
@@ -116,38 +134,24 @@ function R06Alignement({ data = R06Alignement.defaults }) {
 
       <div style={{ position:'absolute', inset:0, padding:'40px 54px 28px', display:'flex', flexDirection:'column', zIndex:2 }}>
 
-        {/* Logo */}
-        <div style={{
-          position:'absolute', right:45, top:40, width:86, height:86, borderRadius:'50%',
-          background:'rgba(0,0,0,0.25)',
-          border: data.logo ? '2px solid rgba(255,255,255,0.55)' : '2px dashed rgba(255,255,255,0.35)',
-          display:'grid', placeItems:'center', overflow:'hidden', zIndex:3,
-        }}>
-          {data.logo
-            ? <img src={data.logo} alt="Logo" style={{ width:'100%', height:'100%', objectFit:'contain', padding:9 }} />
-            : <div style={{ textAlign:'center', color:'rgba(255,255,255,0.35)', fontFamily:MANROPE, fontSize:9, fontWeight:700, letterSpacing:'0.12em', textTransform:'uppercase', lineHeight:1.3 }}>LOGO</div>
-          }
-        </div>
+        {/* Logo — affiché seulement si fourni (aucun placeholder) */}
+        {data.logo && (
+          <div style={{
+            position:'absolute', right:45, top:40, width:86, height:86, borderRadius:'50%',
+            background:'rgba(0,0,0,0.25)', border:'2px solid rgba(255,255,255,0.55)',
+            display:'grid', placeItems:'center', overflow:'hidden', zIndex:3,
+          }}>
+            <img src={data.logo} alt="Logo" style={{ width:'100%', height:'100%', objectFit:'contain', padding:9 }} />
+          </div>
+        )}
 
         {/* Titre */}
         <div style={{ fontFamily:OSWALD, fontWeight:700, fontSize:72, lineHeight:1.0, letterSpacing:'-0.01em', textTransform:'uppercase', textShadow:'0 3px 0 rgba(0,0,0,0.12)', whiteSpace:'nowrap' }}>
           Alignement de départ
         </div>
 
-        {/* Zone grilles — 3 rangées de 4 : [p p p | spéciale] */}
-        <div style={{ marginTop:'auto', display:'flex', flexDirection:'column', gap:5 }}>
-          {lineRows.map((row, ri) => (
-            <div key={ri} style={{ display:'flex', gap:5, justifyContent:'center', alignItems:'flex-start' }}>
-              {row.field.map((p, i) => <PlayerCard key={i} p={p} />)}
-              {row.special && (
-                <React.Fragment>
-                  <div style={{ width:1, background:'rgba(255,255,255,0.28)', alignSelf:'stretch', flexShrink:0, margin:'0 5px' }} />
-                  <PlayerCard p={row.special} />
-                </React.Fragment>
-              )}
-            </div>
-          ))}
-        </div>
+        {/* Zone grilles — 3 rangées de 4 : [p p p | spéciale] (mémoïsée) */}
+        {lineupGrid}
 
         {/* En civil */}
         {scratches.length > 0 && (

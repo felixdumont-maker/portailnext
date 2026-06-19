@@ -28,11 +28,23 @@ interface IdentiteData {
 
 // ─── Logo variants ────────────────────────────────────────────
 
-const LOGO_VARIANTS = [
-  { key: 'principal', label: 'Logo principal',    bg: 'var(--color-light-2)', dark: false },
-  { key: 'icone',     label: 'Icône',             bg: 'var(--color-light-2)', dark: false },
-  { key: 'variante',  label: 'Variante inversée', bg: 'var(--color-dark-1)',  dark: true  },
+// Variantes standards — 2 groupes
+const NOIR_VARIANTS = [
+  { key: 'principal', label: 'Logo principal' },
+  { key: 'icone',     label: 'Icône'          },
+  { key: 'variante',  label: 'Variante'       },
 ] as const
+
+const BLANC_VARIANTS = [
+  { key: 'principal_blanc', label: 'Logo principal' },
+  { key: 'icone_blanc',     label: 'Icône'          },
+  { key: 'variante_blanc',  label: 'Variante'       },
+] as const
+
+const KNOWN_KEYS: Set<string> = new Set([
+  ...NOIR_VARIANTS.map(v => v.key),
+  ...BLANC_VARIANTS.map(v => v.key),
+])
 
 // ─── Helpers ─────────────────────────────────────────────────
 
@@ -71,8 +83,13 @@ function SaveBtn({ saving, onClick, label = 'Sauvegarder' }: { saving: boolean; 
 // ─── Logo upload card ─────────────────────────────────────────
 
 function LogoCard({ variantKey, label, bg, dark, logo, projetId, onUploaded }: {
-  variantKey: string; label: string; bg: string; dark: boolean
-  logo: Logo | undefined; projetId: string; onUploaded: () => void
+  variantKey: string
+  label: string
+  bg: string
+  dark: boolean
+  logo: Logo | undefined
+  projetId: string
+  onUploaded: () => void
 }) {
   const ref = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
@@ -143,6 +160,102 @@ function LogoCard({ variantKey, label, bg, dark, logo, projetId, onUploaded }: {
       </div>
       <input ref={ref} type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" style={{ display: 'none' }}
         onChange={e => { const f = e.target.files?.[0]; if (f) uploadFile(f); e.target.value = '' }} />
+    </div>
+  )
+}
+
+// ─── Ajouter une variante de logo ────────────────────────────
+
+function AddLogoVariant({ groupe, projetId, onUploaded }: {
+  groupe: 'noir' | 'blanc'; projetId: string; onUploaded: () => void
+}) {
+  const ref          = useRef<HTMLInputElement>(null)
+  const [open,       setOpen]       = useState(false)
+  const [label,      setLabel]      = useState('')
+  const [uploading,  setUploading]  = useState(false)
+
+  async function upload(file: File) {
+    if (!label.trim()) return
+    setUploading(true)
+    const slug = label.trim().toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '').slice(0, 40)
+    const varKey = `${groupe}_${slug}`
+    const form = new FormData()
+    form.append('file', file)
+    form.append('variant', varKey)
+    try {
+      await fetch(`${API}/api/v1/admin/projet/${projetId}/identite/logo`, { method: 'POST', body: form, credentials: 'include' })
+      onUploaded()
+      setLabel(''); setOpen(false)
+    } finally { setUploading(false) }
+  }
+
+  const dark = groupe === 'blanc'
+
+  if (!open) return (
+    <button
+      onClick={() => setOpen(true)}
+      style={{
+        aspectRatio: '4/3', display: 'flex', flexDirection: 'column' as const,
+        alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)',
+        background: 'transparent',
+        border: `1px dashed ${dark ? 'var(--color-dark-border)' : 'var(--color-light-border-2)'}`,
+        borderRadius: 'var(--radius-md)', cursor: 'pointer',
+        color: dark ? 'var(--color-dark-text-2)' : 'var(--color-light-text-3)',
+        transition: 'border-color var(--duration-fast), color var(--duration-fast)',
+      }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-brand)'; e.currentTarget.style.color = 'var(--color-brand)' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = dark ? 'var(--color-dark-border)' : 'var(--color-light-border-2)'; e.currentTarget.style.color = dark ? 'var(--color-dark-text-2)' : 'var(--color-light-text-3)' }}
+    >
+      <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px' }}>add</span>
+      <span style={{ fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.08em' }}>
+        Ajouter
+      </span>
+    </button>
+  )
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-2)',
+      padding: 'var(--space-3)',
+      border: '1px solid var(--color-brand)',
+      borderRadius: 'var(--radius-md)', background: 'var(--color-brand-muted)',
+    }}>
+      <input
+        type="text"
+        placeholder="Nom de la variante"
+        value={label}
+        onChange={e => setLabel(e.target.value)}
+        autoFocus
+        style={{
+          fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)',
+          color: 'var(--color-light-text)', background: 'var(--color-light-0)',
+          border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-sm)',
+          padding: 'var(--space-2) var(--space-3)', outline: 'none', width: '100%',
+        }}
+      />
+      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+        <label style={{
+          flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+          padding: 'var(--space-2) var(--space-3)',
+          background: label.trim() ? 'var(--color-brand)' : 'var(--color-light-border)',
+          color: 'white', borderRadius: 'var(--radius-sm)',
+          fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700,
+          textTransform: 'uppercase' as const, letterSpacing: '0.06em',
+          cursor: label.trim() && !uploading ? 'pointer' : 'not-allowed',
+        }}>
+          {uploading
+            ? <><span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '12px', animation: 'spin 0.8s linear infinite' }}>progress_activity</span>Envoi…</>
+            : <><span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '12px' }}>upload</span>Choisir</>
+          }
+          <input ref={ref} type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp"
+            style={{ display: 'none' }} disabled={!label.trim() || uploading}
+            onChange={e => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = '' }} />
+        </label>
+        <button onClick={() => { setOpen(false); setLabel('') }}
+          style={{ padding: 'var(--space-2)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-light-text-3)', display: 'flex', alignItems: 'center', borderRadius: 'var(--radius-sm)' }}>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>close</span>
+        </button>
+      </div>
     </div>
   )
 }
@@ -402,11 +515,55 @@ export default function AdminIdentiteVisuellePage() {
       {/* ── 02 Logos ── */}
       <section style={{ marginBottom: 'var(--space-16)' }}>
         <SectionHead num={num()} title="Logos" />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-6)' }}>
-          {LOGO_VARIANTS.map(v => (
-            <LogoCard key={v.key} variantKey={v.key} label={v.label} bg={v.bg} dark={v.dark}
-              logo={data.logos[v.key]} projetId={id} onUploaded={loadData} />
-          ))}
+
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-10)' }}>
+
+          {/* Groupe Noir */}
+          <div>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: 'var(--color-light-text-3)', margin: '0 0 var(--space-4)' }}>
+              Version noire
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 'var(--space-5)' }}>
+              {NOIR_VARIANTS.map(v => (
+                <LogoCard key={v.key} variantKey={v.key} label={v.label} bg="var(--color-light-2)" dark={false}
+                  logo={data.logos[v.key]} projetId={id} onUploaded={loadData} />
+              ))}
+              {/* Extras noir */}
+              {Object.entries(data.logos)
+                .filter(([k]) => !KNOWN_KEYS.has(k) && k.startsWith('noir_'))
+                .map(([k, logo]) => (
+                  <LogoCard key={k} variantKey={k} label={k.replace(/^noir_/, '').replace(/_/g, ' ')} bg="var(--color-light-2)" dark={false}
+                    logo={logo} projetId={id} onUploaded={loadData} />
+                ))
+              }
+              {/* Bouton ajouter noir */}
+              <AddLogoVariant groupe="noir" projetId={id} onUploaded={loadData} />
+            </div>
+          </div>
+
+          {/* Groupe Blanc */}
+          <div>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em', color: 'var(--color-light-text-3)', margin: '0 0 var(--space-4)' }}>
+              Version blanche
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 'var(--space-5)' }}>
+              {BLANC_VARIANTS.map(v => (
+                <LogoCard key={v.key} variantKey={v.key} label={v.label} bg="var(--color-dark-1)" dark={true}
+                  logo={data.logos[v.key]} projetId={id} onUploaded={loadData} />
+              ))}
+              {/* Extras blanc */}
+              {Object.entries(data.logos)
+                .filter(([k]) => !KNOWN_KEYS.has(k) && k.startsWith('blanc_'))
+                .map(([k, logo]) => (
+                  <LogoCard key={k} variantKey={k} label={k.replace(/^blanc_/, '').replace(/_/g, ' ')} bg="var(--color-dark-1)" dark={true}
+                    logo={logo} projetId={id} onUploaded={loadData} />
+                ))
+              }
+              {/* Bouton ajouter blanc */}
+              <AddLogoVariant groupe="blanc" projetId={id} onUploaded={loadData} />
+            </div>
+          </div>
+
         </div>
       </section>
 

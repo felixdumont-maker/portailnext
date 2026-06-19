@@ -18,6 +18,7 @@ interface Projet {
   localisation: string | null
   date_livraison_estimee: string | null
   lien_gdrive: string | null
+  lien_site_test: string | null
   client_id: number
   client_nom: string
   nom_service: string
@@ -53,6 +54,7 @@ export default function EditProjetPage() {
   const [localisation, setLocalisation] = useState('')
   const [dateLivraison, setDateLivraison] = useState('')
   const [lienGdrive, setLienGdrive] = useState('')
+  const [lienSiteTest, setLienSiteTest] = useState('')
   const [idClient, setIdClient] = useState('')
 
   useEffect(() => {
@@ -68,6 +70,7 @@ export default function EditProjetPage() {
       setLocalisation(p.localisation || '')
       setDateLivraison(p.date_livraison_estimee || '')
       setLienGdrive(p.lien_gdrive || '')
+      setLienSiteTest(p.lien_site_test || '')
       setIdClient(String(p.client_id || ''))
       setLoading(false)
     }).catch(() => setLoading(false))
@@ -91,6 +94,7 @@ export default function EditProjetPage() {
           localisation: localisation.trim() || null,
           date_livraison_estimee: dateLivraison || null,
           lien_gdrive: lienGdrive.trim() || null,
+          lien_site_test: lienSiteTest.trim() || null,
           id_client: idClient || null,
         }),
       })
@@ -273,6 +277,26 @@ export default function EditProjetPage() {
                 placeholder="https://drive.google.com/..."
                 className="w-full bg-[var(--color-light-0)] border-none rounded-2xl px-6 py-4 outline-none font-body text-sm focus:ring-2 focus:ring-[var(--color-brand)]/40 placeholder:text-[var(--color-light-text-3)]"
               />
+            </div>
+
+            {/* Lien du site test (Vercel) */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-[10px] font-bold text-[var(--color-dark-text-2)] uppercase tracking-widest font-body">
+                  Lien du site test
+                </label>
+                <span className="text-[10px] text-[var(--color-dark-text-2)] uppercase tracking-tight font-body">Optionnel</span>
+              </div>
+              <input
+                type="url"
+                value={lienSiteTest}
+                onChange={e => setLienSiteTest(e.target.value)}
+                placeholder="https://site-exemple.vercel.app"
+                className="w-full bg-[var(--color-light-0)] border-none rounded-2xl px-6 py-4 outline-none font-body text-sm focus:ring-2 focus:ring-[var(--color-brand)]/40 placeholder:text-[var(--color-light-text-3)]"
+              />
+              <p className="text-[11px] text-[var(--color-dark-text-2)] font-body mt-2">
+                Inclus dans le courriel de révision pour les projets Site Web Vitrine.
+              </p>
             </div>
 
           </div>

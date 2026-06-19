@@ -688,6 +688,7 @@
   <script type="text/babel" src="T07StoryCover.jsx"></script>
   <script type="text/babel" src="T08HistoirePME.jsx"></script>
   <script type="text/babel" src="T09MessageAbsence.jsx"></script>
+  <script type="text/babel" src="T10HoraireFerier.jsx"></script>
   <script src="./salon-templates/brand.js"></script>
   <script type="text/babel" src="./salon-templates/E01Hero.jsx?v=5"></script>
   <script type="text/babel" src="./salon-templates/E02Service.jsx?v=6"></script>
@@ -699,6 +700,7 @@
   <script type="text/babel" src="./salon-templates/E08Citation.jsx?v=5"></script>
   <script type="text/babel" src="./salon-templates/E09AvantApres.jsx?v=5"></script>
   <script type="text/babel" src="./salon-templates/E10Polichinelle.jsx?v=5"></script>
+  <script type="text/babel" src="./salon-templates/E11VipEvent.jsx?v=1"></script>
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
@@ -785,6 +787,7 @@
       { id:'T07', label:'Story / Reel',       ratio:'9:16', w:1080, h:1920, render: d => <T07StoryCover       data={d.T07}/> },
       { id:'T08', label:'Histoire PME',       ratio:'1:1',  w:1080, h:1080, render: d => <T08HistoirePME      data={d.T08}/> },
       { id:'T09', label:'Message absence',    ratio:'1:1',  w:1080, h:1080, render: d => <T09MessageAbsence   data={d.T09}/> },
+      { id:'T10', label:'Horaire férié',      ratio:'1:1',  w:1080, h:1080, render: d => <T10HoraireFerier    data={d.T10}/> },
       { id:'R01', label:'Soir de match',     ratio:'1:1',  w:1080, h:1080, brand:'royal', render: d => <R01Gameday data={d.R01}/> },
       { id:'R02', label:'Joueuse',           ratio:'1:1',  w:1080, h:1080, brand:'royal', render: d => <R02Joueuse data={d.R02}/> },
       { id:'R03', label:'Résultat',          ratio:'1:1',  w:1080, h:1080, brand:'royal', render: d => <R03Resultat data={d.R03}/> },
@@ -827,6 +830,10 @@
       { id:'E09B', label:'Avant/Après B',     ratio:'1:1',  w:1080, h:1080, brand:'salon', render: d => <E09AvantApresB data={d.E09B}/> },
       { id:'E10A', label:'Secret A',          ratio:'1:1',  w:1080, h:1080, brand:'salon', render: d => <E10PolichinelleA data={d.E10A}/> },
       { id:'E10B', label:'Secret B',          ratio:'1:1',  w:1080, h:1080, brand:'salon', render: d => <E10PolichinelleB data={d.E10B}/> },
+      { id:'E11A', label:'Soirée VIP A · Affiche', ratio:'1:1', w:1080, h:1080, brand:'salon', render: d => <E11VipEventA data={d.E11A}/> },
+      { id:'E11B', label:'Soirée VIP B · Invitation', ratio:'1:1', w:1080, h:1080, brand:'salon', render: d => <E11VipEventB data={d.E11B}/> },
+      { id:'E11C', label:'Soirée VIP C · Double expérience', ratio:'1:1', w:1080, h:1080, brand:'salon', render: d => <E11VipEventC data={d.E11C}/> },
+      { id:'E11D', label:'Journée VIP D · Glow Up', ratio:'1:1', w:1080, h:1080, brand:'salon', render: d => <E11VipEventD data={d.E11D}/> },
     ];
 
     const DEFAULTS = {
@@ -839,6 +846,7 @@
       T07: clone(T07StoryCover.defaults),
       T08: clone(T08HistoirePME.defaults),
       T09: clone(T09MessageAbsence.defaults),
+      T10: clone(T10HoraireFerier.defaults),
       R01: clone(R01Gameday.defaults),
       R02: clone(R02Joueuse.defaults),
       R03: clone(R03Resultat.defaults),
@@ -865,7 +873,7 @@
       E01C: clone(E01HeroC.defaults),
       E02A: clone(E02ServiceA.defaults),
       E02B: clone(E02ServiceB.defaults),
-      E03A: clone(E03PromoA.defaults),
+      E03A: clone(E03PromoA.defaults || { brand:'LES BELLES SŒURS', tag:'OFFRE SPÉCIALE', eyebrow:'BAL DE FINISSANTS 2025', items:[{service:'Faciale de base',prix:'80$',avant:'95$'},{service:'Peeling',prix:'100$',avant:'135$'}], description:'Pour améliorer les peaux texturées et tendance acnéique.\nInvitation aux filles comme aux garçons — un visage de prince ou de princesse pour votre bal !', cta:'PRENDS RDV DÈS MAINTENANT →', until:'JUSQU\'AU 31 MAI', photo:'refs/ref-03.webp' }),
       E03B: clone(E03PromoB.defaults),
       E04A: clone(E04TemoignageA.defaults),
       E04B: clone(E04TemoignageB.defaults),
@@ -881,6 +889,10 @@
       E09B: clone(E09AvantApresB.defaults),
       E10A: clone(E10PolichinelleA.defaults),
       E10B: clone(E10PolichinelleB.defaults),
+      E11A: clone(E11VipEventA.defaults),
+      E11B: clone(E11VipEventB.defaults),
+      E11C: clone(E11VipEventC.defaults),
+      E11D: clone(E11VipEventD.defaults),
     };
 
     /* ── Field components ── */
@@ -1307,6 +1319,61 @@
             { key:'accent', label:'Couleur accent',  def:'#e8640a' },
             { key:'fg',     label:'Titre',           def:'#ffffff' },
             { key:'fgSub',  label:'Texte message',   def:'rgba(255,255,255,0.65)' },
+          ]} />
+        </EdShell>
+      );
+    }
+
+    /* ── T10 — Horaire férié ── */
+    function EdT10({ d, set, onExport, onReset }) {
+      const setJour = (i, field, val) => {
+        const next = [...(d.jours || [])];
+        next[i] = { ...next[i], [field]: val };
+        set('jours', next);
+      };
+      return (
+        <EdShell id="T10" title="Horaire férié" hint="Variation d'horaire · Congé · Férié" onExport={onExport} onReset={onReset}>
+
+          <FInput label="Badge (haut droite)" value={d.badge||''} onChange={v=>set('badge',v)} placeholder="CONGÉ FÉRIÉ" />
+          <FInput label="Titre ligne 1"       value={(d.titre||'').split('\n')[0]||''} onChange={v=>set('titre', v + '\n' + ((d.titre||'').split('\n')[1]||''))} />
+          <FInput label="Titre ligne 2"       value={(d.titre||'').split('\n')[1]||''} onChange={v=>set('titre', ((d.titre||'').split('\n')[0]||'') + '\n' + v)} />
+          <FInput label="Sous-titre"          value={d.soustitre||''} onChange={v=>set('soustitre',v)} placeholder="Prochains jours fériés" />
+
+          <Sep/>
+          <Lbl>Jours</Lbl>
+          {(d.jours||[]).map((jour, i) => (
+            <div key={i} style={{background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:10,marginBottom:6}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                <span className="f-label" style={{margin:0}}>Jour {i+1}</span>
+                <button className="btn-text" type="button" style={{padding:'0 4px'}}
+                  onClick={()=>set('jours',(d.jours||[]).filter((_,j)=>j!==i))}>✕</button>
+              </div>
+              <FInput label="Date" value={jour.date||''} onChange={v=>setJour(i,'date',v)} placeholder="Vendredi 20 juin" />
+              <FInput label="Heures" value={jour.heures||''} onChange={v=>setJour(i,'heures',v)} placeholder="9 h — 12 h" />
+              <div className="field">
+                <label style={{display:'flex',alignItems:'center',gap:8,cursor:'pointer'}}>
+                  <input type="checkbox" checked={!!jour.ferme} onChange={e=>setJour(i,'ferme',e.target.checked)} />
+                  <span className="f-label" style={{margin:0}}>Journée fermée (texte grisé)</span>
+                </label>
+              </div>
+            </div>
+          ))}
+          <button className="btn-secondary" style={{width:'100%',marginBottom:8}} type="button"
+            onClick={()=>set('jours',[...(d.jours||[]),{date:'',heures:'',ferme:false}])}>+ Jour</button>
+
+          <Sep/>
+          <FArea  label="Note / message de retour" value={d.note||''} onChange={v=>set('note',v)} />
+
+          <Sep/>
+          <FInput label="Site web"        value={d.siteWeb||''} onChange={v=>set('siteWeb',v)}  placeholder="cocktailmedia.ca" />
+          <FInput label="Réseaux sociaux" value={d.social||''}  onChange={v=>set('social',v)}   placeholder="@cocktailmedia" />
+
+          <Sep/>
+          <StylePanel d={d} set={set} zones={[
+            { key:'bg',     label:'Fond',            def:'#0f1923' },
+            { key:'accent', label:'Couleur accent',   def:'#e8640a' },
+            { key:'fg',     label:'Titre',            def:'#ffffff' },
+            { key:'fgSub',  label:'Texte note',       def:'rgba(255,255,255,0.55)' },
           ]} />
         </EdShell>
       );
@@ -2693,6 +2760,11 @@
                 </div>
                 <button className="btn-text" type="button" style={{paddingBottom:2,flexShrink:0}} onClick={()=>set('players',(d.players||[]).filter((_,j)=>j!==i))}>✕</button>
               </div>
+              <div style={{display:'grid',gridTemplateColumns:'48px 1fr 1fr',gap:4,marginBottom:4}}>
+                <input className="f-input" value={p.num||''}       onChange={e=>setPlayer(i,'num',e.target.value)}       placeholder="#"      style={{textAlign:'center',fontSize:'0.7rem'}} />
+                <input className="f-input" value={p.firstName||''} onChange={e=>setPlayer(i,'firstName',e.target.value)} placeholder="Prénom" style={{fontSize:'0.7rem'}} />
+                <input className="f-input" value={p.lastName||''}  onChange={e=>setPlayer(i,'lastName',e.target.value)}  placeholder="Nom"    style={{fontSize:'0.7rem'}} />
+              </div>
               <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
                 <label style={{display:'flex',gap:5,alignItems:'center',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-mid)'}}>
                   <input type="checkbox" checked={!!p.isCap} onChange={e=>setPlayer(i,'isCap',e.target.checked)} style={{accentColor:'var(--brand)'}} />
@@ -2743,6 +2815,11 @@
                   />
                 </div>
                 <button className="btn-text" type="button" style={{paddingBottom:2,flexShrink:0}} onClick={()=>set('players',(d.players||[]).filter((_,j)=>j!==i))}>✕</button>
+              </div>
+              <div style={{display:'grid',gridTemplateColumns:'48px 1fr 1fr',gap:4,marginBottom:4}}>
+                <input className="f-input" value={p.num||''}       onChange={e=>setPlayer(i,'num',e.target.value)}       placeholder="#"      style={{textAlign:'center',fontSize:'0.7rem'}} />
+                <input className="f-input" value={p.firstName||''} onChange={e=>setPlayer(i,'firstName',e.target.value)} placeholder="Prénom" style={{fontSize:'0.7rem'}} />
+                <input className="f-input" value={p.lastName||''}  onChange={e=>setPlayer(i,'lastName',e.target.value)}  placeholder="Nom"    style={{fontSize:'0.7rem'}} />
               </div>
               <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
                 <label style={{display:'flex',gap:5,alignItems:'center',cursor:'pointer',fontSize:'0.7rem',color:'var(--text-mid)'}}>
@@ -3410,6 +3487,21 @@
       const addSponsor    = () => set('sponsors', [...(d.sponsors||[]), { name:'', logo:'' }]);
       const removeSponsor = (i) => set('sponsors', (d.sponsors||[]).filter((_,j) => j !== i));
 
+      // Joueurs additionnels (même photo, ex. 2 joueurs du match)
+      const updateExtra = (i, field, val) => {
+        const a = [...(d.extraPlayers || [])]; a[i] = { ...a[i], [field]: val }; set('extraPlayers', a);
+      };
+      const pickExtra = (i, fullName) => {
+        if (!fullName) return;
+        const r = activeRoster.find(p => `${p.firstName} ${p.lastName}` === fullName);
+        if (!r) return;
+        const a = [...(d.extraPlayers || [])];
+        a[i] = { ...a[i], firstName: r.firstName.toUpperCase(), lastName: r.lastName.toUpperCase(), number: r.num || '' };
+        set('extraPlayers', a);
+      };
+      const addExtra    = () => set('extraPlayers', [...(d.extraPlayers||[]), { firstName:'', lastName:'', number:'', position:'' }]);
+      const removeExtra = (i) => set('extraPlayers', (d.extraPlayers||[]).filter((_,j) => j !== i));
+
       return (
         <EdShell id="R08" title="Joueur·euse de la semaine" hint="Photo · texte gauche/droite · Royal ♀ · Xtreme ♂" onExport={onExport} onReset={onReset}>
           <TeamToggle d={d} set={set}
@@ -3494,6 +3586,37 @@
             <FInput label="Numéro"   value={d.number||''}   onChange={v=>set('number',v)} />
             <FInput label="Position" value={d.position||''} onChange={v=>set('position',v)} />
           </Row2>
+
+          {/* Joueurs additionnels — même photo (ex. 2 joueurs du match) */}
+          <div className="field">
+            <Lbl>Autres joueurs (même photo)</Lbl>
+            {(d.extraPlayers||[]).map((pl,i)=>(
+              <div key={i} style={{background:'var(--bg-input)',border:'1px solid var(--border)',borderRadius:'var(--r)',padding:8,marginBottom:6}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                  <span className="f-label" style={{margin:0}}>Joueur {i+2}</span>
+                  <button type="button" onClick={()=>removeExtra(i)} style={{background:'none',border:'none',cursor:'pointer',color:'var(--text-lo)',fontSize:13,padding:0}}>✕</button>
+                </div>
+                <select className="f-select" style={{marginBottom:4}} value="" onChange={e=>pickExtra(i,e.target.value)}>
+                  <option value="">— Choisir du roster —</option>
+                  {activeRoster.map(r=>(
+                    <option key={`${r.num}-${r.lastName}`} value={`${r.firstName} ${r.lastName}`}>
+                      {r.num ? `#${r.num} ` : ''}{r.firstName} {r.lastName}
+                    </option>
+                  ))}
+                </select>
+                <Row2>
+                  <FInput label="Prénom" value={pl.firstName||''} onChange={v=>updateExtra(i,'firstName',v)} />
+                  <FInput label="Nom"    value={pl.lastName||''}  onChange={v=>updateExtra(i,'lastName',v)} />
+                </Row2>
+                <Row2>
+                  <FInput label="Numéro"   value={pl.number||''}   onChange={v=>updateExtra(i,'number',v)} />
+                  <FInput label="Position" value={pl.position||''} onChange={v=>updateExtra(i,'position',v)} />
+                </Row2>
+              </div>
+            ))}
+            <button className="btn-text" type="button" onClick={addExtra}>+ Ajouter un joueur (même photo)</button>
+          </div>
+
           <FInput label="Contexte (semaine / dates)" value={d.matchContext||''} onChange={v=>set('matchContext',v)} />
           <Sep/>
 
@@ -3692,6 +3815,28 @@
       );
     }
 
+    function FInfoList({ label, value, onChange, max = 4 }) {
+      const rows = value || [];
+      const upd = (i, k, v) => onChange(rows.map((r, j) => j === i ? { ...r, [k]: v } : r));
+      const del = (i) => onChange(rows.filter((_, j) => j !== i));
+      const add = () => { if (rows.length < max) onChange([...rows, { label: '', value: '' }]); };
+      return (
+        <div className="field">
+          <Lbl>{label}</Lbl>
+          {rows.map((row, i) => (
+            <div key={i} style={{display:'grid',gridTemplateColumns:'1fr 1.4fr auto',gap:4,marginBottom:4,alignItems:'center'}}>
+              <input className="f-input" placeholder="Étiquette (Date…)" value={row.label||''} onChange={e=>upd(i,'label',e.target.value)} />
+              <input className="f-input" placeholder="Valeur" value={row.value||''} onChange={e=>upd(i,'value',e.target.value)} />
+              <button onClick={()=>del(i)} style={{background:'none',border:'1px solid var(--brd)',color:'var(--text-mid)',cursor:'pointer',borderRadius:3,padding:'0 5px',fontSize:'0.8rem',lineHeight:'1.6'}}>×</button>
+            </div>
+          ))}
+          {rows.length < max && (
+            <button onClick={add} style={{marginTop:4,width:'100%',padding:'4px 0',background:'none',border:'1px dashed var(--brd)',color:'var(--text-mid)',cursor:'pointer',borderRadius:3,fontSize:'0.75rem'}}>+ Ajouter une info</button>
+          )}
+        </div>
+      );
+    }
+
     function FServiceList({ label, value, onChange }) {
       const items = value || [];
       const upd = (i, k, v) => onChange(items.map((r, j) => j === i ? { ...r, [k]: v } : r));
@@ -3872,26 +4017,144 @@
     }
 
     function EdE03A({ d, set, onExport, onReset }) {
+      const items = Array.isArray(d.items) && d.items.length ? d.items : [{ service:'', prix:'', avant:'' }];
+      function setItem(i, key, val) {
+        const next = items.map((it, j) => j === i ? { ...it, [key]: val } : it);
+        set('items', next);
+      }
+      function addItem() {
+        if (items.length >= 5) return;
+        set('items', [...items, { service:'', prix:'', avant:'' }]);
+      }
+      function removeItem(i) {
+        if (items.length <= 1) return;
+        set('items', items.filter((_, j) => j !== i));
+      }
       return (
-        <EdShell id="E03A" title="Promo A" hint="Photo + rabais + code" onExport={onExport} onReset={onReset}>
-          <FInput label="Marque" value={d.brand||''} onChange={v=>set('brand',v)} />
-          <FInput label="Tag" value={d.tag||''} onChange={v=>set('tag',v)} />
+        <EdShell id="E03A" title="Promo A" hint="Liste de services en promo + photo" onExport={onExport} onReset={onReset}>
+          <FImg label="Logo (à côté de la tête)" value={d.logo||''} onChange={v=>set('logo',v)} />
+          <FInput label="Marque (si pas de logo)" value={d.brand||''} onChange={v=>set('brand',v)} />
+          <div className="field">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <Lbl>Grosseur entête (tête + écriture)</Lbl>
+              <button type="button" onClick={()=>set('_headerScale',1)} style={{fontSize:'0.6rem',color:'var(--text-lo)',background:'none',border:'none',cursor:'pointer',padding:'0 2px',letterSpacing:'0.08em'}}>RESET</button>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <input type="range" min="0.5" max="3" step="0.05"
+                value={d._headerScale !== undefined ? d._headerScale : 1}
+                onChange={e=>set('_headerScale',parseFloat(e.target.value))}
+                style={{flex:1}} />
+              <span style={{fontSize:'0.7rem',color:'var(--text-mid)',minWidth:34,textAlign:'right'}}>
+                {Math.round((d._headerScale !== undefined ? d._headerScale : 1) * 100)}%
+              </span>
+            </div>
+          </div>
+          <div className="field">
+            <label style={{display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
+              <input type="checkbox"
+                checked={!!d._logoBetween}
+                onChange={e=>set('_logoBetween', e.target.checked)} />
+              <span style={{fontFamily:'var(--font-ui)',fontSize:'0.78rem'}}>Placer entre l'entête et le corps</span>
+            </label>
+          </div>
           <Row2>
-            <FInput label="Kicker" value={d.kicker||''} onChange={v=>set('kicker',v)} />
-            <FInput label="Valeur" value={d.value||''} onChange={v=>set('value',v)} />
+            <FInput label="Tag" value={d.tag||''} onChange={v=>set('tag',v)} />
+            <FInput label="Événement / titre" value={d.eyebrow||''} onChange={v=>set('eyebrow',v)} />
           </Row2>
+          <div className="field">
+            <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+              <Lbl>Grosseur du titre</Lbl>
+              <button type="button" onClick={()=>set('_eyebrowScale',1)} style={{fontSize:'0.6rem',color:'var(--text-lo)',background:'none',border:'none',cursor:'pointer',padding:'0 2px',letterSpacing:'0.08em'}}>RESET</button>
+            </div>
+            <div style={{display:'flex', alignItems:'center', gap:8}}>
+              <input type="range" min="0.4" max="2" step="0.05"
+                value={d._eyebrowScale !== undefined ? d._eyebrowScale : 1}
+                onChange={e=>set('_eyebrowScale', parseFloat(e.target.value))}
+                style={{flex:1}} />
+              <span style={{fontSize:'0.7rem', color:'var(--text-mid)', minWidth:34, textAlign:'right'}}>
+                {Math.round((d._eyebrowScale !== undefined ? d._eyebrowScale : 1) * 100)}%
+              </span>
+            </div>
+          </div>
+          <Sep/>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',opacity:0.45,marginBottom:6}}>SERVICES EN PROMO</div>
+          {items.map((item, i) => (
+            <div key={i} style={{background:'rgba(0,0,0,0.035)',border:'1px solid rgba(0,0,0,0.07)',borderRadius:8,padding:'10px 12px',marginBottom:8}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                <span style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'0.08em',opacity:0.4}}>Service {i+1}</span>
+                {items.length > 1 && (
+                  <button onClick={()=>removeItem(i)} style={{background:'none',border:'none',cursor:'pointer',opacity:0.35,fontSize:14,padding:'0 2px',lineHeight:1}} title="Supprimer">✕</button>
+                )}
+              </div>
+              <FInput label="Nom du service" value={item.service||''} onChange={v=>setItem(i,'service',v)} />
+              <Row2>
+                <FInput label="Prix promo" value={item.prix||''} onChange={v=>setItem(i,'prix',v)} />
+                <FInput label="Prix original" value={item.avant||''} onChange={v=>setItem(i,'avant',v)} />
+              </Row2>
+            </div>
+          ))}
+          {items.length < 5 && (
+            <button onClick={addItem} style={{width:'100%',padding:'8px 0',marginBottom:10,border:'1px dashed rgba(0,0,0,0.18)',borderRadius:8,background:'none',cursor:'pointer',fontSize:12,fontWeight:600,opacity:0.5}}>+ Ajouter un service</button>
+          )}
+          <Sep/>
+          <FArea label="Description / invitation" value={d.description||''} onChange={v=>set('description',v)} />
+          <FArea label="Bonus (plus gros, optionnel)" value={d.bonus||''} onChange={v=>set('bonus',v)} />
+          <FInput label="CTA" value={d.cta||''} onChange={v=>set('cta',v)} />
           <Row2>
-            <FInput label="Unité" value={d.unit||''} onChange={v=>set('unit',v)} />
-            <FInput label="Suffix" value={d.suffix||''} onChange={v=>set('suffix',v)} />
-          </Row2>
-          <FArea label="Description" value={d.description||''} onChange={v=>set('description',v)} />
-          <Row2>
-            <FInput label="Code" value={d.code||''} onChange={v=>set('code',v)} />
+            <FInput label="Site web (centre footer)" value={d.website||''} onChange={v=>set('website',v)} />
             <FInput label="Jusqu'au" value={d.until||''} onChange={v=>set('until',v)} />
           </Row2>
-          <FInput label="CTA" value={d.cta||''} onChange={v=>set('cta',v)} />
           <Sep/>
           <FImg label="Photo" value={d.photo||''} onChange={v=>set('photo',v)} />
+          <div className="field">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <Lbl>Position photo — X (gauche / droite)</Lbl>
+              <button type="button" onClick={()=>set('_photoX',50)} style={{fontSize:'0.6rem',color:'var(--text-lo)',background:'none',border:'none',cursor:'pointer',padding:'0 2px',letterSpacing:'0.08em'}}>RESET</button>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <input type="range" min="0" max="100" step="1"
+                value={d._photoX ?? 50}
+                onChange={e=>set('_photoX', parseInt(e.target.value))}
+                style={{flex:1}} />
+              <span style={{fontSize:'0.7rem',color:'var(--text-mid)',minWidth:34,textAlign:'right'}}>{d._photoX ?? 50}%</span>
+            </div>
+          </div>
+          <div className="field">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <Lbl>Position photo — Y (haut / bas)</Lbl>
+              <button type="button" onClick={()=>set('_photoY',50)} style={{fontSize:'0.6rem',color:'var(--text-lo)',background:'none',border:'none',cursor:'pointer',padding:'0 2px',letterSpacing:'0.08em'}}>RESET</button>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <input type="range" min="0" max="100" step="1"
+                value={d._photoY ?? 50}
+                onChange={e=>set('_photoY', parseInt(e.target.value))}
+                style={{flex:1}} />
+              <span style={{fontSize:'0.7rem',color:'var(--text-mid)',minWidth:34,textAlign:'right'}}>{d._photoY ?? 50}%</span>
+            </div>
+          </div>
+          <Sep/>
+          <div style={{fontSize:11,fontWeight:700,letterSpacing:'0.08em',textTransform:'uppercase',opacity:0.45,marginBottom:8}}>COULEURS DES TEXTES</div>
+          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+            {[
+              ['Badge PROMO',    '_colorBadge',   '#f8cbca'],
+              ['Titre événement','_colorEyebrow', '#f8cbca'],
+              ['Noms services',  '_colorSvc',     d._fg||'#2c1f1c'],
+              ['Prix',           '_colorPrix',    d._fg||'#2c1f1c'],
+              ['Description',    '_colorDesc',    d._fg||'#2c1f1c'],
+              ['Bonus',          '_colorBonus',   '#f8cbca'],
+              ['CTA footer',     '_colorCta',     d._bg||'#fffcfa'],
+              ['Site web footer','_colorWeb',     d._bg||'#fffcfa'],
+              ['Date footer',    '_colorUntil',   d._bg||'#fffcfa'],
+            ].map(([label, key, def]) => (
+              <div key={key} style={{display:'flex',alignItems:'center',gap:6}}>
+                <input type="color" className="f-input"
+                  value={d[key] || def}
+                  onChange={e=>set(key, e.target.value)}
+                  style={{width:32,height:26,padding:0,cursor:'pointer',flexShrink:0,border:'1px solid rgba(0,0,0,0.15)',borderRadius:4}} />
+                <span style={{fontSize:'0.72rem',opacity:0.65,lineHeight:1.2}}>{label}</span>
+              </div>
+            ))}
+          </div>
           <SalonStyle d={d} set={set} />
         </EdShell>
       );
@@ -4220,6 +4483,188 @@
       );
     }
 
+    function EdE11A({ d, set, onExport, onReset }) {
+      return (
+        <EdShell id="E11A" title="Soirée VIP A · Affiche" hint="Format affiche sombre · infos clés en badges" onExport={onExport} onReset={onReset}>
+          <Row2>
+            <FInput label="Badge (ex. Sur invitation)" value={d.badge||''} onChange={v=>set('badge',v)} />
+            <FInput label="Eyebrow" value={d.eyebrow||''} onChange={v=>set('eyebrow',v)} />
+          </Row2>
+          <Row2>
+            <FInput label="Titre ligne 1" value={d.titleMain||''} onChange={v=>set('titleMain',v)} />
+            <FInput label="Titre ligne 2 (italique)" value={d.titleItalic||''} onChange={v=>set('titleItalic',v)} />
+          </Row2>
+          <FArea label="Description / teaser" value={d.description||''} onChange={v=>set('description',v)} />
+          <Sep/>
+          <FInfoList label="Infos clés (date, heure, lieu…)" value={d.infos||[]} onChange={v=>set('infos',v)} max={4} />
+          <Sep/>
+          <Row2>
+            <FInput label="CTA" value={d.cta||''} onChange={v=>set('cta',v)} />
+            <FInput label="RSVP / mention finale" value={d.rsvp||''} onChange={v=>set('rsvp',v)} />
+          </Row2>
+          <SalonStyle d={d} set={set} />
+        </EdShell>
+      );
+    }
+
+    function EdE11B({ d, set, onExport, onReset }) {
+      return (
+        <EdShell id="E11B" title="Soirée VIP B · Invitation" hint="Carte avec photo + détails pratiques" onExport={onExport} onReset={onReset}>
+          <FInput label="Tag" value={d.tag||''} onChange={v=>set('tag',v)} />
+          <Row2>
+            <FInput label="Titre" value={d.title||''} onChange={v=>set('title',v)} />
+            <FInput label="Titre italique" value={d.titleItalic||''} onChange={v=>set('titleItalic',v)} />
+          </Row2>
+          <Sep/>
+          <FInfoList label="Détails pratiques (date, heure, lieu…)" value={d.infos||[]} onChange={v=>set('infos',v)} max={4} />
+          <Sep/>
+          <FArea label="Description / teaser" value={d.description||''} onChange={v=>set('description',v)} />
+          <FInput label="Note (au-dessus du bouton)" value={d.note||''} onChange={v=>set('note',v)} />
+          <FInput label="CTA" value={d.cta||''} onChange={v=>set('cta',v)} />
+          <Sep/>
+          <FImg label="Photo" value={d.photo||''} onChange={v=>set('photo',v)} />
+          <div className="field">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <Lbl>Position photo — X</Lbl>
+              <button type="button" onClick={()=>set('_photoX',50)} style={{fontSize:'0.6rem',color:'var(--text-lo)',background:'none',border:'none',cursor:'pointer',padding:'0 2px',letterSpacing:'0.08em'}}>RESET</button>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <input type="range" min="0" max="100" step="1"
+                value={d._photoX ?? 50}
+                onChange={e=>set('_photoX', parseInt(e.target.value))}
+                style={{flex:1}} />
+              <span style={{fontSize:'0.7rem',color:'var(--text-mid)',minWidth:34,textAlign:'right'}}>{d._photoX ?? 50}%</span>
+            </div>
+          </div>
+          <div className="field">
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <Lbl>Position photo — Y</Lbl>
+              <button type="button" onClick={()=>set('_photoY',50)} style={{fontSize:'0.6rem',color:'var(--text-lo)',background:'none',border:'none',cursor:'pointer',padding:'0 2px',letterSpacing:'0.08em'}}>RESET</button>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:8}}>
+              <input type="range" min="0" max="100" step="1"
+                value={d._photoY ?? 50}
+                onChange={e=>set('_photoY', parseInt(e.target.value))}
+                style={{flex:1}} />
+              <span style={{fontSize:'0.7rem',color:'var(--text-mid)',minWidth:34,textAlign:'right'}}>{d._photoY ?? 50}%</span>
+            </div>
+          </div>
+          <SalonStyle d={d} set={set} />
+        </EdShell>
+      );
+    }
+
+    function EdE11C({ d, set, onExport, onReset }) {
+      const sections = Array.isArray(d.sections) && d.sections.length === 2 ? d.sections : E11VipEventC.defaults.sections;
+      const setSection = (i, patch) => {
+        set('sections', sections.map((s, j) => j === i ? { ...s, ...patch } : s));
+      };
+      return (
+        <EdShell id="E11C" title="Soirée VIP C · Double expérience" hint="Deux ateliers, deux photos découpées, infos partagées" onExport={onExport} onReset={onReset}>
+          <Row2>
+            <FInput label="Eyebrow" value={d.eyebrow||''} onChange={v=>set('eyebrow',v)} />
+            <FInput label="Tagline" value={d.tagline||''} onChange={v=>set('tagline',v)} />
+          </Row2>
+          <Row2>
+            <FInput label="Titre" value={d.titleMain||''} onChange={v=>set('titleMain',v)} />
+            <FInput label="Titre (italique)" value={d.titleItalic||''} onChange={v=>set('titleItalic',v)} />
+          </Row2>
+          <Sep/>
+          {sections.map((s, i) => (
+            <div key={i} style={{border:'1px solid var(--brd)',borderRadius:4,padding:'10px 10px 6px',marginBottom:10}}>
+              <div style={{fontSize:'0.65rem',color:'var(--text-mid)',fontWeight:600,marginBottom:6}}>EXPÉRIENCE {i+1}</div>
+              <Row2>
+                <FInput label="Rôle (sous la photo)" value={s.role||''} onChange={v=>setSection(i,{role:v})} />
+                <FInput label="Survol (eyebrow)" value={s.eyebrow||''} onChange={v=>setSection(i,{eyebrow:v})} />
+              </Row2>
+              <FInput label="Lieu / nom" value={s.label||''} onChange={v=>setSection(i,{label:v})} />
+              <FImg label="Photo découpée" value={s.photo||''} onChange={v=>setSection(i,{photo:v})} />
+              <FListSimple label="Points forts" value={s.items||[]} onChange={v=>setSection(i,{items:v})} />
+            </div>
+          ))}
+          <Sep/>
+          <FInput label="Tirage / cadeaux" value={d.draw||''} onChange={v=>set('draw',v)} />
+          <Row2>
+            <FInput label="CTA" value={d.cta||''} onChange={v=>set('cta',v)} />
+            <FInput label="RSVP / mention finale" value={d.rsvp||''} onChange={v=>set('rsvp',v)} />
+          </Row2>
+          <SalonStyle d={d} set={set} />
+        </EdShell>
+      );
+    }
+
+    function EdE11D({ d, set, onExport, onReset }) {
+      const sections = Array.isArray(d.sections) && d.sections.length === 2 ? d.sections : E11VipEventD.defaults.sections;
+      const setSection = (i, patch) => set('sections', sections.map((s, j) => j === i ? { ...s, ...patch } : s));
+      const highlights = d.highlights || [];
+      const setHighlight = (i, k, v) => set('highlights', highlights.map((h, j) => j === i ? { ...h, [k]: v } : h));
+      return (
+        <EdShell id="E11D" title="Journée VIP D · Glow Up" hint="Reproduction fidèle de l'affiche cliente, format carré" onExport={onExport} onReset={onReset}>
+          <Row2>
+            <FInput label="Eyebrow" value={d.eyebrow||''} onChange={v=>set('eyebrow',v)} />
+            <FInput label="Titre principal" value={d.titleMain||''} onChange={v=>set('titleMain',v)} />
+          </Row2>
+          <Row2>
+            <FInput label="Titre script (ex. Glow Up)" value={d.titleScript||''} onChange={v=>set('titleScript',v)} />
+            <FInput label="Tagline" value={d.tagline||''} onChange={v=>set('tagline',v)} />
+          </Row2>
+          <Row2>
+            <FInput label="Bandeau slogan" value={d.banner||''} onChange={v=>set('banner',v)} />
+            <FInput label="Bandeau (mots en relief)" value={d.bannerEmphasis||''} onChange={v=>set('bannerEmphasis',v)} />
+          </Row2>
+          <Sep/>
+          <div className="field">
+            <Lbl>Points forts (icône + texte court — 4 idéalement)</Lbl>
+            {highlights.map((h, i) => (
+              <div key={i} style={{display:'grid',gridTemplateColumns:'56px 1fr',gap:4,marginBottom:4}}>
+                <input className="f-input" value={h.icon||''} onChange={e=>setHighlight(i,'icon',e.target.value)} style={{textAlign:'center'}} />
+                <input className="f-input" value={h.label||''} onChange={e=>setHighlight(i,'label',e.target.value)} />
+              </div>
+            ))}
+          </div>
+          <FInput label="Phrase de transition" value={d.divider||''} onChange={v=>set('divider',v)} />
+          <Sep/>
+          {sections.map((s, i) => (
+            <div key={i} style={{border:'1px solid var(--brd)',borderRadius:4,padding:'10px 10px 6px',marginBottom:10}}>
+              <div style={{fontSize:'0.65rem',color:'var(--text-mid)',fontWeight:600,marginBottom:6}}>EXPÉRIENCE {i+1}</div>
+              <Row2>
+                <FInput label="Survol (eyebrow)" value={s.eyebrow||''} onChange={v=>setSection(i,{eyebrow:v})} />
+                <FInput label="Lieu / nom" value={s.label||''} onChange={v=>setSection(i,{label:v})} />
+              </Row2>
+              <Row2>
+                <FInput label="Étiquette (Journée / Soirée VIP)" value={s.tag||''} onChange={v=>setSection(i,{tag:v})} />
+                <FImg label="Photo découpée" value={s.photo||''} onChange={v=>setSection(i,{photo:v})} />
+              </Row2>
+              <FListSimple label="Points forts" value={s.items||[]} onChange={v=>setSection(i,{items:v})} />
+            </div>
+          ))}
+          <Sep/>
+          <Row2>
+            <FInput label="Date — étiquette (ex. Jeudi)" value={d.dateLabel||''} onChange={v=>set('dateLabel',v)} />
+            <FInput label="Date — valeur (ex. 18 juin)" value={d.dateValue||''} onChange={v=>set('dateValue',v)} />
+          </Row2>
+          <Sep/>
+          <Row2>
+            <FInput label="Mot de la fin — début" value={d.closingMain||''} onChange={v=>set('closingMain',v)} />
+            <FInput label="Mot de la fin — accent (ex. VIP)" value={d.closingAccent||''} onChange={v=>set('closingAccent',v)} />
+          </Row2>
+          <Row2>
+            <FInput label="Mot de la fin — fin" value={d.closingEnd||''} onChange={v=>set('closingEnd',v)} />
+            <FInput label="Badge (ex. Vous êtes précieuse)" value={d.badge||''} onChange={v=>set('badge',v)} />
+          </Row2>
+          <FInput label="Note de bas de page" value={d.footerNote||''} onChange={v=>set('footerNote',v)} />
+          <Sep/>
+          <div className="field">
+            <Lbl>Couleurs</Lbl>
+            <Row2>
+              <div><Lbl>Accent rose</Lbl><input className="f-input" type="color" value={d._accent||'#e8669f'} onChange={e=>set('_accent', e.target.value)} style={{height:34,padding:2}} /></div>
+              <div><Lbl>Or</Lbl><input className="f-input" type="color" value={d._gold||'#d8b25c'} onChange={e=>set('_gold', e.target.value)} style={{height:34,padding:2}} /></div>
+            </Row2>
+          </div>
+        </EdShell>
+      );
+    }
+
     /* ── R11 — Starting 3 ── */
     function EdR11({ d, set, onExport, onReset }) {
       const isX = d._team === 'xtreme';
@@ -4366,7 +4811,7 @@
       );
     }
 
-    const EDITORS = { T01: EdT01, T02: EdT02, T03: EdT03, T04: EdT04, T05: EdT05, T06: EdT06, T07: EdT07, T08: EdT08, T09: EdT09, R01: EdR01, R02: EdR02, R03: EdR03, R04: EdR04, R05: EdR05, R06: EdR06, R07: EdR07, R08: EdR08, R09: EdR09, R10: EdR10, R11: EdR11,
+    const EDITORS = { T01: EdT01, T02: EdT02, T03: EdT03, T04: EdT04, T05: EdT05, T06: EdT06, T07: EdT07, T08: EdT08, T09: EdT09, T10: EdT10, R01: EdR01, R02: EdR02, R03: EdR03, R04: EdR04, R05: EdR05, R06: EdR06, R07: EdR07, R08: EdR08, R09: EdR09, R10: EdR10, R11: EdR11,
       G1A: EdG1A, G1B: EdG1B, G2A: EdG2A, G2B: EdG2B, G3A: EdG3A, G3B: EdG3B,
       G4A: EdG4A, G4B: EdG4B, G5A: EdG5A, G5B: EdG5B,
       E01A: EdE01A, E01B: EdE01B, E01C: EdE01C,
@@ -4379,19 +4824,69 @@
       E08A: EdE08A, E08B: EdE08B,
       E09A: EdE09A, E09B: EdE09B,
       E10A: EdE10A, E10B: EdE10B,
+      E11A: EdE11A, E11B: EdE11B, E11C: EdE11C, E11D: EdE11D,
     };
 
     function Panel({ active, data, setData, onReset, onExport }) {
       const Ed = EDITORS[active];
+      // `set` stable (par template actif) → permet aux éditeurs de mémoïser leurs listes lourdes.
+      const set = React.useCallback(
+        (f, v) => setData(prev => ({ ...prev, [active]: { ...(prev[active] || {}), [f]: v } })),
+        [active, setData]
+      );
       if (Ed) return (
         <Ed
           d={data[active] || {}}
-          set={(f, v) => setData(prev => ({ ...prev, [active]: { ...(prev[active] || {}), [f]: v } }))}
+          set={set}
           onReset={onReset}
           onExport={onExport}
         />
       );
       return <NoEditor id={active} onExport={onExport} />;
+    }
+
+    /* ── Embed polices ── précalculé une seule fois, réutilisé pour tous les exports ──
+       html-to-image embarque les @font-face en data URI. Si on le laisse refaire ce travail
+       à chaque rendu (ancien double-passage), une course async pouvait rasteriser AVANT que
+       les woff2 soient prêts → fallback Impact → tout le texte sortait en gras à l'export
+       alors que le preview restait correct. On résout tout l'embed UNE fois, puis on injecte
+       la chaîne finie. */
+    let _fontEmbedCSSCache = null;
+    let _sameOriginFontsInjected = false;
+
+    // Les @font-face Google sont chargées via un <link> CROSS-ORIGIN : html-to-image ne peut pas
+    // lire leur cssRules (SecurityError) → il ne les embarque pas → l'export retombe sur Impact
+    // (police lourde) = tout en gras. On fetch le CSS Google (CORS-OK) et on le réinjecte dans un
+    // <style> SAME-ORIGIN : la lib peut alors lire les @font-face et embarquer les woff2 (gstatic CORS-OK).
+    async function ensureSameOriginFontCSS() {
+      if (_sameOriginFontsInjected) return;
+      _sameOriginFontsInjected = true;
+      const links = [...document.querySelectorAll('link[rel="stylesheet"]')]
+        .filter(l => /fonts\.googleapis\.com/.test(l.href || ''));
+      const parts = [];
+      for (const l of links) {
+        try {
+          const res = await fetch(l.href, { mode: 'cors' });
+          if (res.ok) parts.push(await res.text());
+        } catch (e) { console.warn('[fonts] fetch CSS échoué', l.href, e); }
+      }
+      if (parts.length) {
+        const style = document.createElement('style');
+        style.setAttribute('data-embedded-fonts', '');
+        style.textContent = parts.join('\n');
+        document.head.appendChild(style);
+        // Laisse le navigateur enregistrer les nouvelles @font-face
+        try { await document.fonts.ready; } catch (e) {}
+      }
+    }
+
+    async function getCachedFontEmbedCSS(el) {
+      if (_fontEmbedCSSCache != null) return _fontEmbedCSSCache;
+      await ensureSameOriginFontCSS();
+      await document.fonts.ready;
+      const css = await htmlToImage.getFontEmbedCSS(el);
+      _fontEmbedCSSCache = css || '';   // '' = échec → on ne passera PAS fontEmbedCSS (sinon embed désactivé)
+      return _fontEmbedCSSCache;
     }
 
     /* ── Export PNG ── capture le stage déjà rendu (ref React) ── */
@@ -4404,8 +4899,8 @@
       if (btn) { btn.disabled = true; btn.innerHTML = '<span class="btn-dl-icon">…</span>Export…'; }
 
       try {
-        // Attendre que toutes les polices Google soient chargées avant la capture
-        await document.fonts.ready;
+        // Injecte les @font-face same-origin + résout l'embed en amont (cf. getCachedFontEmbedCSS).
+        const fontEmbedCSS = await getCachedFontEmbedCSS(stageEl);
 
         const exportOpts = {
           pixelRatio: 3,
@@ -4419,10 +4914,9 @@
             boxShadow:  'none',
           },
         };
+        // Ne passer fontEmbedCSS que s'il est non vide — une chaîne vide DÉSACTIVE l'embed dans la lib.
+        if (fontEmbedCSS) exportOpts.fontEmbedCSS = fontEmbedCSS;
 
-        // Premier passage : force html-to-image à découvrir et charger les polices
-        await htmlToImage.toPng(stageEl, exportOpts);
-        // Deuxième passage : les polices sont maintenant en cache → elles s'embarquent correctement
         const dataUrl = await htmlToImage.toPng(stageEl, exportOpts);
 
         if (!dataUrl || dataUrl.length < 500) {
@@ -4514,12 +5008,15 @@
           });
 
           const el = container.firstChild;
-          const dataUrl = await htmlToImage.toPng(el, {
+          const fontEmbedCSS = await getCachedFontEmbedCSS(el);
+          const batchOpts = {
             pixelRatio: 2,
             width: tmpl.w,
             height: tmpl.h,
             style: { transform: 'none', position: 'static', left: '0', top: '0', boxShadow: 'none' },
-          });
+          };
+          if (fontEmbedCSS) batchOpts.fontEmbedCSS = fontEmbedCSS;
+          const dataUrl = await htmlToImage.toPng(el, batchOpts);
 
           zip.file(`secret-${String(i + 1).padStart(2, '0')}.png`, dataUrlToBlob(dataUrl));
           onProgress(i + 1, quotes.length);
@@ -4543,6 +5040,12 @@
     }
 
     /* ── App ── */
+    // Stage isolé + mémoïsé : ne se re-rend QUE si le template ou ses données changent.
+    // Évite de repeindre l'aperçu 1080×1080 (12 images base64 + dégradés) à chaque frappe / zoom.
+    const StageContent = React.memo(function StageContent({ tmpl, data }) {
+      return tmpl.render(data);
+    });
+
     function App() {
       const [active, setActive]           = useState('T01');
       const [tab, setTab]                 = useState('preview'); // mobile tabs
@@ -4558,6 +5061,10 @@
       const [allowedIds, setAllowedIds]   = useState(null); // null = tous visibles
       const wrapRef  = useRef();
       const stageRef = useRef();
+
+      // Saisie fluide : l'éditeur met `data` à jour immédiatement, mais l'aperçu lourd
+      // est rendu à partir d'une version DIFFÉRÉE (priorité basse, interruptible).
+      const deferredData = React.useDeferredValue(data);
 
       // Charger la config d'accès (admin = null, pigiste = liste restreinte)
       useEffect(() => {
@@ -4718,7 +5225,7 @@
               width: tmpl.w,
               height: tmpl.h,
             }}>
-              {tmpl.render(data)}
+              <StageContent tmpl={tmpl} data={deferredData} />
             </div>
             <div className="stage-hud">
               <div className="hud-pip" />

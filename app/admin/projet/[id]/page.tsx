@@ -19,6 +19,8 @@ interface Projet {
   client_telephone: string
   nom_service: string | null
   is_archived: boolean
+  facturation_mode: string | null
+  logo_fichiers: { id: number; filename: string }[]
 }
 
 interface ChecklistItem {
@@ -30,6 +32,10 @@ interface ChecklistItem {
   is_revision: boolean
   item_type: string
   file_category: string
+  field_type: string
+  text_value: string | null
+  has_file: boolean
+  file_name: string | null
 }
 
 interface EditItem {
@@ -53,6 +59,21 @@ interface Mandat {
   montant_convenu: number
   date_echeance: string | null
   statut: string
+}
+
+interface RessourceDisponible {
+  id: number
+  titre: string
+  categorie: string
+  bundle_id: number | null
+  is_global: boolean
+  already_assigned: boolean
+}
+
+interface RessourceBundleLite {
+  id: number
+  nom: string
+  icone: string
 }
 
 const PIPELINE_STEPS = [
@@ -110,6 +131,74 @@ const MANDAT_BADGE: Record<string, string> = {
   annule:     'bg-gray-100 text-gray-500',
 }
 
+interface Member { name: string; title: string; desc: string }
+
+interface RevisionDraftItem { key: string; label: string; included: boolean }
+
+let revisionKeySeq = 0
+const newRevisionKey = () => `rev-${Date.now()}-${revisionKeySeq++}`
+
+const REVISION_CHECKLIST_SITE_WEB_VITRINE = [
+  'Orthographe et contenu textuel de toutes les pages',
+  'Coordonnées (téléphone, courriel, adresse)',
+  'Formulaire de contact (envoi et réception)',
+  'Affichage sur mobile et tablette',
+  'Liens (menu, boutons, réseaux sociaux)',
+  "Section Équipe (noms, titres, photos, descriptions)",
+  'Images du site (qualité et pertinence)',
+  "Heures d'ouverture affichées",
+  'Nom de domaine et certificat SSL (https)',
+]
+
+function ChecklistItemContent({ item, apiBase }: { item: ChecklistItem; apiBase: string }) {
+  const fileUrl = `${apiBase}/api/v1/admin/item/${item.id}/file`
+  const isImage = item.has_file && /\.(jpe?g|png|gif|webp|svg)$/i.test(item.file_name || '')
+
+  if (item.field_type === 'members' && item.text_value) {
+    let members: Member[] = []
+    try { members = JSON.parse(item.text_value) } catch { /* skip */ }
+    return (
+      <div className="space-y-2">
+        {members.map((m, i) => (
+          <div key={i} className="bg-white border border-[var(--color-light-border-2)] rounded-lg p-3">
+            <p className="font-body font-bold text-sm text-[var(--color-dark-1)]">{m.name}</p>
+            {m.title && <p className="font-body text-xs text-[var(--color-brand)]">{m.title}</p>}
+            {m.desc && <p className="font-body text-xs text-[var(--color-dark-text-2)] mt-1">{m.desc}</p>}
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (item.has_file) {
+    return (
+      <div className="flex flex-col gap-2">
+        {isImage && (
+          <a href={fileUrl} target="_blank" rel="noopener noreferrer">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={fileUrl} alt={item.nom_item} className="max-h-40 rounded-lg object-contain border border-[var(--color-light-border-2)] bg-white" />
+          </a>
+        )}
+        <a href={fileUrl} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs font-body font-bold text-[var(--color-brand)] hover:underline">
+          <span aria-hidden="true" className="material-symbols-outlined text-sm">download</span>
+          Télécharger le fichier
+        </a>
+      </div>
+    )
+  }
+
+  if (item.text_value) {
+    return (
+      <p className="font-body text-sm text-[var(--color-dark-1)] bg-white border border-[var(--color-light-border-2)] rounded-lg px-3 py-2 whitespace-pre-wrap">
+        {item.text_value}
+      </p>
+    )
+  }
+
+  return null
+}
+
 function inferType(item: ChecklistItem): string {
   if (item.item_type === 'video') return 'video_url'
   if (item.file_category) return item.file_category === 'video' ? 'video_file' : item.file_category
@@ -129,9 +218,16 @@ export default function AdminProjetDetailPage() {
   const [forceStatusOpen, setForceStatusOpen] = useState(false)
   const [forcedStatut, setForcedStatut] = useState(STATUTS[0])
   const [revisionOpen, setRevisionOpen] = useState(false)
-  const [revisionItems, setRevisionItems] = useState<string[]>([''])
+  const [revisionDraft, setRevisionDraft] = useState<RevisionDraftItem[]>([])
   const [editItemsOpen, setEditItemsOpen] = useState(false)
   const [editedItems, setEditedItems] = useState<EditItem[]>([])
+  const [completeOpen, setCompleteOpen] = useState(false)
+  const [completeRessources, setCompleteRessources] = useState<RessourceDisponible[]>([])
+  const [completeBundles, setCompleteBundles] = useState<RessourceBundleLite[]>([])
+  const [selectedRessourceIds, setSelectedRessourceIds] = useState<Set<number>>(new Set())
+  const [loadingRessources, setLoadingRessources] = useState(false)
+  const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [deletingLogoId, setDeletingLogoId] = useState<number | null>(null)
 
   // Pigiste
   const [pigistes, setPigistes] = useState<Pigiste[]>([])
@@ -208,18 +304,53 @@ export default function AdminProjetDetailPage() {
   }
 
   const handleRevision = async () => {
-    const validItems = revisionItems.filter(s => s.trim())
+    const validItems = revisionDraft.filter(r => r.included && r.label.trim()).map(r => r.label.trim())
     setActionLoading('revision')
     const ok = await postAction(`/api/v1/admin/projet/${id}/revision`, { items: validItems })
-    if (ok) { showToast('Projet en révision — client notifié !'); setRevisionOpen(false); setRevisionItems(['']); await fetchData() }
+    if (ok) { showToast('Projet en révision — client notifié !'); setRevisionOpen(false); setRevisionDraft([]); await fetchData() }
     setActionLoading('')
   }
 
+  const openRevisionPanel = () => {
+    const defaults = projet?.nom_service === 'Site Web Vitrine' ? REVISION_CHECKLIST_SITE_WEB_VITRINE : []
+    setRevisionDraft(defaults.length
+      ? defaults.map(label => ({ key: newRevisionKey(), label, included: true }))
+      : [{ key: newRevisionKey(), label: '', included: true }])
+    setRevisionOpen(true)
+  }
+
+  const openCompletePanel = async () => {
+    setCompleteOpen(true)
+    setLoadingRessources(true)
+    try {
+      const res = await fetch(`${API}/api/v1/admin/projet/${id}/ressources-disponibles`, { credentials: 'include' })
+      if (res.ok) {
+        const data = await res.json()
+        const ressources: RessourceDisponible[] = Array.isArray(data.ressources) ? data.ressources : []
+        setCompleteRessources(ressources)
+        setCompleteBundles(Array.isArray(data.bundles) ? data.bundles : [])
+        setSelectedRessourceIds(new Set(ressources.filter(r => r.already_assigned).map(r => r.id)))
+      }
+    } catch { /* ignore */ }
+    setLoadingRessources(false)
+  }
+
+  const toggleRessource = (rid: number) => {
+    setSelectedRessourceIds(prev => {
+      const next = new Set(prev)
+      if (next.has(rid)) next.delete(rid); else next.add(rid)
+      return next
+    })
+  }
+
   const handleComplete = async () => {
-    if (!confirm('Marquer le projet comme complété ?')) return
     setActionLoading('complete')
-    const ok = await postAction(`/api/v1/admin/projet/${id}/complete`)
-    if (ok) { showToast('Projet complété — client notifié !'); await fetchData() }
+    const ok = await postAction(`/api/v1/admin/projet/${id}/complete`, { ressource_ids: Array.from(selectedRessourceIds) })
+    if (ok) {
+      showToast(selectedRessourceIds.size > 0 ? `Projet complété — client notifié avec ${selectedRessourceIds.size} ressource(s) !` : 'Projet complété — client notifié !')
+      setCompleteOpen(false)
+      await fetchData()
+    }
     setActionLoading('')
   }
 
@@ -227,6 +358,13 @@ export default function AdminProjetDetailPage() {
     setActionLoading('force')
     const ok = await postAction(`/api/v1/admin/projet/${id}/force-status`, { statut: forcedStatut })
     if (ok) { showToast(`Statut forcé : ${forcedStatut}`); setForceStatusOpen(false); await fetchData() }
+    setActionLoading('')
+  }
+
+  const handleRappelDocuments = async () => {
+    setActionLoading('rappel')
+    const ok = await postAction(`/api/v1/admin/projet/${id}/rappel-documents`)
+    if (ok) showToast('Rappel envoyé au client !')
     setActionLoading('')
   }
 
@@ -238,9 +376,8 @@ export default function AdminProjetDetailPage() {
   }
 
   const handleNotifierFacture = async () => {
-    if (!projet?.client_id) return
     setActionLoading('facture')
-    const ok = await postAction(`/api/v1/admin/client/${projet.client_id}/notifier-facture`)
+    const ok = await postAction(`/api/v1/admin/projet/${id}/notifier-facture`)
     if (ok) showToast('Notification facture envoyée au client !')
     setActionLoading('')
   }
@@ -277,6 +414,35 @@ export default function AdminProjetDetailPage() {
       else { const d = await res.json().catch(() => ({})); showToast(d.error || 'Erreur', false) }
     } catch { showToast('Erreur de connexion', false) }
     setActionLoading('')
+  }
+
+  const handleUploadLogo = async (files: FileList | File[]) => {
+    const list = Array.from(files)
+    if (list.length === 0) return
+    setUploadingLogo(true)
+    try {
+      const fd = new FormData()
+      list.forEach(f => fd.append('files', f))
+      const res = await fetch(`${API}/api/v1/admin/projet/${id}/logo`, {
+        method: 'POST', credentials: 'include', body: fd,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) { showToast(`${list.length > 1 ? 'Logos déposés' : 'Logo déposé'} !`); await fetchData() }
+      else showToast(data.error || 'Erreur lors du dépôt du logo', false)
+    } catch { showToast('Erreur réseau', false) }
+    setUploadingLogo(false)
+  }
+
+  const handleDeleteLogo = async (fileId: number) => {
+    setDeletingLogoId(fileId)
+    try {
+      const res = await fetch(`${API}/api/v1/admin/projet/${id}/logo/${fileId}`, {
+        method: 'DELETE', credentials: 'include',
+      })
+      if (res.ok) { showToast('Fichier retiré.'); await fetchData() }
+      else showToast('Erreur lors du retrait', false)
+    } catch { showToast('Erreur réseau', false) }
+    setDeletingLogoId(null)
   }
 
   const handleCreerMandat = async () => {
@@ -360,13 +526,24 @@ export default function AdminProjetDetailPage() {
           )}
         </div>
         <div className="flex flex-col gap-3">
-          <button
-            onClick={handleNotifierFacture}
-            disabled={actionLoading === 'facture'}
-            className="bg-[var(--color-brand)] text-white px-8 py-4 rounded-2xl font-body font-bold flex items-center justify-center gap-3 hover:bg-[var(--color-brand-hover)] transition-all disabled:opacity-60">
-            <span aria-hidden="true" className="material-symbols-outlined">description</span>
-            {actionLoading === 'facture' ? 'ENVOI...' : 'NOTIFIER FACTURE'}
-          </button>
+          {projet?.facturation_mode ? (
+            <div className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--color-light-0)] border border-[var(--color-light-border-2)]">
+              <span aria-hidden="true" className="material-symbols-outlined text-sm text-[var(--color-dark-text-2)]">money_off</span>
+              <span className="font-body font-bold text-xs uppercase tracking-wide text-[var(--color-dark-text-2)]">
+                {projet.facturation_mode === 'deja_paye' && 'Déjà payé'}
+                {projet.facturation_mode === 'quickbooks' && 'QuickBooks'}
+                {projet.facturation_mode === 'forfait' && 'Forfait'}
+              </span>
+            </div>
+          ) : (
+            <button
+              onClick={handleNotifierFacture}
+              disabled={actionLoading === 'facture'}
+              className="bg-[var(--color-brand)] text-white px-8 py-4 rounded-2xl font-body font-bold flex items-center justify-center gap-3 hover:bg-[var(--color-brand-hover)] transition-all disabled:opacity-60">
+              <span aria-hidden="true" className="material-symbols-outlined">description</span>
+              {actionLoading === 'facture' ? 'ENVOI...' : 'NOTIFIER FACTURE'}
+            </button>
+          )}
           <Link href={`/admin/projet/${id}/edit`}
             className="border border-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-8 py-3 rounded-2xl font-body font-bold flex items-center justify-center gap-2 hover:bg-[var(--color-light-1)] transition-all text-sm">
             <span aria-hidden="true" className="material-symbols-outlined text-sm">edit</span>
@@ -410,11 +587,18 @@ export default function AdminProjetDetailPage() {
 
         {/* Bouton principal selon étape */}
         {isDocuments && (
-          <button onClick={handleMarkDocumentsRecus} disabled={actionLoading === 'docs'}
-            className="flex-1 min-w-[160px] bg-blue-600 text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-blue-700">
-            <span aria-hidden="true" className="material-symbols-outlined text-sm">inbox</span>
-            {actionLoading === 'docs' ? '...' : 'DOCS REÇUS'}
-          </button>
+          <>
+            <button onClick={handleMarkDocumentsRecus} disabled={actionLoading === 'docs'}
+              className="flex-1 min-w-[160px] bg-blue-600 text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-blue-700">
+              <span aria-hidden="true" className="material-symbols-outlined text-sm">inbox</span>
+              {actionLoading === 'docs' ? '...' : 'DOCS REÇUS'}
+            </button>
+            <button onClick={handleRappelDocuments} disabled={actionLoading === 'rappel'}
+              className="flex-1 min-w-[160px] bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] text-[var(--color-dark-1)] py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-[var(--color-light-0)]">
+              <span aria-hidden="true" className="material-symbols-outlined text-sm">notifications</span>
+              {actionLoading === 'rappel' ? '...' : 'RAPPEL CLIENT'}
+            </button>
+          </>
         )}
         {isDocumentsRecus && (
           <button onClick={handleStart} disabled={actionLoading === 'start'}
@@ -424,7 +608,7 @@ export default function AdminProjetDetailPage() {
           </button>
         )}
         {isTravaux && (
-          <button onClick={() => setRevisionOpen(true)}
+          <button onClick={openRevisionPanel}
             className="flex-1 min-w-[160px] bg-yellow-500 text-[var(--color-dark-1)] py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-yellow-400">
             <span aria-hidden="true" className="material-symbols-outlined text-sm">rate_review</span>
             EN RÉVISION
@@ -432,7 +616,7 @@ export default function AdminProjetDetailPage() {
         )}
         {isRevision && (
           <>
-            <button onClick={handleComplete} disabled={actionLoading === 'complete'}
+            <button onClick={openCompletePanel} disabled={actionLoading === 'complete'}
               className="flex-1 min-w-[160px] bg-emerald-600 text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-emerald-700">
               <span aria-hidden="true" className="material-symbols-outlined text-sm">check_circle</span>
               {actionLoading === 'complete' ? '...' : 'MARQUER COMPLÉTÉ'}
@@ -461,6 +645,11 @@ export default function AdminProjetDetailPage() {
           className="flex-1 min-w-[140px] bg-[var(--color-dark-text-2)] text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-[var(--color-dark-2)]">
           <span aria-hidden="true" className="material-symbols-outlined text-sm">quiz</span>
           DECISION BOARD
+        </Link>
+        <Link href={`/admin/sites/nouveau?from_projet=${id}`}
+          className="flex-1 min-w-[140px] bg-emerald-600 text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-emerald-700">
+          <span aria-hidden="true" className="material-symbols-outlined text-sm">web</span>
+          PRÉPARER SITE
         </Link>
       </div>
 
@@ -511,28 +700,37 @@ export default function AdminProjetDetailPage() {
       {revisionOpen && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6">
           <h3 className="font-display text-[var(--text-lg)] text-amber-800 mb-4">CRÉER UNE LISTE DE RÉVISIONS</h3>
-          <p className="text-amber-700 font-body text-sm mb-4">Le client recevra un courriel de notification automatiquement.</p>
+          <p className="text-amber-700 font-body text-sm mb-4">
+            Décochez les items qui ne s&apos;appliquent pas à ce projet. Le client recevra un courriel de notification automatiquement et pourra cocher chaque item ou signaler un changement (texte ou fichier).
+          </p>
           <div className="space-y-2 mb-4">
-            {revisionItems.map((item, idx) => (
-              <div key={idx} className="flex gap-2">
+            {revisionDraft.map(row => (
+              <div key={row.key} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={row.included}
+                  onChange={e => setRevisionDraft(prev => prev.map(r => r.key === row.key ? { ...r, included: e.target.checked } : r))}
+                  className="w-5 h-5 accent-amber-500 flex-shrink-0"
+                />
                 <input
                   type="text"
-                  value={item}
-                  onChange={e => setRevisionItems(prev => { const n = [...prev]; n[idx] = e.target.value; return n })}
+                  value={row.label}
+                  onChange={e => setRevisionDraft(prev => prev.map(r => r.key === row.key ? { ...r, label: e.target.value } : r))}
                   placeholder="Item de révision..."
-                  className="flex-1 bg-white border border-amber-200 rounded-xl px-4 py-2 font-body text-sm outline-none focus:ring-2 focus:ring-amber-400/40"
+                  className={`flex-1 bg-white border border-amber-200 rounded-xl px-4 py-2 font-body text-sm outline-none focus:ring-2 focus:ring-amber-400/40 ${!row.included ? 'opacity-50' : ''}`}
                 />
-                {revisionItems.length > 1 && (
-                  <button onClick={() => setRevisionItems(prev => prev.filter((_, i) => i !== idx))}
-                    className="text-red-400 hover:text-red-600 px-2">
-                    <span aria-hidden="true" className="material-symbols-outlined text-sm">close</span>
-                  </button>
-                )}
+                <button onClick={() => setRevisionDraft(prev => prev.filter(r => r.key !== row.key))}
+                  className="text-red-400 hover:text-red-600 px-2">
+                  <span aria-hidden="true" className="material-symbols-outlined text-sm">close</span>
+                </button>
               </div>
             ))}
+            {revisionDraft.length === 0 && (
+              <p className="text-amber-700/70 font-body text-sm">Aucun item. Cliquez sur « + Ajouter un item ».</p>
+            )}
           </div>
           <div className="flex flex-wrap gap-3">
-            <button onClick={() => setRevisionItems(prev => [...prev, ''])}
+            <button onClick={() => setRevisionDraft(prev => [...prev, { key: newRevisionKey(), label: '', included: true }])}
               className="border border-dashed border-amber-400 text-amber-700 px-4 py-2 rounded-xl font-body text-sm font-bold hover:bg-amber-100 transition-colors">
               + Ajouter un item
             </button>
@@ -540,7 +738,7 @@ export default function AdminProjetDetailPage() {
               className="bg-amber-500 text-white px-8 py-2 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:bg-amber-600 transition-colors">
               {actionLoading === 'revision' ? 'Envoi...' : 'Envoyer en révision + notifier'}
             </button>
-            <button onClick={() => { setRevisionOpen(false); setRevisionItems(['']) }}
+            <button onClick={() => { setRevisionOpen(false); setRevisionDraft([]) }}
               className="bg-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-6 py-2 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-border-2)] transition-colors">
               Annuler
             </button>
@@ -597,6 +795,81 @@ export default function AdminProjetDetailPage() {
         </div>
       )}
 
+      {/* Panel — Marquer complété + ressources à envoyer */}
+      {completeOpen && (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 mb-6">
+          <h3 className="font-display text-[var(--text-lg)] text-emerald-800 mb-4">MARQUER COMPLÉTÉ — RESSOURCES À ENVOYER</h3>
+          <p className="text-emerald-700 font-body text-sm mb-4">
+            Cochez les ressources à attribuer à {projet?.client_nom || 'la cliente'}. Elles seront ajoutées à son portail et incluses dans le courriel de livraison.
+          </p>
+          {loadingRessources ? (
+            <p className="text-emerald-700/70 font-body text-sm mb-4">Chargement des ressources...</p>
+          ) : completeRessources.length === 0 ? (
+            <p className="text-emerald-700/70 font-body text-sm mb-4">
+              Aucune ressource disponible. <Link href="/admin/ressources" className="underline font-bold">Créer une ressource</Link>.
+            </p>
+          ) : (
+            <div className="space-y-4 mb-4">
+              {completeBundles.map(b => {
+                const items = completeRessources.filter(r => r.bundle_id === b.id)
+                if (items.length === 0) return null
+                return (
+                  <div key={b.id}>
+                    <p className="font-body text-xs font-bold uppercase tracking-widest text-emerald-700 mb-2 flex items-center gap-1.5">
+                      <span aria-hidden="true" className="material-symbols-outlined text-sm">{b.icone}</span>
+                      {b.nom}
+                    </p>
+                    <div className="space-y-1.5">
+                      {items.map(r => (
+                        <label key={r.id} className="flex items-center gap-2 bg-white border border-emerald-200 rounded-xl px-3 py-2 cursor-pointer">
+                          <input type="checkbox" checked={selectedRessourceIds.has(r.id)} onChange={() => toggleRessource(r.id)}
+                            className="w-4 h-4 accent-emerald-600" />
+                          <span className="flex-1 font-body text-sm text-[var(--color-dark-1)]">{r.titre}</span>
+                          {r.is_global && (
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-body">Tous</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
+              {(() => {
+                const sansBundle = completeRessources.filter(r => !completeBundles.some(b => b.id === r.bundle_id))
+                if (sansBundle.length === 0) return null
+                return (
+                  <div>
+                    <p className="font-body text-xs font-bold uppercase tracking-widest text-emerald-700 mb-2">Sans bundle</p>
+                    <div className="space-y-1.5">
+                      {sansBundle.map(r => (
+                        <label key={r.id} className="flex items-center gap-2 bg-white border border-emerald-200 rounded-xl px-3 py-2 cursor-pointer">
+                          <input type="checkbox" checked={selectedRessourceIds.has(r.id)} onChange={() => toggleRessource(r.id)}
+                            className="w-4 h-4 accent-emerald-600" />
+                          <span className="flex-1 font-body text-sm text-[var(--color-dark-1)]">{r.titre}</span>
+                          {r.is_global && (
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-body">Tous</span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-3">
+            <button onClick={handleComplete} disabled={actionLoading === 'complete'}
+              className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:bg-emerald-700 transition-colors">
+              {actionLoading === 'complete' ? 'Envoi...' : selectedRessourceIds.size > 0 ? `Attribuer (${selectedRessourceIds.size}) + Marquer complété` : 'Marquer complété'}
+            </button>
+            <button onClick={() => setCompleteOpen(false)}
+              className="bg-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-6 py-3 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-border-2)] transition-colors">
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Grid principal */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
@@ -621,17 +894,24 @@ export default function AdminProjetDetailPage() {
                   <p className="text-[var(--color-dark-text-2)] text-sm font-body">Aucun item.</p>
                 )}
                 {itemsNormaux.map(item => (
-                  <div key={item.id} className="flex items-center gap-3">
-                    <div className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center ${item.est_coche ? 'border-[var(--color-brand)] bg-[var(--color-brand)] text-white' : 'border-[var(--color-light-border-2)]'}`}>
-                      {item.est_coche && <span aria-hidden="true" className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>}
-                    </div>
-                    <span className={`flex-1 font-body text-sm font-medium ${item.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
-                      {item.nom_item}
-                    </span>
-                    {item.requires_file && (
-                      <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body ${item.est_coche ? 'bg-green-100 text-green-600' : item.is_required ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
-                        {item.est_coche ? '✓ Reçu' : item.is_required ? 'Requis' : 'Optionnel'}
+                  <div key={item.id} className={`rounded-xl border transition-all ${item.est_coche ? 'border-[var(--color-brand)]/20 bg-[var(--color-brand)]/3' : 'border-[var(--color-light-border-2)]'}`}>
+                    <div className="flex items-center gap-3 px-3 py-2.5">
+                      <div className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center ${item.est_coche ? 'border-[var(--color-brand)] bg-[var(--color-brand)] text-white' : 'border-[var(--color-light-border-2)]'}`}>
+                        {item.est_coche && <span aria-hidden="true" className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>}
+                      </div>
+                      <span className={`flex-1 font-body text-sm font-medium ${item.est_coche ? 'text-[var(--color-dark-1)]' : 'text-[var(--color-dark-text-2)]'}`}>
+                        {item.nom_item}
                       </span>
+                      {item.requires_file && !item.has_file && (
+                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body ${item.is_required ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                          {item.is_required ? 'Requis' : 'Optionnel'}
+                        </span>
+                      )}
+                    </div>
+                    {item.est_coche && (item.text_value || item.has_file) && (
+                      <div className="px-3 pb-3">
+                        <ChecklistItemContent item={item} apiBase={API} />
+                      </div>
                     )}
                   </div>
                 ))}
@@ -645,20 +925,76 @@ export default function AdminProjetDetailPage() {
                 <p className="text-[var(--color-dark-text-2)] text-sm mb-6 font-body">
                   Accédez à tous les assets et livrables.
                 </p>
-                {projet?.lien_gdrive ? (
-                  <a href={projet.lien_gdrive} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 text-[var(--color-brand)] font-body font-bold hover:underline text-sm">
-                    <span aria-hidden="true" className="material-symbols-outlined">folder_open</span>
-                    Ouvrir dans Drive
-                  </a>
-                ) : (
-                  <span className="text-[var(--color-dark-text-2)] text-sm font-body">Aucun lien Drive.</span>
-                )}
+                <div className="flex flex-col gap-3">
+                  {projet?.lien_gdrive ? (
+                    <a href={projet.lien_gdrive} target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 text-[var(--color-brand)] font-body font-bold hover:underline text-sm">
+                      <span aria-hidden="true" className="material-symbols-outlined">folder_open</span>
+                      Ouvrir dans Drive
+                    </a>
+                  ) : (
+                    <span className="text-[var(--color-dark-text-2)] text-sm font-body">Aucun lien Drive.</span>
+                  )}
+                  <button
+                    onClick={async () => {
+                      setActionLoading('drive')
+                      try {
+                        const res = await fetch(`${API}/api/v1/admin/projet/${id}/recreate-drive`, { method: 'POST', credentials: 'include' })
+                        const d = await res.json()
+                        if (res.ok) { showToast('Dossier Drive créé !'); await fetchData() }
+                        else showToast(d.error || 'Erreur Drive', false)
+                      } catch { showToast('Erreur réseau', false) }
+                      setActionLoading('')
+                    }}
+                    disabled={actionLoading === 'drive'}
+                    className="inline-flex items-center gap-2 text-xs font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] transition-colors disabled:opacity-50 self-start">
+                    <span aria-hidden="true" className="material-symbols-outlined text-sm">
+                      {actionLoading === 'drive' ? 'refresh' : 'add_circle'}
+                    </span>
+                    {actionLoading === 'drive' ? 'Création…' : projet?.lien_gdrive ? 'Recréer le dossier' : 'Créer le dossier Drive'}
+                  </button>
+                </div>
               </div>
               <span aria-hidden="true" className="material-symbols-outlined absolute -bottom-10 -right-10 text-[120px] text-[var(--color-brand)]/10 rotate-12">
                 folder
               </span>
             </div>
+          </div>
+
+          {/* Logo vectorisé */}
+          <div className="bg-white p-8 rounded-3xl space-y-4">
+            <h2 className="font-display text-[var(--text-xl)] text-[var(--color-dark-1)]">LOGO VECTORISÉ</h2>
+            <p className="text-[var(--color-dark-text-2)] text-sm font-body">
+              Déposez un ou plusieurs fichiers (logo, variantes) — ils iront dans un dossier Drive « Logo » dédié et seront proposés au téléchargement dans le courriel de livraison du projet.
+            </p>
+            {projet && projet.logo_fichiers.length > 0 && (
+              <div className="space-y-2">
+                {projet.logo_fichiers.map(f => (
+                  <div key={f.id} className="flex items-center gap-3 bg-[var(--color-light-1)] rounded-xl px-3 py-2">
+                    <a href={`${API}/api/v1/projet/${id}/logo/${f.id}`} target="_blank" rel="noopener noreferrer"
+                      className="flex-1 inline-flex items-center gap-2 text-[var(--color-brand)] font-body font-bold hover:underline text-sm min-w-0 truncate">
+                      <span aria-hidden="true" className="material-symbols-outlined text-sm flex-shrink-0">download</span>
+                      {f.filename}
+                    </a>
+                    <button onClick={() => handleDeleteLogo(f.id)} disabled={deletingLogoId === f.id}
+                      className="text-[var(--color-dark-text-2)] hover:text-red-600 transition-colors flex-shrink-0" aria-label="Retirer">
+                      <span aria-hidden="true" className="material-symbols-outlined text-base">{deletingLogoId === f.id ? 'progress_activity' : 'close'}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label className={`flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-xl transition-all ${uploadingLogo ? 'opacity-60 cursor-default' : 'cursor-pointer hover:border-[var(--color-brand)]'}`}
+              style={{ borderColor: 'var(--color-light-border-2)' }}>
+              <input type="file" accept=".svg,.ai,.eps,.pdf,.png" multiple className="hidden" disabled={uploadingLogo}
+                onChange={e => { if (e.target.files?.length) handleUploadLogo(e.target.files); e.target.value = '' }} />
+              <span aria-hidden="true" className="material-symbols-outlined text-2xl text-[var(--color-dark-text-2)]">
+                {uploadingLogo ? 'hourglass_top' : 'upload_file'}
+              </span>
+              <span className="font-body text-xs font-bold uppercase tracking-widest text-[var(--color-dark-text-2)]">
+                {uploadingLogo ? 'Envoi…' : 'Déposer un ou plusieurs fichiers (SVG, AI, EPS, PDF, PNG)'}
+              </span>
+            </label>
           </div>
 
           {/* Items de révision */}

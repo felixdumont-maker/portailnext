@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 
 const API = process.env.NEXT_PUBLIC_API_URL || ''
 
-// ─── Types ────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────
 
 interface Logo        { public_url: string | null; preview_url: string | null; filename: string | null }
 interface PaletteColor{ hex: string; label?: string }
@@ -24,21 +24,39 @@ interface IdentiteData {
   zip_url: string
 }
 
-// ─── Helpers ─────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────
 
 function nomCourt(nom: string) {
   const parts = nom.split(' — ')
   return parts.length >= 2 ? parts[1] : nom
 }
 
-// ─── Loading skeleton ─────────────────────────────────────────
+// ─── Groupes de logos ─────────────────────────────────────
+
+// Variantes standard : les clés connues et leur appartenance à un groupe
+const NOIR_KEYS  = ['principal', 'icone', 'variante']
+const BLANC_KEYS = ['principal_blanc', 'icone_blanc', 'variante_blanc']
+
+const LABEL_MAP: Record<string, string> = {
+  principal:        'Logo principal',
+  icone:            'Icône',
+  variante:         'Variante',
+  principal_blanc:  'Logo principal',
+  icone_blanc:      'Icône',
+  variante_blanc:   'Variante',
+}
+
+function humanLabel(key: string): string {
+  return LABEL_MAP[key] ?? key.replace(/_/g, ' ')
+}
+
+// ─── Loading skeleton ──────────────────────────────────────
 
 function Shimmer({ w = '100%', h = '16px', r = '6px' }: { w?: string; h?: string; r?: string }) {
   return (
     <div style={{
       width: w, height: h, borderRadius: r,
-      background: 'var(--color-light-0)',
-      flexShrink: 0,
+      background: 'var(--color-light-0)', flexShrink: 0,
     }} />
   )
 }
@@ -61,21 +79,15 @@ function LoadingSkeleton() {
   )
 }
 
-// ─── Logo card ────────────────────────────────────────────────
+// ─── Logo card ─────────────────────────────────────────────
 
-const LOGO_VARIANTS = [
-  { key: 'principal', label: 'Logo principal',    bg: 'var(--color-light-0b)',  dark: false },
-  { key: 'icone',     label: 'Icône',             bg: 'var(--color-light-0b)',  dark: false },
-  { key: 'variante',  label: 'Variante inversée', bg: 'var(--color-dark-1)',  dark: true  },
-] as const
-
-function LogoCard({ label, bg, dark, logo }: {
-  label: string; bg: string; dark: boolean; logo: Logo | undefined
+function LogoCard({ varKey, label, bg, dark, logo }: {
+  varKey: string; label: string; bg: string; dark: boolean; logo: Logo | undefined
 }) {
   const imgUrl = dark ? (logo?.preview_url ?? logo?.public_url) : logo?.public_url
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-3)' }}>
+    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-2)' }}>
       <div style={{
         aspectRatio: '4/3',
         background: bg,
@@ -84,7 +96,7 @@ function LogoCard({ label, bg, dark, logo }: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 'var(--space-8)',
+        padding: 'var(--space-6)',
         overflow: 'hidden',
       }}>
         {imgUrl ? (
@@ -94,19 +106,22 @@ function LogoCard({ label, bg, dark, logo }: {
             style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
           />
         ) : (
-          <div style={{ textAlign: 'center' as const }}>
-            <span
-              className="material-symbols-outlined"
-              style={{ fontSize: '28px', color: dark ? 'var(--color-dark-3)' : 'var(--color-light-border-2)', display: 'block' }}
-            >
-              image
-            </span>
-          </div>
+          <span
+            aria-hidden="true"
+            className="material-symbols-outlined"
+            style={{
+              fontSize: '28px',
+              color: dark ? 'var(--color-dark-3)' : 'var(--color-light-border-2)',
+            }}
+          >
+            image
+          </span>
         )}
       </div>
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 var(--space-1)' }}>
         <span style={{
-          fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700,
+          fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
           textTransform: 'uppercase' as const, letterSpacing: '0.10em',
           color: 'var(--color-light-text-3)',
         }}>
@@ -119,7 +134,7 @@ function LogoCard({ label, bg, dark, logo }: {
             rel="noreferrer"
             download
             style={{
-              fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700,
+              fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
               textTransform: 'uppercase' as const, letterSpacing: '0.06em',
               color: 'var(--color-brand)', textDecoration: 'none',
               display: 'inline-flex', alignItems: 'center', gap: '4px',
@@ -138,13 +153,70 @@ function LogoCard({ label, bg, dark, logo }: {
   )
 }
 
-// ─── Section divider ──────────────────────────────────────────
+// ─── Groupe de logos (noir ou blanc) ──────────────────────
+
+function LogoGroup({ title, keys, dark, bg, logos, extras }: {
+  title: string
+  keys: string[]
+  dark: boolean
+  bg: string
+  logos: Record<string, Logo>
+  extras: Array<{ key: string; logo: Logo }>
+}) {
+  const allKeys = [...keys, ...extras.map(e => e.key)]
+  const hasAny  = allKeys.some(k => logos[k]?.public_url || logos[k]?.preview_url)
+
+  if (!hasAny && extras.length === 0) return null
+
+  return (
+    <div>
+      {/* Sous-titre du groupe */}
+      <p style={{
+        fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
+        textTransform: 'uppercase' as const, letterSpacing: '0.12em',
+        color: 'var(--color-light-text-3)',
+        margin: '0 0 var(--space-4)',
+      }}>
+        {title}
+      </p>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+        gap: 'var(--space-5)',
+      }}>
+        {keys.map(k => (
+          <LogoCard
+            key={k}
+            varKey={k}
+            label={humanLabel(k)}
+            bg={bg}
+            dark={dark}
+            logo={logos[k]}
+          />
+        ))}
+        {extras.map(({ key, logo }) => (
+          <LogoCard
+            key={key}
+            varKey={key}
+            label={humanLabel(key)}
+            bg={bg}
+            dark={dark}
+            logo={logo}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ─── Section divider ───────────────────────────────────────
 
 function SectionHead({ num, title }: { num: string; title: string }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center',
-      gap: 'var(--space-4)', marginBottom: 'var(--space-10)',
+      gap: 'var(--space-4)', marginBottom: 'var(--space-8)',
     }}>
       <span style={{
         fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
@@ -165,7 +237,7 @@ function SectionHead({ num, title }: { num: string; title: string }) {
   )
 }
 
-// ─── Main page ────────────────────────────────────────────────
+// ─── Main page ─────────────────────────────────────────────
 
 export default function IdentiteVisuelleClientPage() {
   const params = useParams()
@@ -187,7 +259,7 @@ export default function IdentiteVisuelleClientPage() {
       .catch(() => { setError(true); setLoading(false) })
   }, [id, router])
 
-  // Load client fonts into document head
+  // Inject Google Fonts for client fonts into document head
   useEffect(() => {
     if (!data?.fonts?.length) return
     data.fonts.forEach(font => {
@@ -217,6 +289,18 @@ export default function IdentiteVisuelleClientPage() {
     </div>
   )
 
+  // ── Classer les logos ──────────────────────────────────
+  const knownKeys = new Set([...NOIR_KEYS, ...BLANC_KEYS])
+  const noirExtras  = Object.entries(data.logos)
+    .filter(([k]) => !knownKeys.has(k) && k.startsWith('noir_'))
+    .map(([key, logo]) => ({ key, logo }))
+  const blancExtras = Object.entries(data.logos)
+    .filter(([k]) => !knownKeys.has(k) && k.startsWith('blanc_'))
+    .map(([key, logo]) => ({ key, logo }))
+  const autresLogos = Object.entries(data.logos)
+    .filter(([k]) => !knownKeys.has(k) && !k.startsWith('noir_') && !k.startsWith('blanc_'))
+    .map(([key, logo]) => ({ key, logo }))
+
   const hasPalette      = data.palette.length > 0
   const hasLogos        = Object.keys(data.logos).length > 0
   const hasFonts        = data.fonts.length > 0
@@ -227,7 +311,7 @@ export default function IdentiteVisuelleClientPage() {
   const num = () => String(++n).padStart(2, '0')
 
   return (
-    <div style={{ maxWidth: '780px', margin: '0 auto', padding: '0 var(--space-6)', paddingBottom: 'var(--space-24)' }}>
+    <div style={{ maxWidth: '780px', margin: '0 auto', padding: '0 var(--space-6)', paddingTop: 'var(--space-8)', paddingBottom: 'var(--space-24)' }}>
 
       {/* ── Breadcrumb ── */}
       <button
@@ -238,7 +322,7 @@ export default function IdentiteVisuelleClientPage() {
           textTransform: 'uppercase' as const, letterSpacing: '0.1em',
           color: 'var(--color-light-text-3)',
           background: 'none', border: 'none', cursor: 'pointer', padding: 0,
-          marginBottom: 'var(--space-10)', minHeight: '44px',
+          marginBottom: 'var(--space-8)', minHeight: '44px',
           transition: 'color var(--duration-fast)',
         }}
         onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-light-text)')}
@@ -260,7 +344,8 @@ export default function IdentiteVisuelleClientPage() {
         <h1 style={{
           fontFamily: 'var(--font-display)', fontWeight: 800,
           fontSize: 'var(--text-3xl)',
-          lineHeight: 1.05, letterSpacing: '-0.03em',
+          lineHeight: 1.0, letterSpacing: '-0.025em',
+          textTransform: 'uppercase' as const,
           color: 'var(--color-light-text)',
           margin: '0 0 var(--space-4)', maxWidth: '20ch',
         }}>
@@ -279,15 +364,14 @@ export default function IdentiteVisuelleClientPage() {
 
       {/* ── 01 Palette ── */}
       {hasPalette && (
-        <section style={{ marginBottom: 'var(--space-20)' }}>
+        <section style={{ marginBottom: 'var(--space-16)' }}>
           <SectionHead num={num()} title="Palette de couleurs" />
 
-          {/* Color bar */}
           <div style={{
             display: 'flex',
             borderRadius: 'var(--radius-md)',
             overflow: 'hidden',
-            height: '96px',
+            height: '80px',
             marginBottom: 'var(--space-6)',
           }}>
             {data.palette.map((c, i) => (
@@ -295,15 +379,14 @@ export default function IdentiteVisuelleClientPage() {
             ))}
           </div>
 
-          {/* Color chips */}
-          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 'var(--space-6)' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 'var(--space-4)' }}>
             {data.palette.map((c, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: '100px' }}>
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', minWidth: '120px' }}>
                 <div style={{
-                  width: '36px', height: '36px', borderRadius: 'var(--radius-sm)',
+                  width: '32px', height: '32px', borderRadius: 'var(--radius-sm)',
                   background: c.hex, flexShrink: 0,
-                  border: '1px solid var(--color-black-10pct)',
-                  boxShadow: '0 1px 4px var(--color-black-4pct)',
+                  border: '1px solid oklch(0% 0 0 / 0.10)',
+                  boxShadow: '0 1px 4px oklch(0% 0 0 / 0.06)',
                 }} />
                 <div>
                   {c.label && (
@@ -331,29 +414,66 @@ export default function IdentiteVisuelleClientPage() {
 
       {/* ── 02 Logos ── */}
       {hasLogos && (
-        <section style={{ marginBottom: 'var(--space-20)' }}>
+        <section style={{ marginBottom: 'var(--space-16)' }}>
           <SectionHead num={num()} title="Logos" />
-          <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: 'var(--space-6)',
-          }}>
-            {LOGO_VARIANTS.map(v => (
-              <LogoCard
-                key={v.key}
-                label={v.label}
-                bg={v.bg}
-                dark={v.dark}
-                logo={data.logos[v.key]}
-              />
-            ))}
+
+          <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-10)' }}>
+
+            {/* Groupe Noir */}
+            <LogoGroup
+              title="Version noire"
+              keys={NOIR_KEYS}
+              dark={false}
+              bg="var(--color-light-0b)"
+              logos={data.logos}
+              extras={noirExtras}
+            />
+
+            {/* Groupe Blanc */}
+            <LogoGroup
+              title="Version blanche"
+              keys={BLANC_KEYS}
+              dark={true}
+              bg="var(--color-dark-1)"
+              logos={data.logos}
+              extras={blancExtras}
+            />
+
+            {/* Autres logos (clés non reconnues) */}
+            {autresLogos.length > 0 && (
+              <div>
+                <p style={{
+                  fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
+                  textTransform: 'uppercase' as const, letterSpacing: '0.12em',
+                  color: 'var(--color-light-text-3)', margin: '0 0 var(--space-4)',
+                }}>
+                  Autres variantes
+                </p>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                  gap: 'var(--space-5)',
+                }}>
+                  {autresLogos.map(({ key, logo }) => (
+                    <LogoCard
+                      key={key}
+                      varKey={key}
+                      label={humanLabel(key)}
+                      bg="var(--color-light-0b)"
+                      dark={false}
+                      logo={logo}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </section>
       )}
 
       {/* ── 03 Typographie ── */}
       {hasFonts && (
-        <section style={{ marginBottom: 'var(--space-20)' }}>
+        <section style={{ marginBottom: 'var(--space-16)' }}>
           <SectionHead num={num()} title="Typographie" />
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-12)' }}>
             {data.fonts.map((font, i) => (
@@ -361,13 +481,12 @@ export default function IdentiteVisuelleClientPage() {
                 key={i}
                 style={{
                   paddingBottom: i < data.fonts.length - 1 ? 'var(--space-12)' : 0,
-                  borderBottom: i < data.fonts.length - 1
-                    ? '1px solid var(--color-light-border)' : 'none',
+                  borderBottom: i < data.fonts.length - 1 ? '1px solid var(--color-light-border)' : 'none',
                 }}
               >
                 {font.usage && (
                   <span style={{
-                    fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700,
+                    fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
                     textTransform: 'uppercase' as const, letterSpacing: '0.12em',
                     color: 'var(--color-light-text-3)', display: 'block',
                     marginBottom: 'var(--space-4)',
@@ -376,7 +495,6 @@ export default function IdentiteVisuelleClientPage() {
                   </span>
                 )}
 
-                {/* Font name in the actual font */}
                 <p style={{
                   fontFamily: `'${font.nom_font}', serif`,
                   fontSize: 'clamp(2rem, 6vw, 3.5rem)',
@@ -388,7 +506,6 @@ export default function IdentiteVisuelleClientPage() {
                   {font.nom_font}
                 </p>
 
-                {/* Sample sentence */}
                 <p style={{
                   fontFamily: `'${font.nom_font}', serif`,
                   fontSize: 'var(--text-lg)',
@@ -400,7 +517,6 @@ export default function IdentiteVisuelleClientPage() {
                   À chaque projet, une identité unique.
                 </p>
 
-                {/* Alphabet */}
                 <p style={{
                   fontFamily: `'${font.nom_font}', serif`,
                   fontSize: 'var(--text-sm)',
@@ -441,7 +557,7 @@ export default function IdentiteVisuelleClientPage() {
 
       {/* ── 04 Déclinaisons ── */}
       {hasDeclinaisons && (
-        <section style={{ marginBottom: 'var(--space-20)' }}>
+        <section style={{ marginBottom: 'var(--space-16)' }}>
           <SectionHead num={num()} title="Déclinaisons couleur" />
           <div style={{
             display: 'grid',
@@ -469,7 +585,7 @@ export default function IdentiteVisuelleClientPage() {
                 </div>
                 {d.label && (
                   <p style={{
-                    fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700,
+                    fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
                     textTransform: 'uppercase' as const, letterSpacing: '0.10em',
                     color: 'var(--color-light-text-3)', margin: 'var(--space-2) 0 0',
                   }}>
@@ -484,7 +600,7 @@ export default function IdentiteVisuelleClientPage() {
 
       {/* ── 05 Mockups ── */}
       {hasMockups && (
-        <section style={{ marginBottom: 'var(--space-20)' }}>
+        <section style={{ marginBottom: 'var(--space-16)' }}>
           <SectionHead num={num()} title="Mockups" />
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-5)' }}>
             {data.mockups.map(m => (
@@ -506,7 +622,7 @@ export default function IdentiteVisuelleClientPage() {
                 {m.label && (
                   <div style={{ padding: 'var(--space-3) var(--space-4)' }}>
                     <span style={{
-                      fontFamily: 'var(--font-body)', fontSize: '11px', fontWeight: 700,
+                      fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
                       textTransform: 'uppercase' as const, letterSpacing: '0.10em',
                       color: 'var(--color-light-text-3)',
                     }}>

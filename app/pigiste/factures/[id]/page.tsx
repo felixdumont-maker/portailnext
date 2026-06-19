@@ -16,15 +16,16 @@ interface Facture {
   id: number; numero: string; statut: string
   date_emission: string; date_echeance: string
   montant_ht: number; tps: number; tvq: number; montant_total: number
-  notes: string; lignes: Ligne[]; nom_pigiste: string
+  notes: string; lignes: Ligne[]; nom_pigiste: string; has_pdf: boolean
 }
 
 export default function PigisteFactureDetail() {
   const { id }  = useParams<{ id: string }>()
   const router  = useRouter()
   const [f, setF]             = useState<Facture | null>(null)
-  const [submitting, setSubmitting] = useState(false)
-  const [toast, setToast]     = useState<{ msg: string; ok: boolean } | null>(null)
+  const [submitting, setSubmitting]     = useState(false)
+  const [downloading, setDownloading]   = useState(false)
+  const [toast, setToast]               = useState<{ msg: string; ok: boolean } | null>(null)
 
   const showToast = (msg: string, ok = true) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500) }
 
@@ -33,6 +34,22 @@ export default function PigisteFactureDetail() {
     .then(data => { if (data) setF(data) })
 
   useEffect(() => { load() }, [id])
+
+  const handleTelecharger = async () => {
+    setDownloading(true)
+    try {
+      const res = await fetch(`/api/v1/pigiste/factures/${id}/pdf`, { credentials: 'include' })
+      if (!res.ok) { showToast('PDF non disponible', false); return }
+      const blob = await res.blob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `${f?.numero}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch { showToast('Erreur de téléchargement', false) }
+    finally   { setDownloading(false) }
+  }
 
   const handleSoumettre = async () => {
     setSubmitting(true)
@@ -235,6 +252,25 @@ export default function PigisteFactureDetail() {
                 Cette facture a été payée.
               </p>
             </div>
+          )}
+
+          {f.statut !== 'brouillon' && f.has_pdf && (
+            <button onClick={handleTelecharger} disabled={downloading} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-3)',
+              width: '100%', padding: '12px', borderRadius: 'var(--radius-full)',
+              background: 'transparent', color: 'var(--color-light-text-2)',
+              border: '1px solid var(--color-light-border-2)',
+              fontFamily: 'var(--font-display)', fontSize: 'var(--text-base)', fontWeight: 700, letterSpacing: '0.04em',
+              cursor: downloading ? 'not-allowed' : 'pointer',
+              marginTop: 'var(--space-3)',
+              transition: `border-color var(--duration-fast), color var(--duration-fast)`,
+            }}
+              onMouseEnter={e => { if (!downloading) { e.currentTarget.style.borderColor = 'var(--color-light-text-2)'; e.currentTarget.style.color = 'var(--color-light-text)' } }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-light-border-2)'; e.currentTarget.style.color = 'var(--color-light-text-2)' }}
+            >
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>download</span>
+              {downloading ? 'Téléchargement…' : 'Télécharger le PDF'}
+            </button>
           )}
         </div>
 

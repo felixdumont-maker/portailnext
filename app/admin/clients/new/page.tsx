@@ -10,6 +10,7 @@ export default function NouveauClientPage() {
   const [email, setEmail] = useState('');
   const [nomEntreprise, setNomEntreprise] = useState('');
   const [telephone, setTelephone] = useState('');
+  const [statutRelation, setStatutRelation] = useState<'actif' | 'prospect'>('actif');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,6 +32,7 @@ export default function NouveauClientPage() {
           email: email.trim().toLowerCase(),
           nom_entreprise: nomEntreprise.trim() || null,
           telephone: telephone.trim() || null,
+          statut_relation: statutRelation,
         }),
       });
       const data = await res.json();
@@ -66,7 +68,9 @@ export default function NouveauClientPage() {
           NOUVEAU CLIENT
         </h1>
         <p className="text-[var(--color-dark-text-2)] mt-4 text-base max-w-md">
-          Le client recevra une invitation par email pour créer son mot de passe et accéder au portail.
+          {statutRelation === 'prospect'
+            ? "Ajoutez un prospect à votre pipeline. Aucun compte ni dossier n'est créé tant qu'il n'est pas promu client actif."
+            : 'Le client recevra une invitation par email pour créer son mot de passe et accéder au portail.'}
         </p>
       </div>
 
@@ -79,6 +83,31 @@ export default function NouveauClientPage() {
               {error}
             </div>
           )}
+
+          {/* Type */}
+          <div className="space-y-3">
+            <label className="block text-xs font-bold uppercase tracking-widest text-[var(--color-light-text-2)]">
+              Type
+            </label>
+            <div className="flex bg-[var(--color-light-0)] rounded-lg p-1">
+              <button
+                type="button"
+                onClick={() => setStatutRelation('prospect')}
+                className={`flex-1 py-3 rounded-md font-bold text-sm transition-colors ${statutRelation === 'prospect' ? 'bg-white shadow-sm text-[var(--color-dark-0)]' : 'text-[var(--color-dark-text-2)]'}`}
+              >
+                Prospect
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatutRelation('actif')}
+                className={`flex-1 py-3 rounded-md font-bold text-sm transition-colors ${statutRelation === 'actif' ? 'bg-white shadow-sm text-[var(--color-dark-0)]' : 'text-[var(--color-dark-text-2)]'}`}
+              >
+                Client actif
+              </button>
+            </div>
+          </div>
+
+          <div className="h-px bg-[var(--color-light-0)] w-full" />
 
           {/* Nom complet */}
           <div className="space-y-3">
@@ -149,12 +178,21 @@ export default function NouveauClientPage() {
           <div className="h-px bg-[var(--color-light-0)] w-full" />
 
           {/* Note invitation */}
-          <div className="flex items-start gap-3 bg-[var(--color-light-1)] rounded-lg px-5 py-4">
-            <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] text-xl mt-0.5">mail</span>
-            <p className="text-sm text-[var(--color-dark-text-2)]">
-              Une invitation sera envoyée à <strong>{email || "l'adresse email indiquée"}</strong> pour que le client crée son mot de passe.
-            </p>
-          </div>
+          {statutRelation === 'actif' ? (
+            <div className="flex items-start gap-3 bg-[var(--color-light-1)] rounded-lg px-5 py-4">
+              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] text-xl mt-0.5">mail</span>
+              <p className="text-sm text-[var(--color-dark-text-2)]">
+                Une invitation sera envoyée à <strong>{email || "l'adresse email indiquée"}</strong> pour que le client crée son mot de passe.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3 bg-[var(--color-light-1)] rounded-lg px-5 py-4">
+              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] text-xl mt-0.5">timeline</span>
+              <p className="text-sm text-[var(--color-dark-text-2)]">
+                Il apparaîtra dans la colonne <strong>Prospect</strong> du pipeline. Vous pourrez le promouvoir en client actif à tout moment.
+              </p>
+            </div>
+          )}
 
           {/* Boutons */}
           <div className="flex flex-col md:flex-row gap-4 pt-4">
@@ -163,7 +201,7 @@ export default function NouveauClientPage() {
               disabled={loading}
               className="flex-1 order-1 md:order-2 bg-[var(--color-brand)] text-white py-4 px-8 rounded-full font-bold text-sm uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-[var(--color-brand-hover)] transition-colors disabled:opacity-50"
             >
-              {loading ? 'Création en cours…' : 'Créer le client'}
+              {loading ? 'Création en cours…' : statutRelation === 'prospect' ? 'Ajouter le prospect' : 'Créer le client'}
               {!loading && <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_forward</span>}
             </button>
             <button

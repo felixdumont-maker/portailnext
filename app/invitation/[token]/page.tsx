@@ -27,6 +27,27 @@ function validatePassword(password: string): string[] {
   return errors
 }
 
+function Wrapper({ children }: { children: React.ReactNode }) {
+  return (
+    <main id="main-content" style={{
+      minHeight: '100dvh',
+      background: 'var(--color-dark-0)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      padding: 'var(--space-8) var(--space-4)',
+    }}>
+      <div style={{ width: '100%', maxWidth: '560px' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 'var(--space-8)' }}>
+          <Image src="/cos-logo-blanc.png" alt="CocktailOS" width={140} height={36} style={{ objectFit: 'contain', height: '36px', width: 'auto' }} />
+        </div>
+        {children}
+        <p style={{ marginTop: 'var(--space-6)', textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-dark-text-3)', textTransform: 'uppercase', letterSpacing: '0.3em' }}>
+          © {new Date().getFullYear()} CocktailOS
+        </p>
+      </div>
+    </main>
+  )
+}
+
 function InvitationForm() {
   const params = useParams()
   const router = useRouter()
@@ -106,48 +127,25 @@ function InvitationForm() {
     }
   }
 
-  // ── Layout wrapper commun ──
-  const Wrapper = ({ children }: { children: React.ReactNode }) => (
-    <div style={{
-      minHeight: '100dvh',
-      background: `radial-gradient(circle at 60% 20%, rgba(232,59,20,0.12) 0%, transparent 50%),
-                   radial-gradient(circle at 0% 100%, rgba(61,6,0,0.35) 0%, transparent 50%),
-                   linear-gradient(160deg, var(--color-dark-0) 0%, 'var(--color-dark-0)' 100%)`,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '2rem 1rem',
-    }}>
-      <div style={{ width: '100%', maxWidth: '560px' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
-          <Image src="/cos-logo-blanc.png" alt="CocktailOS" width={140} height={36} style={{ objectFit: 'contain', height: '36px', width: 'auto' }} />
-        </div>
-        {children}
-        <p style={{ marginTop: '1.5rem', textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, color: 'var(--color-dark-2)', textTransform: 'uppercase', letterSpacing: '0.3em' }}>
-          © 2026 CocktailOS
-        </p>
-      </div>
-    </div>
-  )
-
   // ── Chargement ──
   if (loadingInfo) return (
     <Wrapper>
-      <div style={{ background: 'rgba(28,28,26,0.7)', backdropFilter: 'blur(40px)', borderRadius: '24px', padding: '3rem', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
-        <p style={{ fontFamily: 'var(--font-body)', color: 'var(--color-dark-text-2)', fontSize: '14px' }}>Vérification du lien...</p>
-      </div>
+      <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-dark-text-2)', textAlign: 'center' }}>Vérification du lien…</p>
     </Wrapper>
   )
 
   // ── Token invalide / déjà utilisé ──
   if (tokenError) return (
     <Wrapper>
-      <div style={{ background: 'rgba(28,28,26,0.7)', backdropFilter: 'blur(40px)', borderRadius: '24px', padding: '3rem 2.5rem', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
-        <div style={{ width: '56px', height: '56px', background: 'rgba(239,68,68,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-          <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-error)', fontSize: '28px', fontVariationSettings: "'FILL' 1" }}>error</span>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: '48px', height: '48px', background: 'var(--color-error-glow)', border: '1px solid var(--color-error-border)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--space-6)' }}>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-error)', fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>error</span>
         </div>
-        <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2rem', color: 'white', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>LIEN INVALIDE</h1>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', lineHeight: 1.6 }}>{tokenError}</p>
-        <a href="/" style={{ display: 'inline-block', marginTop: '1.5rem', fontFamily: 'var(--font-body)', fontSize: '12px', fontWeight: 700, color: 'var(--color-dark-text-2)', textDecoration: 'none', textTransform: 'uppercase', letterSpacing: '0.15em' }}>
-          ← Retour à la connexion
+        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-2xl)', color: 'var(--color-dark-text)', letterSpacing: '-0.02em', lineHeight: 'var(--leading-tight)', margin: '0 0 var(--space-2)' }}>Lien invalide.</h1>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-dark-text-2)', lineHeight: 'var(--leading-relaxed)', margin: '0 0 var(--space-6)' }}>{tokenError}</p>
+        <a href="/" style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 700, color: 'var(--color-dark-text-2)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)' }}>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>arrow_back</span>
+          Retour à la connexion
         </a>
       </div>
     </Wrapper>
@@ -156,13 +154,13 @@ function InvitationForm() {
   // ── Succès ──
   if (success) return (
     <Wrapper>
-      <div style={{ background: 'rgba(28,28,26,0.7)', backdropFilter: 'blur(40px)', borderRadius: '24px', padding: '3rem 2.5rem', border: '1px solid rgba(255,255,255,0.08)', textAlign: 'center' }}>
-        <div style={{ width: '64px', height: '64px', background: 'rgba(34,197,94,0.15)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
-          <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-success)', fontSize: '32px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ width: '48px', height: '48px', background: 'var(--color-success-glow)', border: '1px solid var(--color-success-border)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto var(--space-6)' }}>
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-success)', fontSize: '24px', fontVariationSettings: "'FILL' 1" }}>check_circle</span>
         </div>
-        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '2.25rem', color: 'white', letterSpacing: '0.1em', marginBottom: '0.75rem' }}>COMPTE ACTIVÉ !</h2>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', lineHeight: 1.6 }}>
-          Bienvenue, {info?.nom}. Redirection vers votre portail...
+        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-2xl)', color: 'var(--color-dark-text)', letterSpacing: '-0.02em', lineHeight: 'var(--leading-tight)', margin: '0 0 var(--space-2)' }}>Compte activé.</h1>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-dark-text-2)', lineHeight: 'var(--leading-relaxed)', margin: 0 }}>
+          Bienvenue, {info?.nom}. Redirection vers votre portail…
         </p>
       </div>
     </Wrapper>
@@ -170,89 +168,101 @@ function InvitationForm() {
 
   // ── Formulaire principal ──
   const card: React.CSSProperties = {
-    background: 'rgba(28,28,26,0.7)', backdropFilter: 'blur(40px)',
-    borderRadius: '24px', padding: '2.5rem', border: '1px solid rgba(255,255,255,0.08)',
-    boxShadow: '0 40px 80px -15px rgba(0,0,0,0.7)',
+    background: 'var(--color-dark-2)',
+    borderRadius: 'var(--radius-lg)',
+    padding: 'var(--space-8)',
+    border: '1px solid var(--color-dark-border)',
   }
   const label: React.CSSProperties = {
-    display: 'block', fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700,
-    textTransform: 'uppercase', letterSpacing: '0.2em', color: 'var(--color-dark-text-2)', marginBottom: '6px',
+    display: 'block', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
+    color: 'var(--color-dark-text-2)', marginBottom: 'var(--space-2)',
   }
   const input: React.CSSProperties = {
-    width: '100%', padding: '12px 16px', background: 'rgba(0,0,0,0.35)',
-    border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
-    color: 'white', fontFamily: 'var(--font-body)', fontSize: '14px', outline: 'none', boxSizing: 'border-box',
+    width: '100%', padding: 'var(--space-3) var(--space-4)',
+    background: 'var(--color-dark-2)',
+    border: '1px solid var(--color-dark-border)', borderRadius: 'var(--radius-md)',
+    color: 'var(--color-dark-text)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)',
+    outline: 'none', boxSizing: 'border-box', minHeight: '44px',
+    transition: 'border-color var(--duration-fast), background var(--duration-fast)',
   }
-  const row: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }
+  const inputFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.style.borderColor = 'var(--color-brand)'
+    e.target.style.background = 'var(--color-input-focus-dark)'
+  }
+  const inputBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.style.borderColor = 'var(--color-dark-border)'
+    e.target.style.background = 'var(--color-dark-2)'
+  }
+  const row: React.CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }
 
   return (
     <Wrapper>
       <div style={card}>
         {/* En-tête */}
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.25rem', color: 'white', letterSpacing: '0.1em', lineHeight: 1, marginBottom: '0.5rem' }}>
-            BIENVENUE, {(info?.nom || '').toUpperCase().split(' ')[0]} !
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-2xl)', color: 'var(--color-dark-text)', letterSpacing: '-0.02em', lineHeight: 'var(--leading-tight)', marginBottom: 'var(--space-2)' }}>
+            Bienvenue, {(info?.nom || '').split(' ')[0]}.
           </h1>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-dark-text-2)', lineHeight: 1.6 }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-dark-text-2)', lineHeight: 'var(--leading-normal)', margin: '0 0 var(--space-3)' }}>
             Complétez votre profil et créez votre mot de passe pour accéder à votre portail client.
           </p>
-          <div style={{ marginTop: '0.75rem', padding: '8px 14px', background: 'rgba(232,59,20,0.08)', borderRadius: '8px', display: 'inline-block' }}>
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--color-brand)', fontWeight: 600 }}>{info?.email}</span>
+          <div style={{ padding: 'var(--space-2) var(--space-3)', background: 'var(--color-error-glow)', borderRadius: 'var(--radius-sm)', display: 'inline-block' }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-brand-text-muted)', fontWeight: 600 }}>{info?.email}</span>
           </div>
         </div>
 
         <form onSubmit={handleSubmit}>
 
           {/* ─ Section Entreprise ─ */}
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--color-dark-text-2)', letterSpacing: '0.15em', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            VOTRE ENTREPRISE
-          </p>
+          <h2 style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-dark-text-3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--color-dark-border)' }}>
+            Votre entreprise
+          </h2>
 
-          <div style={{ ...row, marginBottom: '1rem' }}>
+          <div style={{ ...row, marginBottom: 'var(--space-4)' }}>
             <div>
-              <label style={label}>Nom de l'entreprise</label>
-              <input style={input} type="text" aria-label="Nom entreprise" value={nomEntreprise} onChange={e => setNomEntreprise(e.target.value)} placeholder="Acme inc." />
+              <label htmlFor="inv-entreprise" style={label}>Nom de l'entreprise</label>
+              <input id="inv-entreprise" style={input} type="text" value={nomEntreprise} onChange={e => setNomEntreprise(e.target.value)} placeholder="Acme inc." onFocus={inputFocus} onBlur={inputBlur} />
             </div>
             <div>
-              <label style={label}>Téléphone</label>
-              <input style={input} type="tel" aria-label="Téléphone" value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="819 000-0000" />
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={label}>Adresse de facturation</label>
-            <input style={input} type="text" aria-label="Adresse" value={adresse} onChange={e => setAdresse(e.target.value)} placeholder="123 rue Exemple" />
-          </div>
-
-          <div style={{ ...row, marginBottom: '1rem' }}>
-            <div>
-              <label style={label}>Ville</label>
-              <input style={input} type="text" aria-label="Ville" value={ville} onChange={e => setVille(e.target.value)} placeholder="Trois-Rivières" />
-            </div>
-            <div>
-              <label style={label}>Province</label>
-              <input style={input} type="text" aria-label="Province" value={province} onChange={e => setProvince(e.target.value)} />
+              <label htmlFor="inv-telephone" style={label}>Téléphone</label>
+              <input id="inv-telephone" style={input} type="tel" value={telephone} onChange={e => setTelephone(e.target.value)} placeholder="819 000-0000" onFocus={inputFocus} onBlur={inputBlur} />
             </div>
           </div>
 
-          <div style={{ marginBottom: '2rem' }}>
-            <label style={label}>Code postal</label>
-            <input style={{ ...input, maxWidth: '180px' }} type="text" aria-label="Code postal" value={codePostal} onChange={e => setCodePostal(e.target.value)} placeholder="G8V 1X4" />
+          <div style={{ marginBottom: 'var(--space-4)' }}>
+            <label htmlFor="inv-adresse" style={label}>Adresse de facturation</label>
+            <input id="inv-adresse" style={input} type="text" value={adresse} onChange={e => setAdresse(e.target.value)} placeholder="123 rue Exemple" onFocus={inputFocus} onBlur={inputBlur} />
+          </div>
+
+          <div style={{ ...row, marginBottom: 'var(--space-4)' }}>
+            <div>
+              <label htmlFor="inv-ville" style={label}>Ville</label>
+              <input id="inv-ville" style={input} type="text" value={ville} onChange={e => setVille(e.target.value)} placeholder="Trois-Rivières" onFocus={inputFocus} onBlur={inputBlur} />
+            </div>
+            <div>
+              <label htmlFor="inv-province" style={label}>Province</label>
+              <input id="inv-province" style={input} type="text" value={province} onChange={e => setProvince(e.target.value)} onFocus={inputFocus} onBlur={inputBlur} />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: 'var(--space-8)' }}>
+            <label htmlFor="inv-codepostal" style={label}>Code postal</label>
+            <input id="inv-codepostal" style={{ ...input, maxWidth: '180px' }} type="text" value={codePostal} onChange={e => setCodePostal(e.target.value)} placeholder="G8V 1X4" onFocus={inputFocus} onBlur={inputBlur} />
           </div>
 
           {/* ─ Section Mot de passe ─ */}
-          <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', color: 'var(--color-dark-text-2)', letterSpacing: '0.15em', marginBottom: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            VOTRE MOT DE PASSE
-          </p>
+          <h2 style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-dark-text-3)', letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 'var(--space-4)', paddingBottom: 'var(--space-3)', borderBottom: '1px solid var(--color-dark-border)' }}>
+            Votre mot de passe
+          </h2>
 
-          <div style={{ ...row, marginBottom: '0.75rem' }}>
+          <div style={{ ...row, marginBottom: 'var(--space-3)' }}>
             <div>
-              <label style={label}>Mot de passe</label>
-              <input style={input} type={showPasswords ? 'text' : 'password'} aria-label="Mot de passe" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required />
+              <label htmlFor="inv-password" style={label}>Mot de passe</label>
+              <input id="inv-password" style={input} type={showPasswords ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required onFocus={inputFocus} onBlur={inputBlur} />
             </div>
             <div>
-              <label style={label}>Confirmer</label>
-              <input style={input} type={showPasswords ? 'text' : 'password'} aria-label="Confirmer le mot de passe" value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" required />
+              <label htmlFor="inv-confirm" style={label}>Confirmer</label>
+              <input id="inv-confirm" style={input} type={showPasswords ? 'text' : 'password'} value={confirm} onChange={e => setConfirm(e.target.value)} placeholder="••••••••" required onFocus={inputFocus} onBlur={inputBlur} />
             </div>
           </div>
 
@@ -297,14 +307,20 @@ function InvitationForm() {
           {/* Bouton submit */}
           <button type="submit" disabled={loading}
             style={{
-              width: '100%', padding: '1.1rem',
-              background: loading ? 'rgba(232,59,20,0.5)' : 'linear-gradient(135deg, var(--color-brand), var(--color-brand-hover))',
-              color: 'white', border: 'none', borderRadius: '999px',
-              fontFamily: 'var(--font-display)', fontSize: '1.5rem', letterSpacing: '0.15em',
+              width: '100%', padding: 'var(--space-4)',
+              background: loading ? 'var(--color-dark-3)' : 'var(--color-brand)',
+              color: 'white', border: 'none', borderRadius: 'var(--radius-md)',
+              fontFamily: 'var(--font-display)', fontWeight: 700,
+              fontSize: 'var(--text-base)', letterSpacing: '0.08em', textTransform: 'uppercase',
               cursor: loading ? 'not-allowed' : 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-            }}>
-            {loading ? 'ACTIVATION...' : 'ACTIVER MON COMPTE →'}
+              minHeight: '52px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)',
+              transition: 'background var(--duration-fast)',
+            }}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.background = 'var(--color-brand-hover)' }}
+            onMouseLeave={e => { if (!loading) e.currentTarget.style.background = 'var(--color-brand)' }}
+          >
+            {loading ? 'Activation…' : 'Activer mon compte'}
           </button>
 
         </form>

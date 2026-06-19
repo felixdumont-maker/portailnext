@@ -1,0 +1,291 @@
+@import "tailwindcss";
+
+/* ─── Tailwind theme tokens ────────────────────────────────── */
+
+@theme {
+  --font-display: var(--font-bricolage), 'Arial Black', sans-serif;
+  --font-body:    var(--font-atkinson), 'Arial', sans-serif;
+}
+
+/* ─── Design tokens ────────────────────────────────────────── */
+
+:root {
+  /* Brand */
+  --color-brand:       oklch(52% 0.21 32);
+  --color-brand-hover: oklch(46% 0.21 32);
+  --color-brand-muted: oklch(95% 0.04 55);
+
+  /* Dark surfaces — admin navbar, login */
+  --color-dark-0:      oklch(13% 0.015 35);
+  --color-dark-1:      oklch(18% 0.015 35);
+  --color-dark-2:      oklch(23% 0.012 35);
+  --color-dark-3:      oklch(30% 0.010 38);
+  --color-dark-border: oklch(35% 0.010 40);
+  --color-dark-text:   oklch(92% 0.018 70);
+  --color-dark-text-2: oklch(62% 0.012 55);
+  --color-dark-text-3: oklch(42% 0.010 50);
+
+  /* Light surfaces — portail client, admin bg */
+  --color-light-0:       oklch(93% 0.016 72);
+  --color-light-1:       oklch(97% 0.012 70);
+  --color-light-2:       oklch(99% 0.008 68);
+  --color-light-border:  oklch(87% 0.016 70);
+  --color-light-border-2:oklch(78% 0.018 65);
+  --color-light-text:    oklch(22% 0.015 35);
+  --color-light-text-2:  oklch(44% 0.013 45);
+  --color-light-text-3:  oklch(60% 0.010 50);
+
+  /* Semantic */
+  --color-success:        oklch(56% 0.16 145);
+  --color-success-bg:     oklch(95% 0.06 145);
+  --color-success-bg-2:   oklch(95% 0.055 148);
+  --color-success-text:   oklch(32% 0.12 145);
+  --color-success-text-2: oklch(40% 0.17 145);
+  --color-success-mid:    oklch(65% 0.15 145);
+  --color-error:          oklch(54% 0.20 25);
+  --color-error-bg:       oklch(96% 0.05 25);
+  --color-error-bg-2:     oklch(97% 0.04 25);
+  --color-error-text:     oklch(35% 0.16 25);
+  --color-error-mid:      oklch(55% 0.10 25);
+  --color-error-light:    oklch(85% 0.06 25);
+  --color-warning:        oklch(66% 0.17 72);
+  --color-warning-bg:     oklch(96% 0.06 72);
+  --color-warning-bg-2:   oklch(96% 0.038 78);
+  --color-warning-text:   oklch(40% 0.14 52);
+  --color-warning-mid:    oklch(72% 0.14 72);
+  --color-warning-mid-2:  oklch(46% 0.16 72);
+  --color-info:           oklch(52% 0.16 250);
+  --color-info-bg:        oklch(94% 0.05 250);
+  --color-info-bg-2:      oklch(95% 0.030 248);
+  --color-info-text:      oklch(32% 0.14 250);
+  --color-info-mid:       oklch(68% 0.12 240);
+  /* Status badge — teinte rouge/feu */
+  --color-fire-bg:        oklch(95% 0.035 20);
+  --color-fire-text:      oklch(44% 0.19 28);
+  /* Surface légères supplémentaires */
+  --color-light-0b:       oklch(97% 0.010 70);
+  --color-light-border-3: oklch(95% 0.012 70);
+
+  /* Shadows — black with opacity */
+  --shadow-sm:  0 1px 4px oklch(0% 0 0 / 0.06);
+  --shadow-md:  0 8px 24px oklch(0% 0 0 / 0.12);
+  --shadow-lg:  0 8px 32px oklch(0% 0 0 / 0.20);
+  --shadow-xl:  0 12px 32px oklch(0% 0 0 / 0.35);
+
+  /* Color-mix alpha variants — error/success avec opacité */
+  --color-error-glow:    color-mix(in oklch, var(--color-error) 12%, transparent);
+  --color-error-border:  color-mix(in oklch, var(--color-error) 35%, transparent);
+  --color-error-muted:   color-mix(in oklch, var(--color-error) 15%, transparent);
+  --color-success-glow:  color-mix(in oklch, var(--color-success) 10%, transparent);
+  --color-success-border:color-mix(in oklch, var(--color-success) 28%, transparent);
+
+  /* Dark overlay pour hover sur images */
+  --overlay-dark: oklch(0% 0 0 / 0.5);
+  --overlay-hover: oklch(0% 0 0 / 0.08);
+
+  /* Brand muted variants */
+  --color-brand-text-muted: oklch(72% 0.18 32);
+  --color-brand-text-hover: oklch(84% 0.13 32);
+
+  /* Input focus state — dark surfaces */
+  --color-input-focus-dark: oklch(24% 0.018 33);
+
+  /* Login panel gradient end */
+  --color-login-gradient-end: oklch(15% 0.028 32);
+
+  /* Spacing — 4pt scale */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Type scale — fixed rem for app UI */
+  --text-xs:   0.75rem;
+  --text-sm:   0.875rem;
+  --text-base: 1rem;
+  --text-lg:   1.25rem;
+  --text-xl:   1.5rem;
+  --text-2xl:  2rem;
+  --text-3xl:  2.75rem;
+
+  /* Line heights */
+  --leading-tight:   1.2;
+  --leading-snug:    1.35;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.65;
+
+  /* Radius */
+  --radius-sm:   6px;
+  --radius-md:   12px;
+  --radius-lg:   20px;
+  --radius-full: 9999px;
+
+  /* Z-index */
+  --z-raised:   10;
+  --z-dropdown: 100;
+  --z-sticky:   200;
+  --z-modal:    400;
+  --z-toast:    500;
+
+  /* Motion */
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --duration-fast:  120ms;
+  --duration-base:  200ms;
+  --duration-slow:  350ms;
+}
+
+/* ─── Skip to content ──────────────────────────────────────── */
+
+.skip-to-content {
+  position: fixed;
+  top: -100%;
+  left: var(--space-4);
+  z-index: 9999;
+  padding: var(--space-3) var(--space-6);
+  background: var(--color-brand);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-sm);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: top var(--duration-fast);
+}
+
+.skip-to-content:focus {
+  top: var(--space-4);
+}
+
+/* ─── Base ─────────────────────────────────────────────────── */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 16px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-kerning: normal;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-light-text);
+  min-height: 100dvh;
+}
+
+/* ─── Focus ─────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────── */
+
+::-webkit-scrollbar        { width: 5px; height: 5px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: oklch(72% 0.01 50); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: oklch(58% 0.015 45); }
+
+/* ─── Reduced motion ─────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Soumission panel entrance ─────────────────────────────── */
+
+@keyframes soumFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Step slide animations ──────────────────────────────────── */
+
+@keyframes slideInRight {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+@keyframes slideInLeft {
+  from { transform: translateX(-40px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @keyframes spin { from { transform: none; } to { transform: none; } }
+}
+
+/* ─── Helpers ────────────────────────────────────────────────── */
+
+/* Tabular numbers for all data/stats */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ─── Tokens complémentaires — status alpha + surfaces fines ── */
+:root {
+  --color-warning-mid-bg:   color-mix(in oklch, var(--color-warning-mid) 12%, transparent);
+  --color-warning-mid-bg-2: color-mix(in oklch, var(--color-warning-mid) 15%, transparent);
+  --color-warning-mid-bg-3: color-mix(in oklch, var(--color-warning-mid) 10%, transparent);
+  --color-warning-mid-ring: color-mix(in oklch, var(--color-warning-mid) 25%, transparent);
+  --color-teal-bg:          oklch(95% 0.040 195);
+  --color-teal-text:        oklch(40% 0.14 195);
+  --color-light-border-4:   oklch(88% 0.05 50);
+  --color-surface-warm:     oklch(98% 0.008 68);
+  --color-border-warm:      oklch(93% 0.016 72);
+  --color-brand-text-hover-50: color-mix(in oklch, var(--color-brand-text-hover) 50%, transparent);
+  --color-brand-text-muted-45: color-mix(in oklch, var(--color-brand-text-muted) 45%, transparent);
+}
+
+/* ─── Tokens alpha — variants finaux ──────────────────────── */
+:root {
+  --color-success-mid-bg:   color-mix(in oklch, var(--color-success-mid) 12%, transparent);
+  --color-success-mid-bg-2: color-mix(in oklch, var(--color-success-mid) 15%, transparent);
+  --color-success-mid-bg-3: color-mix(in oklch, var(--color-success-mid) 10%, transparent);
+  --color-success-mid-ring: color-mix(in oklch, var(--color-success-mid) 25%, transparent);
+  --color-info-mid-bg:      color-mix(in oklch, var(--color-info-mid) 12%, transparent);
+  --color-info-mid-bg-2:    color-mix(in oklch, var(--color-info-mid) 15%, transparent);
+  --color-success-glow-2:   color-mix(in oklch, var(--color-success) 15%, transparent);
+  --color-success-glow-3:   color-mix(in oklch, var(--color-success) 40%, transparent);
+  --color-error-glow-4:     color-mix(in oklch, var(--color-error) 40%, transparent);
+  --color-error-bg-alpha:   color-mix(in oklch, var(--color-error-mid) 12%, transparent);
+  --color-brand-6pct:       color-mix(in oklch, var(--color-brand) 6%, transparent);
+  --color-brand-8pct:       color-mix(in oklch, var(--color-brand) 8%, transparent);
+  --color-brand-10pct:      color-mix(in oklch, var(--color-brand) 10%, transparent);
+  --color-brand-20pct:      color-mix(in oklch, var(--color-brand) 20%, transparent);
+  --color-brand-25pct:      color-mix(in oklch, var(--color-brand) 25%, transparent);
+  --color-dark-3-50pct:     color-mix(in oklch, var(--color-dark-3) 50%, transparent);
+  --color-dark-3-40pct:     color-mix(in oklch, var(--color-dark-3) 40%, transparent);
+  --color-dark-drag:        oklch(26% 0.015 35);
+  --color-black-4pct:       oklch(0% 0 0 / 0.08);
+  --color-black-10pct:      oklch(0% 0 0 / 10%);
+  --color-black-40pct:      oklch(0% 0 0 / 0.4);
+  --color-dark-text-3b:     oklch(42% 0.01 50);
+  --color-tools-blue:       oklch(46% 0.18 245);
+  --color-success-62:       oklch(62% 0.16 145);
+  --color-success-52:       oklch(52% 0.15 145);
+}

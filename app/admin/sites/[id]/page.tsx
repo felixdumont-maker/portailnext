@@ -135,6 +135,193 @@ function AssetZone({ siteId, slot, label, hint, icon, hasRepo }: {
   )
 }
 
+const ASSET_SLOT_OPTIONS = [
+  { slot: 'logo-icone',   label: 'Logo icône' },
+  { slot: 'logo-texte',   label: 'Logo texte' },
+  { slot: 'logo-complet', label: 'Logo complet' },
+  { slot: 'favicon',      label: 'Favicon' },
+  { slot: 'hero',         label: 'Photo hero' },
+  { slot: 'approche',     label: 'Photo corpo / Proprio' },
+]
+
+function guessSlot(filename: string): string {
+  const n = filename.toLowerCase()
+  if (n.includes('favicon')) return 'favicon'
+  if (n.includes('hero')) return 'hero'
+  if (n.includes('approche') || n.includes('corpo') || n.includes('proprio') || n.includes('owner')) return 'approche'
+  if (n.includes('icone') || n.includes('icon')) return 'logo-icone'
+  if (n.includes('texte') || n.includes('text')) return 'logo-texte'
+  if (n.includes('logo')) return 'logo-complet'
+  return ''
+}
+
+let stagedKeySeq = 0
+const newStagedKey = () => `staged-${Date.now()}-${stagedKeySeq++}`
+
+interface StagedFile {
+  key: string
+  file: File
+  previewUrl: string
+  slot: string
+  status: 'pending' | 'uploading' | 'done' | 'error'
+  error?: string
+}
+
+function MultiDropZone({ siteId, hasRepo }: { siteId: number; hasRepo: boolean }) {
+  const [staged, setStaged] = useState<StagedFile[]>([])
+  const [dragOver, setDragOver] = useState(false)
+
+  function addFiles(files: FileList | File[]) {
+    const imgs = Array.from(files).filter(f => f.type.startsWith('image/'))
+    const items: StagedFile[] = imgs.map(file => ({
+      key: newStagedKey(),
+      file,
+      previewUrl: URL.createObjectURL(file),
+      slot: guessSlot(file.name),
+      status: 'pending',
+    }))
+    if (items.length) setStaged(prev => [...prev, ...items])
+  }
+
+  function setSlot(key: string, slot: string) {
+    setStaged(prev => prev.map(s => s.key === key ? { ...s, slot } : s))
+  }
+
+  function remove(key: string) {
+    setStaged(prev => prev.filter(s => s.key !== key))
+  }
+
+  async function sendOne(item: StagedFile) {
+    if (!item.slot) return
+    setStaged(prev => prev.map(s => s.key === item.key ? { ...s, status: 'uploading' } : s))
+    const fd = new FormData()
+    fd.append('slot', item.slot)
+    fd.append('file', item.file)
+    try {
+      const res = await fetch(`/api/v1/admin/sites/${siteId}/assets`, { method: 'POST', credentials: 'include', body: fd })
+      const data = await res.json()
+      if (res.ok) {
+        setStaged(prev => prev.map(s => s.key === item.key ? { ...s, status: 'done' } : s))
+      } else {
+        setStaged(prev => prev.map(s => s.key === item.key ? { ...s, status: 'error', error: data.error || 'Erreur' } : s))
+      }
+    } catch {
+      setStaged(prev => prev.map(s => s.key === item.key ? { ...s, status: 'error', error: 'Erreur réseau' } : s))
+    }
+  }
+
+  async function sendAll() {
+    for (const item of staged) {
+      if (item.slot && item.status === 'pending') {
+        await sendOne(item)
+      }
+    }
+  }
+
+  const readyCount = staged.filter(s => s.slot && s.status === 'pending').length
+
+  return (
+    <div style={{ marginBottom: 'var(--space-5)', paddingBottom: 'var(--space-5)', borderBottom: '1px solid var(--color-light-border)' }}>
+      <div
+        onDragOver={e => { e.preventDefault(); if (hasRepo) setDragOver(true) }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={e => {
+          e.preventDefault(); setDragOver(false)
+          if (hasRepo && e.dataTransfer.files.length) addFiles(e.dataTransfer.files)
+        }}
+        onClick={() => { if (hasRepo) document.getElementById(`multi-asset-input-${siteId}`)?.click() }}
+        style={{
+          border: `2px dashed ${dragOver ? 'var(--color-brand)' : 'var(--color-light-border)'}`,
+          borderRadius: 'var(--radius-md)',
+          padding: 'var(--space-5)',
+          textAlign: 'center',
+          background: dragOver ? 'var(--color-light-2)' : 'var(--color-light-2)',
+          cursor: hasRepo ? 'pointer' : 'not-allowed',
+          opacity: hasRepo ? 1 : 0.5,
+          marginBottom: 'var(--space-3)',
+          transition: 'all var(--duration-fast)',
+        }}
+      >
+        <input
+          id={`multi-asset-input-${siteId}`}
+          type="file"
+          accept="image/*"
+          multiple
+          disabled={!hasRepo}
+          style={{ display: 'none' }}
+          onChange={e => { if (e.target.files?.length) addFiles(e.target.files); e.target.value = '' }}
+        />
+        <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 28, color: 'var(--color-light-text-3)' }}>upload_file</span>
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-xs)', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--color-light-text)', margin: 'var(--space-2) 0 0' }}>
+          Glissez plusieurs photos ici
+        </p>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: '4px 0 0' }}>
+          ou cliquez pour sélectionner — vous choisirez la destination de chacune ensuite
+        </p>
+      </div>
+
+      {staged.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
+          {staged.map(item => (
+            <div key={item.key} style={{
+              display: 'flex', alignItems: 'center', gap: 'var(--space-3)', padding: 'var(--space-2)',
+              border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-md)',
+              background: item.status === 'done' ? 'var(--color-success-bg)' : item.status === 'error' ? 'var(--color-error-bg)' : 'white',
+            }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={item.previewUrl} alt="" style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 'var(--radius-sm)', flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', color: 'var(--color-light-text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {item.file.name}
+                </p>
+                {item.status === 'error' && (
+                  <p style={{ margin: 0, fontSize: 'var(--text-xs)', color: 'var(--color-brand)' }}>{item.error}</p>
+                )}
+              </div>
+              <select
+                value={item.slot}
+                onChange={e => setSlot(item.key, e.target.value)}
+                disabled={item.status === 'uploading' || item.status === 'done'}
+                style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', padding: '6px 10px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-light-border)', background: 'white', flexShrink: 0 }}
+              >
+                <option value="">— Destination —</option>
+                {ASSET_SLOT_OPTIONS.map(o => <option key={o.slot} value={o.slot}>{o.label}</option>)}
+              </select>
+              {item.status === 'done' ? (
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-success)', flexShrink: 0 }}>check_circle</span>
+              ) : item.status === 'uploading' ? (
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ color: 'var(--color-warning)', flexShrink: 0 }}>hourglass_top</span>
+              ) : (
+                <button
+                  onClick={() => sendOne(item)}
+                  disabled={!item.slot}
+                  className="bg-[var(--color-brand)] text-white py-2 px-4 rounded-full font-bold text-xs uppercase tracking-widest disabled:opacity-40"
+                  style={{ fontFamily: 'var(--font-display)', flexShrink: 0 }}
+                >
+                  Envoyer
+                </button>
+              )}
+              {item.status !== 'uploading' && (
+                <button onClick={() => remove(item.key)} title="Retirer" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--color-light-text-3)', display: 'flex', flexShrink: 0 }}>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 18 }}>close</span>
+                </button>
+              )}
+            </div>
+          ))}
+          <button
+            onClick={sendAll}
+            disabled={readyCount === 0}
+            className="self-start bg-[var(--color-dark-0)] text-white py-3 px-7 rounded-full font-bold text-xs uppercase tracking-widest disabled:opacity-40"
+            style={{ fontFamily: 'var(--font-display)' }}
+          >
+            Envoyer tout ({readyCount})
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Card({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
     <div style={{ background: 'white', borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)', boxShadow: 'var(--shadow-sm)' }}>
@@ -217,6 +404,7 @@ export default function SiteDetailPage() {
 
   const st = STATUS_CONFIG[site.status] ?? { label: site.status, color: 'var(--color-dark-text-2)', icon: 'info' }
   const isReservation = site.template === 'reservation'
+  const templateLabel = isReservation ? 'Réservation' : 'Vitrine'
 
   return (
     <div style={{ maxWidth: 800 }}>
@@ -237,7 +425,7 @@ export default function SiteDetailPage() {
             {site.business_name}
           </h1>
           <p style={{ color: 'var(--color-light-text-3)', marginTop: 'var(--space-1)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)' }}>
-            {isReservation ? 'Réservation' : 'Santé'} · {site.slug}
+            {templateLabel} · {site.slug}
           </p>
         </div>
         <div style={{
@@ -348,11 +536,13 @@ export default function SiteDetailPage() {
 
         {/* ── Assets ────────────────────────────────────── */}
         <Card title="Assets" icon="image">
+          <MultiDropZone siteId={site.id} hasRepo={!!site.github_repo} />
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--space-3)' }}>
             {[
               { slot: 'logo-icone',   label: 'Logo icône',        hint: 'SVG / PNG',  icon: 'interests' },
               { slot: 'logo-texte',   label: 'Logo texte',        hint: 'SVG / PNG',  icon: 'text_fields' },
               { slot: 'logo-complet', label: 'Logo complet',      hint: 'SVG / PNG',  icon: 'logo_dev' },
+              { slot: 'favicon',      label: 'Favicon',           hint: 'PNG (carré)', icon: 'web' },
               { slot: 'hero',         label: 'Photo hero',        hint: 'JPG / WEBP', icon: 'image' },
               { slot: 'approche',     label: 'Photo corpo / Proprio', hint: 'JPG / WEBP', icon: 'portrait' },
             ].map(({ slot, label, hint, icon }) => (
@@ -372,7 +562,7 @@ export default function SiteDetailPage() {
 
         {/* ── Configuration ──────────────────────────────── */}
         <Card title="Configuration" icon="settings">
-          <InfoRow label="Template" value={isReservation ? 'Réservation' : 'Santé'} />
+          <InfoRow label="Template" value={templateLabel} />
           <InfoRow label="Style Hero" value={site.hero_style} />
           <InfoRow label="Type d'entreprise" value={site.seo_business_type} />
           <InfoRow label="Gamme de prix" value={site.seo_price_range} />

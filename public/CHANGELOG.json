@@ -1,0 +1,46 @@
+{
+  "entries": [
+    {
+      "id": "2026-06-09-003",
+      "date": "2026-06-09",
+      "session": "Fix scroll invitation + bug connexion post-reset",
+      "category": "fix",
+      "module": "Auth",
+      "description": "3 correctifs auth : (1) api_reset_password n'ajoutait pas is_email_confirmed=1 — les clients qui utilisaient 'Mot de passe oublié' au lieu du lien d'invitation créaient leur mot de passe mais ne pouvaient plus se connecter. (2) Composant Wrapper défini à l'intérieur de InvitationForm causait un démontage/remontage du <main> à chaque frappe, scrollant la page vers le haut. (3) Règle CLAUDE.md mise à jour : changelog après chaque changement (pas seulement en fin de session).",
+      "files_modified": [
+        "portail/app.py (api_reset_password — ajout is_email_confirmed=1)",
+        "portail-next/app/invitation/[token]/page.tsx (Wrapper sorti hors de InvitationForm)",
+        "CLAUDE.md (règle changelog)"
+      ],
+      "author": "Claude Code"
+    },
+    {
+      "id": "2026-06-07-002",
+      "date": "2026-06-07",
+      "session": "Fusion des pages Roadmap en onglets sur /admin/roadmaps",
+      "category": "ui",
+      "module": "Projets",
+      "description": "Unification des deux pages Roadmap distinctes (CRUD CRM et Vision Produit CocktailOS) en une seule page /admin/roadmaps avec onglets « Roadmaps » et « CocktailOS ». Le contenu hardcodé Vision Produit (forfaits, persona Nathalie Cartier, phases, comparatifs) a été extrait dans un composant CocktailOSVision réutilisable. La route orpheline /admin/roadmap (singulier) a été supprimée.",
+      "files_modified": [
+        "portail-next/app/admin/roadmaps/page.tsx",
+        "portail-next/app/admin/roadmaps/CocktailOSVision.tsx",
+        "portail-next/app/admin/roadmap/page.tsx (supprimé)"
+      ],
+      "author": "Claude Code"
+    },
+    {
+      "id": "2026-06-07-001",
+      "date": "2026-06-07",
+      "session": "Initialisation du système de changelog",
+      "category": "feature",
+      "module": "Infrastructure",
+      "description": "Création du système de changelog CocktailOS — fichier JSON + page Next.js + route Flask",
+      "files_modified": [
+        "portail-next/public/CHANGELOG.json",
+        "portail-next/app/admin/changelog/page.tsx",
+        "portail/app.py"
+      ],
+      "author": "Claude Code"
+    }
+  ]
+}

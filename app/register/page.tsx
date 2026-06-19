@@ -51,10 +51,12 @@ export default function RegisterPage() {
   const router = useRouter();
   const [step, setStep]           = useState(0);
   const [direction, setDirection] = useState<'forward' | 'back'>('forward');
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState('');
-  const [showPw, setShowPw]       = useState(false);
-  const [showPw2, setShowPw2]     = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
+  const [showPw, setShowPw]           = useState(false);
+  const [showPw2, setShowPw2]         = useState(false);
+  const [resendStatus, setResendStatus] = useState<'idle' | 'sending' | 'sent'>('idle');
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState('');
 
   const [form, setForm] = useState({
     email:          '',
@@ -111,6 +113,7 @@ export default function RegisterPage() {
         setDirection('forward');
         setStep(4);
       } else {
+        if (data.unconfirmed) setUnconfirmedEmail(form.email);
         setError(data.error || "Erreur lors de l'inscription");
       }
     } catch {
@@ -126,7 +129,7 @@ export default function RegisterPage() {
   };
 
   return (
-    <main style={{ minHeight: '100dvh', display: 'flex', background: 'var(--color-dark-1)' }}>
+    <main id="main-content" style={{ minHeight: '100dvh', display: 'flex', background: 'var(--color-dark-1)' }}>
 
       {/* ── Left panel (desktop) ── */}
       <div
@@ -296,7 +299,7 @@ export default function RegisterPage() {
         <div style={{ width: '100%', maxWidth: '400px' }}>
 
           {/* ── Animated card ── */}
-          <div key={step} style={slideAnim}>
+          <div key={step} style={slideAnim} aria-live="polite" aria-atomic="true">
 
             {/* Steps 0–3 */}
             {step < 4 && (
@@ -340,7 +343,7 @@ export default function RegisterPage() {
                 {error && (
                   <div role="alert" style={{
                     display: 'flex',
-                    alignItems: 'flex-start',
+                    flexDirection: 'column',
                     gap: 'var(--space-2)',
                     background: 'var(--color-error-glow)',
                     border: '1px solid var(--color-error-border)',
@@ -352,10 +355,25 @@ export default function RegisterPage() {
                     fontSize: 'var(--text-sm)',
                     lineHeight: 'var(--leading-normal)',
                   }}>
-                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px', flexShrink: 0, marginTop: '1px' }}>
-                      error
-                    </span>
-                    {error}
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)' }}>
+                      <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px', flexShrink: 0, marginTop: '1px' }}>error</span>
+                      {error}
+                    </div>
+                    {unconfirmedEmail && (
+                      <button type="button"
+                        onClick={async () => {
+                          if (resendStatus !== 'idle') return;
+                          setResendStatus('sending');
+                          try { await fetch('/api/v1/auth/resend-confirmation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ email: unconfirmedEmail }) }); } catch {}
+                          setResendStatus('sent');
+                        }}
+                        disabled={resendStatus !== 'idle'}
+                        style={{ alignSelf: 'flex-start', background: 'none', border: 'none', padding: 0, cursor: resendStatus !== 'idle' ? 'default' : 'pointer', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 600, color: resendStatus === 'sent' ? 'var(--color-success)' : 'var(--color-brand-text-hover)', textDecoration: resendStatus === 'idle' ? 'underline' : 'none', textUnderlineOffset: '3px' }}>
+                        {resendStatus === 'idle' && '→ Renvoyer le courriel de confirmation'}
+                        {resendStatus === 'sending' && 'Envoi en cours…'}
+                        {resendStatus === 'sent' && '✓ Courriel envoyé — vérifiez votre boîte'}
+                      </button>
+                    )}
                   </div>
                 )}
 
@@ -561,6 +579,19 @@ export default function RegisterPage() {
                 }}>
                   Vérifiez votre email pour confirmer votre compte avant de vous connecter.
                 </p>
+                <button type="button"
+                  onClick={async () => {
+                    if (resendStatus !== 'idle') return;
+                    setResendStatus('sending');
+                    try { await fetch('/api/v1/auth/resend-confirmation', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ email: form.email }) }); } catch {}
+                    setResendStatus('sent');
+                  }}
+                  disabled={resendStatus !== 'idle'}
+                  style={{ display: 'block', margin: '0 auto var(--space-4)', background: 'none', border: 'none', padding: 0, cursor: resendStatus !== 'idle' ? 'default' : 'pointer', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: 600, color: resendStatus === 'sent' ? 'var(--color-success)' : 'var(--color-brand-text-muted)', textDecoration: resendStatus === 'idle' ? 'underline' : 'none', textUnderlineOffset: '3px' }}>
+                  {resendStatus === 'idle' && 'Renvoyer le courriel'}
+                  {resendStatus === 'sending' && 'Envoi en cours…'}
+                  {resendStatus === 'sent' && '✓ Courriel renvoyé'}
+                </button>
                 <Btn onClick={() => router.push('/')}>Se connecter</Btn>
               </div>
             )}
@@ -653,6 +684,7 @@ function BtnRow({ children, onBack, disabled }: { children: React.ReactNode; onB
           gap: 'var(--space-1)',
           flexShrink: 0,
         }}
+        aria-label="Étape précédente"
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >

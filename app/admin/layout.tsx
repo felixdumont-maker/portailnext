@@ -17,6 +17,16 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Clients',  icon: 'group',       href: '/admin/clients'  },
       { label: 'Projets',  icon: 'folder_open', href: '/admin/projets'  },
       { label: 'Services', icon: 'layers',       href: '/admin/services' },
+      { label: 'Ressources', icon: 'menu_book',  href: '/admin/ressources' },
+    ],
+  },
+  {
+    label: 'Équipe', icon: 'handyman',
+    children: [
+      { label: 'Pigistes',          icon: 'handyman',     href: '/admin/pigistes'          },
+      { label: 'Mandats',           icon: 'assignment',   href: '/admin/mandats-pigistes'  },
+      { label: 'Factures pigistes', icon: 'receipt_long', href: '/admin/factures-pigistes' },
+      { label: 'Outils',            icon: 'widgets',      href: '/admin/outils'            },
     ],
   },
   {
@@ -24,20 +34,16 @@ const NAV_GROUPS: NavGroup[] = [
     children: [
       { label: 'Marketing', icon: 'campaign', href: '/admin/marketing' },
       { label: 'Roadmaps',  icon: 'timeline', href: '/admin/roadmaps'  },
+      { label: 'Changelog', icon: 'history',  href: '/admin/changelog' },
     ],
   },
   {
-    label: 'Équipe', icon: 'handyman',
+    label: 'Contenu', icon: 'folder_special',
     children: [
-      { label: 'Pigistes', icon: 'handyman', href: '/admin/pigistes' },
-      { label: 'Outils',   icon: 'widgets',  href: '/admin/outils'   },
-    ],
-  },
-  {
-    label: 'Sites', icon: 'web',
-    children: [
-      { label: 'Tous les sites', icon: 'web',     href: '/admin/sites'         },
-      { label: 'Nouveau site',   icon: 'add_box',  href: '/admin/sites/nouveau' },
+      { label: 'Sites',         icon: 'web',         href: '/admin/sites'                 },
+      { label: 'Soumissions',   icon: 'description', href: '/admin/soumissions'           },
+      { label: 'Templates',     icon: 'article',      href: '/admin/soumissions/templates' },
+      { label: 'Conditions',    icon: 'gavel',        href: '/admin/conditions'            },
     ],
   },
 ]
@@ -53,6 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [user, setUser]             = useState<AdminUser | null>(null)
   const [accountOpen, setAccountOpen] = useState(false)
   const [openGroup, setOpenGroup]   = useState<string | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -96,11 +103,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           left: '50%',
           transform: 'translateX(-50%)',
           zIndex: 'var(--z-sticky)' as never,
-          width: 'clamp(380px, 70vw, 720px)',
+          width: 'clamp(420px, 72vw, 780px)',
           height: '52px',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '0 var(--space-4)',
+          padding: '0 var(--space-5)',
           background: 'var(--color-dark-1)',
           border: '1px solid var(--color-dark-border)',
           borderRadius: 'var(--radius-full)',
@@ -124,7 +131,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </button>
 
         {/* Nav groups */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           {NAV_GROUPS.map(group => {
             const isActive = isGroupActive(group, pathname)
             const isOpen   = openGroup === group.label
@@ -326,7 +333,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </nav>
 
-      {/* ── Mobile navbar — bottom tabs (4 groups) ── */}
+      {/* ── Mobile navbar — bottom tabs ── */}
       <nav
         aria-label="Navigation"
         className="flex md:hidden"
@@ -339,33 +346,123 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           background: 'var(--color-dark-1)', borderTop: '1px solid var(--color-dark-border)',
         }}
       >
-        {NAV_GROUPS.map(group => {
-          const href = group.href ?? group.children![0].href
-          const isActive = isGroupActive(group, pathname)
+        {[
+          { label: 'Dashboard', icon: 'grid_view',    href: '/admin' },
+          { label: 'Projets',   icon: 'folder_open',  href: '/admin/projets' },
+          { label: 'Clients',   icon: 'group',         href: '/admin/clients' },
+          { label: 'Nouveau',   icon: 'add_circle',    href: '/admin/projets/new' },
+        ].map(tab => {
+          const isActive = tab.href === '/admin' ? pathname === '/admin' : pathname.startsWith(tab.href)
           return (
-            <Link
-              key={group.label}
-              href={href}
+            <Link key={tab.href} href={tab.href}
               style={{
                 display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
                 padding: 'var(--space-2) var(--space-3)',
                 color: isActive ? 'var(--color-brand)' : 'var(--color-dark-text-2)',
                 textDecoration: 'none', transition: 'color var(--duration-fast)',
-                minHeight: '44px', justifyContent: 'center',
+                minHeight: '44px', justifyContent: 'center', flex: 1,
               }}
             >
-              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px' }}>{group.icon}</span>
-              <span style={{
-                fontSize: '9px', fontWeight: 700,
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-                fontFamily: 'var(--font-display)',
-              }}>
-                {group.label}
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px' }}>{tab.icon}</span>
+              <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>
+                {tab.label}
               </span>
             </Link>
           )
         })}
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+            padding: 'var(--space-2) var(--space-3)',
+            color: mobileMenuOpen ? 'var(--color-brand)' : 'var(--color-dark-text-2)',
+            background: 'none', border: 'none', cursor: 'pointer',
+            minHeight: '44px', justifyContent: 'center', flex: 1,
+          }}
+        >
+          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px' }}>menu</span>
+          <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', fontFamily: 'var(--font-display)' }}>Menu</span>
+        </button>
       </nav>
+
+      {/* ── Mobile drawer — tous les liens ── */}
+      {mobileMenuOpen && (
+        <div className="md:hidden" style={{ position: 'fixed', inset: 0, zIndex: 200 }}>
+          {/* Backdrop */}
+          <div onClick={() => setMobileMenuOpen(false)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
+          {/* Drawer */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'var(--color-dark-1)',
+            borderRadius: 'var(--radius-lg) var(--radius-lg) 0 0',
+            paddingBottom: 'calc(var(--space-4) + env(safe-area-inset-bottom, 0px))',
+            maxHeight: '85dvh', overflowY: 'auto',
+          }}>
+            {/* Handle */}
+            <div style={{ display: 'flex', justifyContent: 'center', padding: 'var(--space-3) 0 var(--space-2)' }}>
+              <div style={{ width: '36px', height: '4px', borderRadius: '2px', background: 'var(--color-dark-border)' }} />
+            </div>
+            {/* User */}
+            {user && (
+              <div style={{ padding: 'var(--space-3) var(--space-5) var(--space-4)', borderBottom: '1px solid var(--color-dark-border)' }}>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)', color: 'white', margin: 0 }}>{user.nom}</p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-dark-text-2)', margin: 0 }}>{user.email}</p>
+              </div>
+            )}
+            {/* All nav links */}
+            {NAV_GROUPS.map(group => (
+              <div key={group.label}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--color-dark-text-2)', padding: 'var(--space-4) var(--space-5) var(--space-1)', margin: 0 }}>
+                  {group.label}
+                </p>
+                {group.children ? group.children.map(child => {
+                  const isActive = pathname.startsWith(child.href)
+                  return (
+                    <Link key={child.href} href={child.href} onClick={() => setMobileMenuOpen(false)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                        padding: 'var(--space-3) var(--space-5)',
+                        color: isActive ? 'var(--color-brand)' : 'var(--color-dark-text-2)',
+                        textDecoration: 'none',
+                        fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: isActive ? 700 : 400,
+                        background: isActive ? 'rgba(255,255,255,0.04)' : 'transparent',
+                      }}>
+                      <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '20px' }}>{child.icon}</span>
+                      {child.label}
+                    </Link>
+                  )
+                }) : (
+                  <Link href={group.href!} onClick={() => setMobileMenuOpen(false)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                      padding: 'var(--space-3) var(--space-5)',
+                      color: (group.href === '/admin' ? pathname === '/admin' : pathname.startsWith(group.href!)) ? 'var(--color-brand)' : 'var(--color-dark-text-2)',
+                      textDecoration: 'none',
+                      fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)',
+                    }}>
+                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '20px' }}>{group.icon}</span>
+                    {group.label}
+                  </Link>
+                )}
+              </div>
+            ))}
+            {/* Déconnexion */}
+            <div style={{ borderTop: '1px solid var(--color-dark-border)', margin: 'var(--space-2) 0 0' }}>
+              <button onClick={logout}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                  padding: 'var(--space-4) var(--space-5)',
+                  color: 'var(--color-brand)', background: 'none', border: 'none',
+                  cursor: 'pointer', width: '100%', textAlign: 'left',
+                  fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)',
+                }}>
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '20px' }}>logout</span>
+                Déconnexion
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Content ── */}
       <main id="main-content" style={{

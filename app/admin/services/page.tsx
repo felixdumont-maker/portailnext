@@ -644,6 +644,12 @@ export default function AdminServicesPage() {
   const [activating, setActivating] = useState<string | null>(null)
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
 
+  // Envoi des prochaines dispos pour un service précis (présentiel)
+  const [clients, setClients] = useState<{ id: number; nom_complet: string; nom_entreprise: string | null }[]>([])
+  const [dispoModalFor, setDispoModalFor] = useState<number | null>(null)
+  const [dispoClientId, setDispoClientId] = useState<string>('')
+  const [sendingDispo, setSendingDispo] = useState(false)
+
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok })
     setTimeout(() => setToast(null), 3000)
@@ -654,7 +660,36 @@ export default function AdminServicesPage() {
       .then(res => res.json())
       .then(data => { if (Array.isArray(data)) setServices(data) })
       .catch(() => {})
+    fetch('/api/v1/admin/clients', { credentials: 'include' })
+      .then(res => res.json())
+      .then(data => { if (Array.isArray(data)) setClients(data) })
+      .catch(() => {})
   }, [])
+
+  async function envoyerDispoService(serviceId: number) {
+    if (!dispoClientId) return
+    setSendingDispo(true)
+    try {
+      const res = await fetch(`/api/v1/admin/service/${serviceId}/envoyer-dispo`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id_client: Number(dispoClientId) }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) {
+        showToast(data.error || "Erreur lors de l'envoi", false)
+      } else {
+        showToast(`Courriel envoyé — ${data.nb_slots} créneau(x) proposé(s)`)
+        setDispoModalFor(null)
+        setDispoClientId('')
+      }
+    } catch {
+      showToast("Erreur lors de l'envoi", false)
+    } finally {
+      setSendingDispo(false)
+    }
+  }
 
   const toggleExpand = (id: number) => {
     setExpanded(prev => prev === id ? null : id)
@@ -797,6 +832,9 @@ export default function AdminServicesPage() {
   const isAlreadyActive = (def: DefaultService) =>
     services.some(s => s.nom_service.toLowerCase() === def.nom_service.toLowerCase())
 
+  const findActiveService = (def: DefaultService) =>
+    services.find(s => s.nom_service.toLowerCase() === def.nom_service.toLowerCase())
+
   return (
     <div className="max-w-5xl mx-auto">
 
@@ -885,6 +923,7 @@ export default function AdminServicesPage() {
               {DEFAULT_SERVICES.filter(d => d.categorie === cat).map(def => {
             const active = isAlreadyActive(def)
             const loading = activating === def.slug
+            const activeService = findActiveService(def)
             return (
               <div key={def.slug}
                 className={`relative bg-white rounded-2xl p-6 border-2 transition-all ${active ? 'border-emerald-200 opacity-70' : 'border-[var(--color-light-0)] hover:border-[var(--color-brand)]/30'}`}>
@@ -917,24 +956,73 @@ export default function AdminServicesPage() {
                       <p className="text-xs font-body text-[var(--color-dark-text-2)]">
                         <span className="font-bold text-[var(--color-dark-1)]">{def.items.length}</span> checkpoints inclus
                       </p>
-                      <button
-                        onClick={() => !active && !loading && activateDefault(def)}
-                        disabled={active || loading}
-                        className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-body font-bold uppercase tracking-wide transition-all ${
-                          active
-                            ? 'bg-emerald-50 text-emerald-600 cursor-default'
-                            : loading
-                            ? 'bg-[var(--color-light-0)] text-[var(--color-dark-text-2)] cursor-wait'
-                            : 'bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)] active:scale-95'
-                        }`}>
-                        {loading
-                          ? <><span aria-hidden="true" className="material-symbols-outlined text-sm animate-spin">refresh</span>Activation...</>
-                          : active
-                          ? <><span aria-hidden="true" className="material-symbols-outlined text-sm">check</span>Activé</>
-                          : <><span aria-hidden="true" className="material-symbols-outlined text-sm">add</span>Activer</>
-                        }
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {activeService && (
+                          <button
+                            onClick={() => { setDispoModalFor(v => v === activeService.id ? null : activeService.id); setDispoClientId('') }}
+                            className="p-2 rounded-full text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] hover:bg-[var(--color-light-0)] transition-colors"
+                            title="Envoyer les prochaines dispos pour ce service">
+                            <span aria-hidden="true" className="material-symbols-outlined text-lg">send</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => !active && !loading && activateDefault(def)}
+                          disabled={active || loading}
+                          className={`flex items-center gap-2 px-5 py-2 rounded-full text-xs font-body font-bold uppercase tracking-wide transition-all ${
+                            active
+                              ? 'bg-emerald-50 text-emerald-600 cursor-default'
+                              : loading
+                              ? 'bg-[var(--color-light-0)] text-[var(--color-dark-text-2)] cursor-wait'
+                              : 'bg-[var(--color-brand)] text-white hover:bg-[var(--color-brand-hover)] active:scale-95'
+                          }`}>
+                          {loading
+                            ? <><span aria-hidden="true" className="material-symbols-outlined text-sm animate-spin">refresh</span>Activation...</>
+                            : active
+                            ? <><span aria-hidden="true" className="material-symbols-outlined text-sm">check</span>Activé</>
+                            : <><span aria-hidden="true" className="material-symbols-outlined text-sm">add</span>Activer</>
+                          }
+                        </button>
+                      </div>
                     </div>
+                    {activeService && dispoModalFor === activeService.id && (
+                      <div className="mt-4 p-4 bg-[var(--color-light-0)] rounded-2xl" onClick={e => e.stopPropagation()}>
+                        <p className="font-body text-[11px] font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] mb-2">
+                          Envoyer les prochaines dispos
+                        </p>
+                        <p className="font-body text-[11px] text-[var(--color-dark-text-2)] mb-3">
+                          Le client recevra un courriel avec les prochains créneaux libres (durée incluant 1h de
+                          battement avant et après). En réservant, il fournira l&apos;adresse et un projet sera
+                          créé automatiquement.
+                        </p>
+                        <select
+                          value={dispoClientId}
+                          onChange={e => setDispoClientId(e.target.value)}
+                          className="w-full bg-white rounded-full px-4 py-2.5 font-body text-xs outline-none mb-3"
+                        >
+                          <option value="">— Choisir un client —</option>
+                          {clients.map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.nom_complet}{c.nom_entreprise ? ` (${c.nom_entreprise})` : ''}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            onClick={() => setDispoModalFor(null)}
+                            className="px-4 py-2 rounded-full font-body text-xs font-bold text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)] transition-colors"
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            onClick={() => envoyerDispoService(activeService.id)}
+                            disabled={!dispoClientId || sendingDispo}
+                            className="bg-[var(--color-brand)] text-white px-5 py-2 rounded-full font-bold text-xs tracking-widest disabled:opacity-50 hover:bg-[var(--color-brand-hover)] transition-colors"
+                          >
+                            {sendingDispo ? 'Envoi…' : 'ENVOYER'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -991,6 +1079,12 @@ export default function AdminServicesPage() {
                 </div>
                 <div className="hidden md:block h-8 w-px bg-[var(--color-light-border-2)]" />
                 <button
+                  onClick={e => { e.stopPropagation(); setDispoModalFor(v => v === service.id ? null : service.id); setDispoClientId('') }}
+                  className="p-2 rounded-full text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] hover:bg-[var(--color-light-0)] transition-colors"
+                  title="Envoyer les prochaines dispos pour ce service">
+                  <span aria-hidden="true" className="material-symbols-outlined text-lg">send</span>
+                </button>
+                <button
                   onClick={e => { e.stopPropagation(); deleteService(service.id, service.nom_service) }}
                   className="p-2 rounded-full text-[var(--color-dark-text-2)] hover:text-red-600 hover:bg-red-50 transition-colors opacity-0 group-hover:opacity-100"
                   title="Supprimer ce service">
@@ -1004,6 +1098,49 @@ export default function AdminServicesPage() {
                 </div>
               </div>
             </div>
+
+            {/* Envoi des dispos pour ce service */}
+            {dispoModalFor === service.id && (
+              <div className="bg-white rounded-[1.6rem] mt-1 p-6 md:p-8 flex flex-col md:flex-row md:items-end gap-4" onClick={e => e.stopPropagation()}>
+                <div className="flex-1">
+                  <p className="font-body text-xs font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] mb-2">
+                    Envoyer les prochaines dispos — {service.nom_service}
+                  </p>
+                  <p className="font-body text-xs text-[var(--color-dark-text-2)] mb-3">
+                    Le client recevra un courriel avec les prochains créneaux libres pour cette séance
+                    (durée incluant 1h de battement avant et après). En réservant, il fournira l&apos;adresse
+                    et un projet sera créé automatiquement.
+                  </p>
+                  <select
+                    value={dispoClientId}
+                    onChange={e => setDispoClientId(e.target.value)}
+                    className="w-full bg-[var(--color-light-0)] rounded-full px-5 py-3 font-body text-sm outline-none"
+                  >
+                    <option value="">— Choisir un client —</option>
+                    {clients.map(c => (
+                      <option key={c.id} value={c.id}>
+                        {c.nom_complet}{c.nom_entreprise ? ` (${c.nom_entreprise})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setDispoModalFor(null)}
+                    className="px-5 py-3 rounded-full font-body text-sm font-bold text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)] transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={() => envoyerDispoService(service.id)}
+                    disabled={!dispoClientId || sendingDispo}
+                    className="bg-[var(--color-brand)] text-white px-6 py-3 rounded-full font-bold text-sm tracking-widest disabled:opacity-50 hover:bg-[var(--color-brand-hover)] transition-colors"
+                  >
+                    {sendingDispo ? 'Envoi…' : 'ENVOYER'}
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Expanded checklist */}
             {expanded === service.id && (
