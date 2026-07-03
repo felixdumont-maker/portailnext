@@ -164,7 +164,11 @@ export default function LoginPage() {
       const data = await res.json();
       setLoading(false);
       if (data.success) {
-        const dest = data.user.role === 'pigiste' ? '/pigiste/dashboard' : (data.user.is_admin ? '/admin' : '/dashboard');
+        const dest = data.user.role === 'pigiste'
+          ? '/pigiste/dashboard'
+          : (data.user.is_admin
+              ? '/admin'
+              : (data.user.entrainement_only ? '/entrainement' : '/dashboard'));
         if (data.force_password_change) {
           setForceChangeRedirect(dest);
         } else {

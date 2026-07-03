@@ -142,6 +142,7 @@ const ASSET_SLOT_OPTIONS = [
   { slot: 'favicon',      label: 'Favicon' },
   { slot: 'hero',         label: 'Photo hero' },
   { slot: 'approche',     label: 'Photo corpo / Proprio' },
+  { slot: 'banque-photo', label: 'Banque photo (nom conservé)' },
 ]
 
 function guessSlot(filename: string): string {

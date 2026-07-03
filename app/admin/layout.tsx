@@ -53,6 +53,233 @@ function isGroupActive(group: NavGroup, pathname: string): boolean {
   return group.children?.some(c => pathname.startsWith(c.href)) ?? false
 }
 
+interface AdminNotif {
+  id: number
+  type: string
+  titre: string
+  message: string | null
+  lien: string | null
+  is_read: number
+  created_at: string
+}
+
+function tempsRelatif(iso: string): string {
+  // created_at est en UTC (CURRENT_TIMESTAMP SQLite) : "2026-07-02 14:38:00"
+  const d = new Date(iso.replace(' ', 'T') + 'Z')
+  const diff = (Date.now() - d.getTime()) / 1000
+  if (isNaN(diff)) return ''
+  if (diff < 60) return "à l'instant"
+  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`
+  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)} h`
+  return `il y a ${Math.floor(diff / 86400)} j`
+}
+
+const NOTIF_ICON: Record<string, string> = {
+  info: 'info', todo: 'checklist', todoist: 'add_task',
+  assignation: 'person_add', facture: 'receipt_long', agenda: 'event',
+}
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = atob(base64)
+  const arr = new Uint8Array(raw.length)
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i)
+  return arr
+}
+
+function NotifBell() {
+  const router = useRouter()
+  const [open, setOpen]       = useState(false)
+  const [items, setItems]     = useState<AdminNotif[]>([])
+  const [unread, setUnread]   = useState(0)
+  const [pushOn, setPushOn]   = useState(false)
+  const [pushBusy, setPushBusy] = useState(false)
+  const pushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window
+
+  useEffect(() => {
+    if (!pushSupported) return
+    navigator.serviceWorker.getRegistration().then(reg => {
+      reg?.pushManager.getSubscription().then(sub => setPushOn(!!sub))
+    })
+  }, [pushSupported])
+
+  async function activerPush() {
+    if (!pushSupported || pushBusy) return
+    setPushBusy(true)
+    try {
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') { setPushBusy(false); return }
+      const reg = await navigator.serviceWorker.register('/sw.js')
+      await navigator.serviceWorker.ready
+      const keyRes = await fetch('/api/v1/admin/push/vapid-public-key', { credentials: 'include' })
+      const { key } = await keyRes.json()
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(key),
+      })
+      await fetch('/api/v1/admin/push/subscribe', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(sub),
+      })
+      setPushOn(true)
+    } catch (e) { console.error('push subscribe', e) }
+    setPushBusy(false)
+  }
+
+  async function desactiverPush() {
+    if (pushBusy) return
+    setPushBusy(true)
+    try {
+      const reg = await navigator.serviceWorker.getRegistration()
+      const sub = await reg?.pushManager.getSubscription()
+      if (sub) {
+        await fetch('/api/v1/admin/push/unsubscribe', {
+          method: 'POST', credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        })
+        await sub.unsubscribe()
+      }
+      setPushOn(false)
+    } catch (e) { console.error('push unsubscribe', e) }
+    setPushBusy(false)
+  }
+
+  async function charger() {
+    try {
+      const res = await fetch('/api/v1/admin/notifications', { credentials: 'include' })
+      if (!res.ok) return
+      const data = await res.json()
+      setItems(data.items || [])
+      setUnread(data.unread || 0)
+    } catch { /* silencieux */ }
+  }
+
+  useEffect(() => {
+    charger()
+    const t = setInterval(charger, 45000)
+    return () => clearInterval(t)
+  }, [])
+
+  async function ouvrir(n: AdminNotif) {
+    if (!n.is_read) {
+      fetch(`/api/v1/admin/notifications/${n.id}/read`, { method: 'POST', credentials: 'include' }).catch(() => {})
+      setItems(prev => prev.map(i => i.id === n.id ? { ...i, is_read: 1 } : i))
+      setUnread(u => Math.max(0, u - 1))
+    }
+    setOpen(false)
+    if (n.lien) router.push(n.lien)
+  }
+
+  async function toutLire() {
+    await fetch('/api/v1/admin/notifications/read-all', { method: 'POST', credentials: 'include' }).catch(() => {})
+    setItems(prev => prev.map(i => ({ ...i, is_read: 1 })))
+    setUnread(0)
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-label={`Notifications${unread ? ` (${unread} non lues)` : ''}`}
+        aria-expanded={open}
+        style={{
+          width: '34px', height: '34px', borderRadius: '50%',
+          background: 'transparent', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'white', position: 'relative',
+        }}
+      >
+        <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px' }}>notifications</span>
+        {unread > 0 && (
+          <span style={{
+            position: 'absolute', top: '2px', right: '2px', minWidth: '16px', height: '16px',
+            padding: '0 4px', borderRadius: '999px', background: 'var(--color-brand)',
+            color: 'white', fontSize: '10px', fontWeight: 800, lineHeight: '16px',
+            fontFamily: 'var(--font-display)', textAlign: 'center',
+          }}>{unread > 9 ? '9+' : unread}</span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-dropdown)' as never }} />
+          <div style={{
+            position: 'absolute', right: 0, top: 'calc(100% + 10px)',
+            background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+            borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-md)',
+            overflow: 'hidden', width: '320px', maxHeight: '420px',
+            display: 'flex', flexDirection: 'column',
+            zIndex: 'calc(var(--z-dropdown) + 1)' as never,
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-light-border)',
+            }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-sm)', color: 'var(--color-light-text)' }}>Notifications</span>
+              {unread > 0 && (
+                <button onClick={toutLire} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-brand)', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', fontWeight: 600,
+                }}>Tout marquer lu</button>
+              )}
+            </div>
+            <div style={{ overflowY: 'auto' }}>
+              {items.length === 0 && (
+                <p style={{ padding: 'var(--space-5) var(--space-4)', textAlign: 'center', color: 'var(--color-light-text-3)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)', margin: 0 }}>
+                  Aucune notification
+                </p>
+              )}
+              {items.map(n => (
+                <button
+                  key={n.id}
+                  onClick={() => ouvrir(n)}
+                  style={{
+                    display: 'flex', gap: 'var(--space-3)', width: '100%', textAlign: 'left',
+                    padding: 'var(--space-3) var(--space-4)', border: 'none', cursor: 'pointer',
+                    borderBottom: '1px solid var(--color-light-border)',
+                    background: n.is_read ? 'transparent' : 'var(--color-light-1)',
+                  }}
+                >
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--color-brand)', flexShrink: 0 }}>
+                    {NOTIF_ICON[n.type] || 'notifications'}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontFamily: 'var(--font-body)', fontWeight: n.is_read ? 500 : 700, fontSize: 'var(--text-sm)', color: 'var(--color-light-text)' }}>{n.titre}</span>
+                    {n.message && <span style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{n.message}</span>}
+                    <span style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--color-light-text-3)', marginTop: '2px' }}>{tempsRelatif(n.created_at)}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+            {pushSupported && (
+              <button
+                onClick={pushOn ? desactiverPush : activerPush}
+                disabled={pushBusy}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 'var(--space-2)', justifyContent: 'center',
+                  padding: 'var(--space-3)', borderTop: '1px solid var(--color-light-border)',
+                  background: 'none', border: 'none', borderTopStyle: 'solid', cursor: 'pointer',
+                  color: pushOn ? 'var(--color-brand)' : 'var(--color-light-text-3)',
+                  fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', fontWeight: 600, width: '100%',
+                  opacity: pushBusy ? 0.5 : 1,
+                }}
+              >
+                <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                  {pushOn ? 'notifications_active' : 'notifications_off'}
+                </span>
+                {pushOn ? 'Notifications téléphone activées' : 'Activer les notifications téléphone'}
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
   const pathname = usePathname()
@@ -273,7 +500,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           })}
         </div>
 
-        {/* Avatar + account dropdown */}
+        {/* Notifications + Avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+        <NotifBell />
         <div style={{ position: 'relative' }}>
           <button
             onClick={() => setAccountOpen(d => !d)}
@@ -330,6 +559,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             </>
           )}
+        </div>
         </div>
       </nav>
 

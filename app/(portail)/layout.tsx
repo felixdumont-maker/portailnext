@@ -20,13 +20,15 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
   const pathname = usePathname();
   const [nom, setNom]             = useState('');
   const [hasOutils, setHasOutils] = useState(false);
+  const [hasEntrainement, setHasEntrainement] = useState(false);
+  const [entrainementOnly, setEntrainementOnly] = useState(false);
   const [dropdown, setDropdown]   = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     fetch('/api/v1/auth/me', { credentials: 'include' })
       .then(r => { if (!r.ok) { router.push('/'); return null; } return r.json(); })
-      .then(data => { if (data) { setNom(data.nom); setHasOutils(!!data.has_outils); } })
+      .then(data => { if (data) { setNom(data.nom); setHasOutils(!!data.has_outils); setHasEntrainement(!!data.has_entrainement); setEntrainementOnly(!!data.entrainement_only); } })
       .catch(() => router.push('/'));
   }, [router]);
 
@@ -38,6 +40,20 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
     fetch('/api/v1/auth/logout', { method: 'POST', credentials: 'include' })
       .then(() => router.push('/'));
   }
+
+  // Mode "entraînement seulement" : on masque le portail entreprise (Accueil/Soumissions)
+  // et on garde uniquement la séance du jour + le profil.
+  const links = entrainementOnly
+    ? [
+        { label: 'Ma séance', icon: 'fitness_center', href: '/entrainement' },
+        { label: 'Profil',    icon: 'person',         href: '/profile'      },
+      ]
+    : [
+        ...navLinks,
+        ...(hasEntrainement ? [{ label: 'Entraînement', icon: 'fitness_center', href: '/entrainement' }] : []),
+        ...(hasOutils ? [{ label: 'Outils', icon: 'construction', href: '/outils' }] : []),
+      ];
+  const homeHref = entrainementOnly ? '/entrainement' : '/dashboard';
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--color-light-1)' }}>
@@ -65,7 +81,7 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
       >
         {/* Logo */}
         <button
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push(homeHref)}
           aria-label="Tableau de bord"
           style={{
             background: 'none', border: 'none', cursor: 'pointer',
@@ -84,10 +100,7 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
 
         {/* Links */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-          {[
-            ...navLinks,
-            ...(hasOutils ? [{ label: 'Outils', icon: 'construction', href: '/outils' }] : []),
-          ].map(link => {
+          {links.map(link => {
             const active = isLinkActive(link.href, pathname);
             return (
               <Link
@@ -211,10 +224,7 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
           borderTop: '1px solid var(--color-dark-border)',
         }}
       >
-        {[
-          ...navLinks,
-          ...(hasOutils ? [{ label: 'Outils', icon: 'construction', href: '/outils' }] : []),
-        ].map(link => {
+        {links.map(link => {
           const active = isLinkActive(link.href, pathname);
           return (
             <Link key={link.href} href={link.href}

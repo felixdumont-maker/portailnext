@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque, Atkinson_Hyperlegible } from "next/font/google";
+import { Bricolage_Grotesque, Atkinson_Hyperlegible, Geist } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const bricolage = Bricolage_Grotesque({
   subsets: ["latin"],
@@ -19,6 +22,8 @@ const atkinson = Atkinson_Hyperlegible({
 export const metadata: Metadata = {
   title: "CocktailOS — Portail Client",
   description: "Portail Client Cocktail Média",
+  manifest: "/manifest.json",
+  appleWebApp: { capable: true, title: "Cocktail OS", statusBarStyle: "default" },
 };
 
 export default function RootLayout({
@@ -27,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="fr" className={`${bricolage.variable} ${atkinson.variable}`}>
+    <html lang="fr" className={cn(bricolage.variable, atkinson.variable, "font-sans", geist.variable)}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />

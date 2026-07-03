@@ -22,7 +22,10 @@ interface Projet {
   client_id: number
   client_nom: string
   nom_service: string
+  facturation_mode: string | null
 }
+
+type FacturationMode = 'deja_paye' | 'quickbooks' | 'forfait'
 
 const STATUTS = [
   'Documents à donner',
@@ -56,6 +59,8 @@ export default function EditProjetPage() {
   const [lienGdrive, setLienGdrive] = useState('')
   const [lienSiteTest, setLienSiteTest] = useState('')
   const [idClient, setIdClient] = useState('')
+  const [facturer, setFacturer] = useState(true)
+  const [facturationMode, setFacturationMode] = useState<FacturationMode>('deja_paye')
 
   useEffect(() => {
     Promise.all([
@@ -72,6 +77,9 @@ export default function EditProjetPage() {
       setLienGdrive(p.lien_gdrive || '')
       setLienSiteTest(p.lien_site_test || '')
       setIdClient(String(p.client_id || ''))
+      // facturation_mode : null => on facture ; sinon raison de non-facturation
+      setFacturer(!p.facturation_mode)
+      if (p.facturation_mode) setFacturationMode(p.facturation_mode as FacturationMode)
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [id])
@@ -96,12 +104,18 @@ export default function EditProjetPage() {
           lien_gdrive: lienGdrive.trim() || null,
           lien_site_test: lienSiteTest.trim() || null,
           id_client: idClient || null,
+          facturation_mode: facturer ? null : facturationMode,
         }),
       })
       const data = await res.json()
       if (data.success) {
-        setSuccess('Modifications enregistrées.')
-        setTimeout(() => router.push(`/admin/projet/${id}`), 800)
+        const fa = data.facture_action
+        let msg = 'Modifications enregistrées.'
+        if (fa?.type === 'annulee') msg = `Modifications enregistrées. Facture ${fa.numero} annulée.`
+        else if (fa?.type === 'creee') msg = `Modifications enregistrées. Facture ${fa.numero} créée.`
+        else if (fa?.type === 'reactivee') msg = `Modifications enregistrées. Facture ${fa.numero} réactivée.`
+        setSuccess(msg)
+        setTimeout(() => router.push(`/admin/projet/${id}`), 1200)
       } else {
         setError(data.error || 'Erreur lors de la sauvegarde.')
       }
@@ -296,6 +310,43 @@ export default function EditProjetPage() {
               />
               <p className="text-[11px] text-[var(--color-dark-text-2)] font-body mt-2">
                 Inclus dans le courriel de révision pour les projets Site Web Vitrine.
+              </p>
+            </div>
+
+            {/* Facturation */}
+            <div className="pt-2 border-t border-[var(--color-light-0)]">
+              <label className="block text-[10px] font-bold text-[var(--color-dark-text-2)] uppercase mb-3 tracking-widest font-body">
+                Facturation
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer group">
+                <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${facturer ? 'bg-[var(--color-brand)] border-[var(--color-brand)]' : 'border-[var(--color-light-border-2)] group-hover:border-[var(--color-brand)]'}`}>
+                  {facturer && (
+                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </div>
+                <input type="checkbox" checked={facturer} onChange={e => setFacturer(e.target.checked)} className="sr-only" />
+                <span className="text-sm text-[var(--color-dark-3)] font-body">Facturer au client</span>
+              </label>
+              {!facturer && (
+                <div className="space-y-2 pl-8 mt-3">
+                  <label className="block text-xs text-[var(--color-dark-text-2)] font-medium font-body">Raison de non-facturation</label>
+                  <select
+                    value={facturationMode}
+                    onChange={e => setFacturationMode(e.target.value as FacturationMode)}
+                    className="w-full bg-[var(--color-light-0)] border-none rounded-2xl px-6 py-4 outline-none font-body text-sm focus:ring-2 focus:ring-[var(--color-brand)]/40 appearance-none"
+                  >
+                    <option value="deja_paye">Déjà payé</option>
+                    <option value="quickbooks">QuickBooks</option>
+                    <option value="forfait">Forfait</option>
+                  </select>
+                </div>
+              )}
+              <p className="text-[11px] text-[var(--color-dark-text-2)] font-body mt-3">
+                {facturer
+                  ? 'Si ce projet ne facturait pas auparavant, une facture sera créée à l’enregistrement.'
+                  : 'La facture déjà créée pour ce projet sera annulée à l’enregistrement.'}
               </p>
             </div>
 

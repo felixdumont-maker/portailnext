@@ -1,0 +1,17 @@
+{
+  "name": "Portail Cocktail Média",
+  "short_name": "Cocktail OS",
+  "description": "Portail de gestion Cocktail Média",
+  "start_url": "/admin",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#c0321a",
+  "icons": [
+    {
+      "src": "/cos-icone-noir.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

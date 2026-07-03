@@ -517,3 +517,31 @@ body {
     @apply font-sans;
   }
 }
+
+/* ─── Row hover system (Projets récents, Top Clients) ───────────── */
+.row-hover-group {
+  transition: background-color 0.15s ease;
+}
+.row-hover-group:hover {
+  background-color: #e83b14;
+}
+.row-hover-group:hover .row-title {
+  color: white;
+  font-weight: 600;
+}
+.row-hover-group:hover .row-desc {
+  color: rgba(255,255,255,0.7);
+}
+.row-hover-group:hover .row-counter {
+  color: rgba(255,255,255,0.9);
+  font-weight: 600;
+}
+.row-hover-group:hover .row-chevron {
+  color: rgba(255,255,255,0.8);
+  transform: translateX(3px);
+}
+.row-hover-group:hover .row-badge {
+  background: rgba(255,255,255,0.2);
+  color: white;
+  border-color: transparent;
+}

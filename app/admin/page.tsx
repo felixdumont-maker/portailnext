@@ -1,7 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
+import { Card, CardContent } from '@/components/ui/card'
+import { Users, FolderOpen, AlertTriangle, Archive, ChevronDown, ChevronRight } from 'lucide-react'
 
 const API = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -50,6 +52,9 @@ interface TodoPerso {
   projet_id: number | null
   projet_nom: string | null
   client_nom: string | null
+  client_id?: number | null
+  client_id_effectif?: number | null
+  source?: string | null
   created_at: string
 }
 
@@ -79,6 +84,17 @@ const PRIORITE_COLORS: Record<string, string> = {
   basse:   'bg-gray-100 text-gray-500',
 }
 
+function groupByProject(list: TodoPerso[]) {
+  const groups: Record<string, { todos: TodoPerso[]; client_nom: string | null }> = {}
+  for (const todo of list) {
+    const key = todo.projet_nom
+      || (todo.client_nom ? `👤 ${todo.client_nom}` : (todo.source === 'todoist' ? '📥 Todoist' : '— Personnel'))
+    if (!groups[key]) groups[key] = { todos: [], client_nom: todo.client_nom ?? null }
+    groups[key].todos.push(todo)
+  }
+  return groups
+}
+
 function formatDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' }).toUpperCase()
 }
@@ -101,9 +117,167 @@ function PrioritePicker({ value, onChange }: { value: string; onChange: (v: stri
   )
 }
 
+function useAnchoredCoords(isOpen: boolean, panelH: number, panelW: number) {
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const [coords, setCoords] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  useEffect(() => {
+    if (!isOpen || !btnRef.current) return
+    const r = btnRef.current.getBoundingClientRect()
+    const openUp = window.innerHeight - r.bottom < panelH + 12
+    const top = openUp ? Math.max(8, r.top - panelH - 6) : r.bottom + 6
+    const left = Math.max(8, Math.min(r.right - panelW, window.innerWidth - panelW - 8))
+    setCoords({ top, left })
+  }, [isOpen, panelH, panelW])
+  return { btnRef, coords }
+}
+
+function AssignMenu({ currentProjetId, currentClientId, currentTitreId, clients, projets, titres, isOpen, onToggle, onAssign }: {
+  currentProjetId: number | null
+  currentClientId: number | null
+  currentTitreId?: number | null
+  clients: { id: number; nom_complet: string }[]
+  projets: { id: number; nom_projet: string; client_nom: string | null }[]
+  titres?: { id: number; texte: string }[]
+  isOpen: boolean
+  onToggle: () => void
+  onAssign: (payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null }) => void
+}) {
+  const clientSeul = !currentProjetId && currentClientId ? String(currentClientId) : ''
+  const { btnRef, coords } = useAnchoredCoords(isOpen, titres && titres.length ? 260 : 190, 256)
+  return (
+    <div className="relative flex-shrink-0">
+      <button ref={btnRef} onClick={onToggle} title="Assigner à un client / projet"
+        className={`transition-opacity flex-shrink-0 p-1.5 -m-1 hover:text-[var(--color-brand)] ${isOpen ? 'opacity-100 text-[var(--color-brand)]' : 'text-[var(--color-dark-text-2)] opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/row:opacity-100 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100'}`}>
+        <span aria-hidden="true" className="material-symbols-outlined text-[14px]">sell</span>
+      </button>
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={onToggle} />
+          <div className="fixed z-50 w-64 bg-white border border-[var(--color-light-border)] rounded-md shadow-lg p-3 space-y-3 text-left"
+            style={{ top: coords.top, left: coords.left }}>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-dark-text-2)] mb-1">Projet</label>
+              <select value={currentProjetId ?? ''} aria-label="Assigner à un projet" onChange={e => onAssign({ projet_id: e.target.value ? Number(e.target.value) : null })}
+                className="w-full text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white">
+                <option value="">— Aucun —</option>
+                {projets.map(p => <option key={p.id} value={p.id}>{p.nom_projet}{p.client_nom ? ` · ${p.client_nom}` : ''}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-dark-text-2)] mb-1">Client (sans projet)</label>
+              <select value={clientSeul} aria-label="Assigner à un client" onChange={e => onAssign({ client_id: e.target.value ? Number(e.target.value) : null })}
+                className="w-full text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white">
+                <option value="">— Aucun —</option>
+                {clients.map(c => <option key={c.id} value={c.id}>{c.nom_complet}</option>)}
+              </select>
+            </div>
+            {titres && titres.length > 0 && (
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-dark-text-2)] mb-1">Déplacer vers une section</label>
+                <select value={currentTitreId ?? ''} aria-label="Déplacer vers une section" onChange={e => onAssign({ parent_titre_id: e.target.value ? Number(e.target.value) : null })}
+                  className="w-full text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white">
+                  <option value="">— Aucune —</option>
+                  {titres.map(t => <option key={t.id} value={t.id}>{t.texte}</option>)}
+                </select>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+function ScheduleMenu({ todo, isOpen, onToggle, onSchedule, onUnschedule }: {
+  todo: TodoPerso
+  isOpen: boolean
+  onToggle: () => void
+  onSchedule: (payload: { date: string; heure: string; duree: string }) => void
+  onUnschedule: () => void
+}) {
+  const scheduled = !!todo.calendar_event_id
+  const { btnRef, coords } = useAnchoredCoords(isOpen, 210, 256)
+  const today = new Date().toISOString().slice(0, 10)
+  const [date, setDate] = useState(todo.date_echeance || today)
+  const [heure, setHeure] = useState('09:00')
+  const [duree, setDuree] = useState('60')
+  useEffect(() => { if (isOpen) { setDate(todo.date_echeance || today); setHeure('09:00'); setDuree('60') } }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  return (
+    <div className="relative flex-shrink-0">
+      <button ref={btnRef} onClick={onToggle} title={scheduled ? 'Planifié — modifier' : 'Planifier au calendrier'}
+        className={`transition-opacity flex-shrink-0 p-1.5 -m-1 hover:text-[var(--color-brand)] ${scheduled ? 'opacity-100 text-[var(--color-brand)]' : 'text-[var(--color-dark-text-2)] opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100'}`}>
+        <span aria-hidden="true" className="material-symbols-outlined text-[14px]">{scheduled ? 'event_available' : 'calendar_add_on'}</span>
+      </button>
+      {isOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={onToggle} />
+          <div className="fixed z-50 w-64 bg-white border border-[var(--color-light-border)] rounded-md shadow-lg p-3 space-y-2 text-left"
+            style={{ top: coords.top, left: coords.left }}>
+            <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-dark-text-2)]">Planifier au calendrier</label>
+            <div className="flex gap-2">
+              <input type="date" value={date} aria-label="Date" onChange={e => setDate(e.target.value)}
+                className="flex-1 text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white" />
+              <input type="time" value={heure} aria-label="Heure" onChange={e => setHeure(e.target.value)}
+                className="w-20 text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white" />
+            </div>
+            <select value={duree} aria-label="Durée" onChange={e => setDuree(e.target.value)}
+              className="w-full text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white">
+              <option value="15">15 min</option><option value="30">30 min</option>
+              <option value="60">1h</option><option value="90">1h30</option>
+              <option value="120">2h</option><option value="180">3h</option>
+            </select>
+            <button onClick={() => onSchedule({ date, heure, duree })} disabled={!date}
+              className="w-full text-xs bg-[var(--color-brand)] text-white rounded px-3 py-1.5 font-body font-bold disabled:opacity-40">
+              {scheduled ? 'Replanifier' : 'Planifier'}
+            </button>
+            {scheduled && (
+              <button onClick={onUnschedule}
+                className="w-full text-xs text-[var(--color-error)] hover:opacity-70 font-body">Retirer du calendrier</button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData>(MOCK_DATA)
   const [todos, setTodos] = useState<TodoPerso[]>([])
+  const [clients, setClients] = useState<{ id: number; nom_complet: string }[]>([])
+  const [projets, setProjets] = useState<{ id: number; nom_projet: string; client_nom: string | null; is_archived?: number }[]>([])
+  const [assignOpen, setAssignOpen] = useState<number | null>(null)
+  const [groupAssignOpen, setGroupAssignOpen] = useState<string | null>(null)
+  const [scheduleOpen, setScheduleOpen] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editText, setEditText] = useState('')
+  const [toast, setToast] = useState<string | null>(null)
+  const [editingGroup, setEditingGroup] = useState<string | null>(null)
+  const [editGroupText, setEditGroupText] = useState('')
+
+  function showError(msg: string) {
+    setToast(msg)
+    setTimeout(() => setToast(null), 4000)
+  }
+
+  async function renameProject(projetId: number, nom: string, oldKey: string) {
+    setEditingGroup(null)
+    const clean = nom.trim()
+    if (!clean) return
+    const snapshot = todos
+    setTodos(prev => prev.map(t => t.projet_id === projetId ? { ...t, projet_nom: clean } : t))
+    try {
+      const res = await fetch(`${API}/api/v1/admin/projet/${projetId}/rename`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nom: clean }),
+      })
+      if (!res.ok) throw new Error()
+      setOpenGroups(prev => ({ ...prev, [clean]: prev[oldKey] ?? false }))
+    } catch {
+      setTodos(snapshot); showError("Le renommage du projet a échoué.")
+    }
+  }
   const [newTitre, setNewTitre] = useState('')
   const [newTaches, setNewTaches] = useState<{texte: string; priorite: string}[]>([{texte: '', priorite: 'normale'}])
   const [addingTodo, setAddingTodo] = useState(false)
@@ -130,17 +304,139 @@ export default function AdminDashboardPage() {
       .catch(() => {})
   }, [])
 
+  // Clients + projets pour le sélecteur d'assignation
+  useEffect(() => {
+    fetch(`${API}/api/v1/admin/clients`, { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => Array.isArray(d) ? setClients(d.map((c: { id: number; nom_complet: string }) => ({ id: c.id, nom_complet: c.nom_complet }))) : null)
+      .catch(() => {})
+    fetch(`${API}/api/v1/admin/projets`, { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => Array.isArray(d) ? setProjets(d.filter((p: { is_archived?: number }) => !p.is_archived)) : null)
+      .catch(() => {})
+  }, [])
+
+  // Calcule les champs d'un todo après (ré)assignation, pour la mise à jour optimiste
+  function applyAssign(t: TodoPerso, payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null }): TodoPerso {
+    const next = { ...t }
+    if ('projet_id' in payload) {
+      const p = payload.projet_id ? projets.find(x => x.id === payload.projet_id) : null
+      next.projet_id = payload.projet_id ?? null
+      next.projet_nom = p ? p.nom_projet : null
+      if (p) { next.client_nom = p.client_nom; next.client_id_effectif = null; next.parent_titre_id = null }
+    }
+    if ('client_id' in payload) {
+      const c = payload.client_id ? clients.find(x => x.id === payload.client_id) : null
+      next.projet_id = null; next.projet_nom = null
+      next.client_id_effectif = payload.client_id ?? null
+      next.client_nom = c ? c.nom_complet : null
+      if (payload.client_id) next.parent_titre_id = null
+    }
+    if ('parent_titre_id' in payload) next.parent_titre_id = payload.parent_titre_id ?? null
+    return next
+  }
+
+  async function assignTodo(id: number, payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null }) {
+    setAssignOpen(null)
+    const snapshot = todos
+    setTodos(prev => prev.map(t => t.id === id ? applyAssign(t, payload) : t))
+    try {
+      const res = await fetch(`${API}/api/v1/admin/todos/${id}`, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setTodos(snapshot); showError("L'assignation n'a pas pu être enregistrée.")
+    }
+  }
+
+  async function assignGroup(ids: number[], payload: { client_id?: number | null; projet_id?: number | null }) {
+    setGroupAssignOpen(null)
+    const snapshot = todos
+    const set = new Set(ids)
+    setTodos(prev => prev.map(t => set.has(t.id) ? applyAssign(t, payload) : t))
+    try {
+      const res = await fetch(`${API}/api/v1/admin/todos/bulk-assign`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, ...payload }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setTodos(snapshot); showError("L'assignation du groupe a échoué.")
+    }
+  }
+
+  async function scheduleTodo(id: number, payload: { date: string; heure: string; duree: string }) {
+    setScheduleOpen(null)
+    const snapshot = todos
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, date_echeance: payload.date, calendar_event_id: t.calendar_event_id || 'pending' } : t))
+    try {
+      const res = await fetch(`${API}/api/v1/admin/todos/${id}/planifier`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setTodos(prev => prev.map(t => t.id === id ? { ...t, calendar_event_id: data.calendar_event_id || t.calendar_event_id, date_echeance: data.date_echeance || t.date_echeance } : t))
+    } catch {
+      setTodos(snapshot); showError("La planification au calendrier a échoué.")
+    }
+  }
+
+  async function unscheduleTodo(id: number) {
+    setScheduleOpen(null)
+    const snapshot = todos
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, calendar_event_id: null } : t))
+    try {
+      const res = await fetch(`${API}/api/v1/admin/todos/${id}/deplanifier`, { method: 'POST', credentials: 'include' })
+      if (!res.ok) throw new Error()
+    } catch {
+      setTodos(snapshot); showError("Le retrait du calendrier a échoué.")
+    }
+  }
+
+  async function saveText(id: number) {
+    const txt = editText.trim()
+    setEditingId(null)
+    if (!txt) return
+    const snapshot = todos
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, texte: txt } : t))
+    try {
+      const res = await fetch(`${API}/api/v1/admin/todos/${id}`, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texte: txt }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setTodos(snapshot); showError("La modification n'a pas pu être enregistrée.")
+    }
+  }
+
   async function toggleTodo(id: number) {
-    const res = await fetch(`${API}/api/v1/admin/todos/${id}/toggle`, { method: 'POST', credentials: 'include' })
-    if (res.ok) {
+    try {
+      const res = await fetch(`${API}/api/v1/admin/todos/${id}/toggle`, { method: 'POST', credentials: 'include' })
+      if (!res.ok) throw new Error()
       const { est_coche } = await res.json()
       setTodos(prev => prev.map(t => t.id === id ? { ...t, est_coche: est_coche ? 1 : 0 } : t))
+    } catch {
+      showError("Impossible de mettre à jour la tâche.")
     }
   }
 
   async function deleteTodo(id: number) {
-    const res = await fetch(`${API}/api/v1/admin/todos/${id}`, { method: 'DELETE', credentials: 'include' })
-    if (res.ok) setTodos(prev => prev.filter(t => t.id !== id))
+    const snapshot = todos
+    setTodos(prev => prev.filter(t => t.id !== id))
+    try {
+      const res = await fetch(`${API}/api/v1/admin/todos/${id}`, { method: 'DELETE', credentials: 'include' })
+      if (!res.ok) throw new Error()
+    } catch {
+      setTodos(snapshot); showError("La suppression a échoué.")
+    }
   }
 
   async function updatePriorite(id: number, priorite: string) {
@@ -248,27 +544,27 @@ export default function AdminDashboardPage() {
     finally { setRegisteringWebhook(false) }
   }
 
-  const todosActifs = todos.filter(t => !t.est_coche || t.is_titre)
-  const todosCochs = todos.filter(t => t.est_coche && !t.is_titre && !t.parent_titre_id)
-
   function toggleGroup(key: string) {
     setOpenGroups(prev => ({ ...prev, [key]: !(prev[key] ?? false) }))
   }
 
-  function groupByProject(list: TodoPerso[]) {
-    const groups: Record<string, { todos: TodoPerso[]; client_nom: string | null }> = {}
-    for (const todo of list) {
-      const key = todo.projet_nom || '— Personnel'
-      if (!groups[key]) groups[key] = { todos: [], client_nom: todo.client_nom ?? null }
-      groups[key].todos.push(todo)
-    }
-    return groups
-  }
-
-  const activeGroups = groupByProject(todosActifs)
+  const todosActifs  = useMemo(() => todos.filter(t => !t.est_coche || t.is_titre), [todos])
+  const todosCochs   = useMemo(() => todos.filter(t => t.est_coche && !t.is_titre && !t.parent_titre_id), [todos])
+  const activeGroups = useMemo(() => groupByProject(todosActifs), [todosActifs])
+  const titres       = useMemo(() => todos.filter(t => t.is_titre).map(t => ({ id: t.id, texte: t.texte })), [todos])
 
   return (
     <div>
+
+      {/* Toast d'erreur */}
+      {toast && (
+        <div role="alert" aria-live="assertive"
+          className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg text-xs font-body font-semibold text-white"
+          style={{ background: 'var(--color-error)' }}>
+          <span aria-hidden="true" className="material-symbols-outlined text-[16px]">error</span>
+          {toast}
+        </div>
+      )}
 
       {/* Welcome */}
       <section className="mb-8">
@@ -287,17 +583,15 @@ export default function AdminDashboardPage() {
           {/* Header */}
           <button
             onClick={() => setTachesOpen(v => !v)}
-            className="w-full flex items-center justify-between px-5 py-4 hover:bg-[var(--color-light-1)] transition-colors text-left"
-            style={{ borderBottom: tachesOpen ? '1px solid var(--color-light-border)' : 'none' }}
+            className="w-full flex items-center justify-between px-5 py-4 bg-[#faf7f3] border-b border-[#e0d9d3] hover:bg-[#fff8f6] transition-colors text-left"
           >
             <div className="flex items-center gap-2.5">
-              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] text-[18px] transition-transform duration-200"
-                style={{ fontVariationSettings: "'FILL' 1", transform: tachesOpen ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
-                expand_more
-              </span>
+              {tachesOpen
+                ? <ChevronDown aria-hidden="true" className="w-4 h-4 text-[var(--color-brand)] shrink-0" />
+                : <ChevronRight aria-hidden="true" className="w-4 h-4 text-[var(--color-brand)] shrink-0" />}
               <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)]">Mes tâches</h3>
               {todosActifs.length > 0 && (
-                <span className="text-[10px] font-bold font-body bg-[var(--color-brand)] text-white px-2 py-0.5 rounded-full">
+                <span className="text-[10px] tracking-wide font-bold font-body bg-[var(--color-brand)] text-white px-2 py-0.5 rounded-full">
                   {todosActifs.length}
                 </span>
               )}
@@ -338,11 +632,11 @@ export default function AdminDashboardPage() {
                           setNewTaches(p => p.filter((_, j) => j !== i))
                         }
                       }}
-                      placeholder="Tâche…"
+                      placeholder="ex. relancer client vendredi"
                       className="flex-1 bg-white rounded px-2 py-1.5 text-xs outline-none border border-[var(--color-light-border-2)] focus:border-[var(--color-brand)]"
                     />
                     {newTaches.length > 1 && (
-                      <button onClick={() => setNewTaches(p => p.filter((_, j) => j !== i))} className="text-[#ccc] hover:text-red-400">
+                      <button onClick={() => setNewTaches(p => p.filter((_, j) => j !== i))} className="text-[var(--color-dark-text-2)] hover:text-[var(--color-error)]">
                         <span aria-hidden="true" className="material-symbols-outlined text-[14px]">close</span>
                       </button>
                     )}
@@ -370,31 +664,61 @@ export default function AdminDashboardPage() {
             {Object.entries(activeGroups).map(([projetNom, group], idx, arr) => {
               const isOpen = openGroups[projetNom] ?? false
               const isProjet = projetNom !== '— Personnel'
+              const isRealProjet = isProjet && !projetNom.startsWith('👤') && !projetNom.startsWith('📥')
               const taches = group.todos.filter(t => !t.is_titre)
               const done = taches.filter(t => t.est_coche).length
               const total = taches.length
               const nomCourt = isProjet ? projetNom.replace(/^\d{4}-\d{2}-\d{2} — /, '') : 'Personnel'
-              const badgeColor = done === total && total > 0
-                ? 'bg-emerald-100 text-emerald-700'
-                : done > 0
-                ? 'bg-[var(--color-brand)]/10 text-[var(--color-brand)]'
-                : 'bg-[var(--color-light-1)] text-[var(--color-dark-text-2)]'
+              const badgeColor = (isRealProjet || group.client_nom)
+                ? 'bg-[#fff0eb] border border-[#f5c4a0] text-[#c0521a]'
+                : 'bg-gray-100 border border-gray-200 text-gray-500'
               return (
                 <div key={projetNom} className={idx < arr.length - 1 ? 'border-b border-[var(--color-light-border)]' : ''}>
-                  <button onClick={() => toggleGroup(projetNom)}
-                    className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-light-1)] transition-colors text-left group/row">
-                    <span aria-hidden="true" className="material-symbols-outlined text-[14px] text-[var(--color-dark-text-2)] transition-transform duration-150 flex-shrink-0"
-                      style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
-                      chevron_right
-                    </span>
-                    <p className={`flex-1 min-w-0 text-sm font-body font-semibold truncate ${isProjet ? 'text-[var(--color-dark-1)]' : 'text-[var(--color-dark-text-2)]'}`}>
-                      {nomCourt}
-                      {group.client_nom && <span className="font-normal text-[var(--color-dark-text-2)] ml-1.5">· {group.client_nom}</span>}
-                    </p>
-                    <span className={`text-[11px] font-bold font-body px-2 py-0.5 rounded-full flex-shrink-0 tabular-nums ${badgeColor}`}>
-                      {done}/{total}
-                    </span>
-                  </button>
+                  <div className="flex items-center pr-3 hover:bg-[#fff8f6] transition-colors group group/row">
+                    {editingGroup === projetNom ? (
+                      <div className="flex-1 min-w-0 flex items-center gap-3 px-5 py-3">
+                        <span aria-hidden="true" className="material-symbols-outlined text-[14px] text-[var(--color-dark-text-2)] flex-shrink-0">chevron_right</span>
+                        <input autoFocus value={editGroupText} onChange={e => setEditGroupText(e.target.value)}
+                          onBlur={() => renameProject(group.todos[0]!.projet_id!, editGroupText, projetNom)}
+                          onKeyDown={e => { if (e.key === 'Enter') renameProject(group.todos[0]!.projet_id!, editGroupText, projetNom); if (e.key === 'Escape') setEditingGroup(null) }}
+                          aria-label="Renommer le projet"
+                          className="flex-1 min-w-0 text-sm font-body font-semibold bg-transparent outline-none border-b border-[var(--color-brand)] pb-0.5" />
+                      </div>
+                    ) : (
+                      <button onClick={() => toggleGroup(projetNom)}
+                        className="flex-1 min-w-0 flex items-center gap-3 px-5 py-3 text-left">
+                        <span aria-hidden="true" className="material-symbols-outlined text-[14px] text-[var(--color-dark-text-2)] group-hover:text-[var(--color-brand)] transition-transform duration-150 flex-shrink-0"
+                          style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                          chevron_right
+                        </span>
+                        <p className={`flex-1 min-w-0 text-sm font-body font-semibold truncate group-hover:text-[var(--color-dark-1)] group-hover:font-semibold ${isProjet ? 'text-[var(--color-dark-1)]' : 'text-[var(--color-dark-text-2)]'}`}>
+                          {nomCourt}
+                          {group.client_nom && !projetNom.startsWith('👤') && <span className="font-normal text-[var(--color-dark-text-2)] ml-1.5">· {group.client_nom}</span>}
+                        </p>
+                        <span className={`text-[11px] font-bold font-body px-2 py-0.5 rounded-full flex-shrink-0 tabular-nums group-hover:text-[var(--color-brand)] ${badgeColor}`}>
+                          {done}/{total}
+                        </span>
+                      </button>
+                    )}
+                    {isRealProjet && editingGroup !== projetNom && (
+                      <button onClick={() => { setEditingGroup(projetNom); setEditGroupText(nomCourt) }} title="Renommer le projet"
+                        className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/row:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
+                        <span aria-hidden="true" className="material-symbols-outlined text-[14px]">edit</span>
+                      </button>
+                    )}
+                    {!isRealProjet && (
+                      <AssignMenu
+                        currentProjetId={group.todos[0]?.projet_id ?? null}
+                        currentClientId={group.todos.find(t => t.client_id_effectif)?.client_id_effectif ?? null}
+                        clients={clients} projets={projets}
+                        isOpen={groupAssignOpen === projetNom}
+                        onToggle={() => setGroupAssignOpen(groupAssignOpen === projetNom ? null : projetNom)}
+                        onAssign={(payload) => assignGroup(group.todos.map(t => t.id), payload)} />
+                    )}
+                  </div>
+                  <div className="h-[3px] bg-gray-100">
+                    <div className="h-full bg-[var(--color-brand)] transition-all" style={{ width: `${total > 0 ? (done / total) * 100 : 0}%` }} />
+                  </div>
                   {isOpen && (
                     <div className="bg-[var(--color-light-1)] border-t border-[var(--color-light-border)]">
                       {group.todos
@@ -408,36 +732,76 @@ export default function AdminDashboardPage() {
                                 {/* En-tête du titre */}
                                 <div className="flex items-center gap-2 px-5 py-2 bg-[var(--color-light-0)] border-b border-[var(--color-light-border)] group/titre">
                                   <div className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITE[(todo.priorite as keyof typeof PRIORITE) ?? 'normale']?.dot ?? 'bg-orange-400'}`} />
-                                  <p className="flex-1 min-w-0 text-[11px] font-display font-bold uppercase tracking-widest text-[var(--color-dark-text-2)]">
-                                    {todo.texte}
-                                  </p>
-                                  {enfants.length > 0 && (
-                                    <span className="text-[10px] font-body text-[var(--color-dark-text-2)] tabular-nums">{doneEnf}/{enfants.length}</span>
+                                  {editingId === todo.id ? (
+                                    <input autoFocus value={editText} onChange={e => setEditText(e.target.value)}
+                                      onBlur={() => saveText(todo.id)}
+                                      onKeyDown={e => { if (e.key === 'Enter') saveText(todo.id); if (e.key === 'Escape') setEditingId(null) }}
+                                      aria-label="Renommer la section"
+                                      className="flex-1 min-w-0 text-[11px] font-display font-bold uppercase tracking-widest bg-transparent outline-none border-b border-[var(--color-brand)] pb-0.5" />
+                                  ) : (
+                                    <p onDoubleClick={() => { setEditingId(todo.id); setEditText(todo.texte) }} title="Double-cliquer pour renommer"
+                                      className="flex-1 min-w-0 text-[11px] font-display font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] cursor-text">
+                                      {todo.texte}
+                                    </p>
                                   )}
-                                  <div className="opacity-0 group-hover/titre:opacity-100 transition-opacity flex-shrink-0">
+                                  {enfants.length > 0 && (
+                                    <span className="text-[10px] font-body text-[var(--color-light-text-2)] tabular-nums">{doneEnf}/{enfants.length}</span>
+                                  )}
+                                  <div className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/titre:opacity-100 [@media(hover:hover)]:group-focus-within/titre:opacity-100 flex-shrink-0">
                                     <PrioritePicker value={todo.priorite ?? 'normale'} onChange={p => updatePriorite(todo.id, p)} />
                                   </div>
-                                  <button onClick={() => { setInlineAdd(todo.id); setInlineText('') }}
-                                    className="opacity-0 group-hover/titre:opacity-100 transition-opacity text-[var(--color-brand)] flex-shrink-0">
+                                  <button onClick={() => { setEditingId(todo.id); setEditText(todo.texte) }} title="Renommer la section"
+                                    className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/titre:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
+                                    <span aria-hidden="true" className="material-symbols-outlined text-[14px]">edit</span>
+                                  </button>
+                                  <button onClick={() => { setInlineAdd(todo.id); setInlineText('') }} title="Ajouter une tâche"
+                                    className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/titre:opacity-100 focus-visible:!opacity-100 text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
                                     <span aria-hidden="true" className="material-symbols-outlined text-[14px]">add</span>
                                   </button>
                                   <button onClick={() => deleteTodo(todo.id)}
-                                    className="opacity-0 group-hover/titre:opacity-100 transition-opacity text-[#ccc] hover:text-red-400 flex-shrink-0">
+                                    className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/titre:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-error)] p-1.5 -m-1 flex-shrink-0">
                                     <span aria-hidden="true" className="material-symbols-outlined text-[13px]">close</span>
                                   </button>
                                 </div>
                                 {/* Tâches enfants */}
                                 {enfants.map(t => (
-                                  <div key={t.id} className="flex items-center gap-2.5 px-7 py-2 border-b border-[var(--color-light-border)] last:border-0 group/item hover:bg-[var(--color-light-1)] transition-colors">
+                                  <div key={t.id} className="flex items-center gap-2.5 px-7 py-2 border-b border-[var(--color-light-border)] last:border-0 group/item hover:bg-[#fff8f6] transition-colors">
                                     <div className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITE[(t.priorite as keyof typeof PRIORITE) ?? 'normale']?.dot ?? 'bg-orange-400'} ${t.est_coche ? 'opacity-30' : ''}`} />
                                     <input type="checkbox" checked={!!t.est_coche} onChange={() => toggleTodo(t.id)}
+                                      aria-label={`Marquer « ${t.texte} » comme ${t.est_coche ? 'à faire' : 'faite'}`}
                                       className="w-3.5 h-3.5 cursor-pointer flex-shrink-0 accent-[var(--color-brand)]" />
-                                    <p className={`flex-1 min-w-0 text-xs font-body leading-snug ${t.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
-                                      {t.texte}
-                                      {t.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">calendar_month</span>}
-                                    </p>
-                                    <button onClick={() => deleteTodo(t.id)}
-                                      className="opacity-0 group-hover/item:opacity-100 transition-opacity text-[#ccc] hover:text-red-400 flex-shrink-0">
+                                    {editingId === t.id ? (
+                                      <input autoFocus value={editText} onChange={e => setEditText(e.target.value)}
+                                        onBlur={() => saveText(t.id)}
+                                        onKeyDown={e => { if (e.key === 'Enter') saveText(t.id); if (e.key === 'Escape') setEditingId(null) }}
+                                        aria-label="Modifier le texte de la tâche"
+                                        className="flex-1 min-w-0 text-xs font-body bg-transparent outline-none border-b border-[var(--color-brand)] pb-0.5" />
+                                    ) : (
+                                      <p onDoubleClick={() => { setEditingId(t.id); setEditText(t.texte) }} title="Double-cliquer pour modifier"
+                                        className={`flex-1 min-w-0 text-xs font-body leading-snug ${t.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
+                                        {t.texte}
+                                        {t.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
+                                      </p>
+                                    )}
+                                    <button onClick={() => { setEditingId(t.id); setEditText(t.texte) }} title="Modifier"
+                                      className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
+                                      <span aria-hidden="true" className="material-symbols-outlined text-[13px]">edit</span>
+                                    </button>
+                                    <ScheduleMenu todo={t}
+                                      isOpen={scheduleOpen === t.id}
+                                      onToggle={() => setScheduleOpen(scheduleOpen === t.id ? null : t.id)}
+                                      onSchedule={(payload) => scheduleTodo(t.id, payload)}
+                                      onUnschedule={() => unscheduleTodo(t.id)} />
+                                    <AssignMenu
+                                      currentProjetId={t.projet_id}
+                                      currentClientId={t.client_id_effectif ?? null}
+                                      currentTitreId={t.parent_titre_id}
+                                      clients={clients} projets={projets} titres={titres}
+                                      isOpen={assignOpen === t.id}
+                                      onToggle={() => setAssignOpen(assignOpen === t.id ? null : t.id)}
+                                      onAssign={(payload) => assignTodo(t.id, payload)} />
+                                    <button onClick={() => deleteTodo(t.id)} title="Supprimer"
+                                      className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-error)] p-1.5 -m-1 flex-shrink-0">
                                       <span aria-hidden="true" className="material-symbols-outlined text-[13px]">close</span>
                                     </button>
                                   </div>
@@ -449,17 +813,17 @@ export default function AdminDashboardPage() {
                                       <PrioritePicker value={inlinePriorite} onChange={setInlinePriorite} />
                                       <input autoFocus value={inlineText} onChange={e => setInlineText(e.target.value)}
                                         onKeyDown={e => { if (e.key === 'Enter') addInlineTask(todo.id); if (e.key === 'Escape') setInlineAdd(null) }}
-                                        placeholder="Nouvelle tâche…"
+                                        placeholder="ex. appeler comptable demain 14h"
                                         className="flex-1 text-xs bg-transparent outline-none border-b border-[var(--color-brand)] pb-0.5" />
                                       <button onClick={() => setInlineAgenda(v => !v)}
-                                        title="Ajouter à l'agenda"
-                                        className={`flex-shrink-0 transition-colors ${inlineAgenda ? 'text-[var(--color-brand)]' : 'text-[#ccc] hover:text-[var(--color-dark-text-2)]'}`}>
+                                        title="Ajouter à l'agenda" aria-label="Ajouter à l'agenda"
+                                        className={`flex-shrink-0 p-1.5 -m-1 transition-colors ${inlineAgenda ? 'text-[var(--color-brand)]' : 'text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)]'}`}>
                                         <span aria-hidden="true" className="material-symbols-outlined text-[16px]">calendar_add_on</span>
                                       </button>
-                                      <button onClick={() => addInlineTask(todo.id)} className="text-[var(--color-brand)] flex-shrink-0">
+                                      <button onClick={() => addInlineTask(todo.id)} title="Valider" aria-label="Valider la tâche" className="text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
                                         <span aria-hidden="true" className="material-symbols-outlined text-[15px]">check</span>
                                       </button>
-                                      <button onClick={() => setInlineAdd(null)} className="text-[#ccc] flex-shrink-0">
+                                      <button onClick={() => setInlineAdd(null)} title="Annuler" aria-label="Annuler" className="text-[var(--color-dark-text-2)] p-1.5 -m-1 flex-shrink-0">
                                         <span aria-hidden="true" className="material-symbols-outlined text-[14px]">close</span>
                                       </button>
                                     </div>
@@ -487,15 +851,43 @@ export default function AdminDashboardPage() {
                           }
                           /* Tâche sans titre parent (rétrocompatibilité) */
                           return (
-                            <div key={todo.id} className="flex items-center gap-3 px-6 py-2.5 border-b border-[var(--color-light-border)] last:border-0 group/item hover:bg-white transition-colors">
+                            <div key={todo.id} className="flex items-center gap-3 px-6 py-2.5 border-b border-[var(--color-light-border)] last:border-0 group/item hover:bg-[#fff8f6] transition-colors">
                               <input type="checkbox" checked={!!todo.est_coche} onChange={() => toggleTodo(todo.id)}
+                                aria-label={`Marquer « ${todo.texte} » comme ${todo.est_coche ? 'à faire' : 'faite'}`}
                                 className="w-3.5 h-3.5 cursor-pointer flex-shrink-0 accent-[var(--color-brand)]" />
-                              <p className={`flex-1 min-w-0 text-xs font-body leading-snug ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
-                                {todo.texte}
-                                {todo.date_echeance && <span className="ml-2 text-[10px] text-[var(--color-dark-text-2)]">{formatDate(todo.date_echeance)}</span>}
-                              </p>
+                              {editingId === todo.id ? (
+                                <input autoFocus value={editText} onChange={e => setEditText(e.target.value)}
+                                  onBlur={() => saveText(todo.id)}
+                                  onKeyDown={e => { if (e.key === 'Enter') saveText(todo.id); if (e.key === 'Escape') setEditingId(null) }}
+                                  aria-label="Modifier le texte de la tâche"
+                                  className="flex-1 min-w-0 text-xs font-body bg-transparent outline-none border-b border-[var(--color-brand)] pb-0.5" />
+                              ) : (
+                                <p onDoubleClick={() => { setEditingId(todo.id); setEditText(todo.texte) }} title="Double-cliquer pour modifier"
+                                  className={`flex-1 min-w-0 text-xs font-body leading-snug ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
+                                  {todo.texte}
+                                  {todo.date_echeance && <span className="ml-2 text-[10px] text-[var(--color-light-text-2)]">{formatDate(todo.date_echeance)}</span>}
+                                  {todo.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
+                                </p>
+                              )}
+                              <button onClick={() => { setEditingId(todo.id); setEditText(todo.texte) }} title="Modifier"
+                                className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
+                                <span aria-hidden="true" className="material-symbols-outlined text-[13px]">edit</span>
+                              </button>
+                              <ScheduleMenu todo={todo}
+                                isOpen={scheduleOpen === todo.id}
+                                onToggle={() => setScheduleOpen(scheduleOpen === todo.id ? null : todo.id)}
+                                onSchedule={(payload) => scheduleTodo(todo.id, payload)}
+                                onUnschedule={() => unscheduleTodo(todo.id)} />
+                              <AssignMenu
+                                currentProjetId={todo.projet_id}
+                                currentClientId={todo.client_id_effectif ?? null}
+                                currentTitreId={todo.parent_titre_id}
+                                clients={clients} projets={projets} titres={titres}
+                                isOpen={assignOpen === todo.id}
+                                onToggle={() => setAssignOpen(assignOpen === todo.id ? null : todo.id)}
+                                onAssign={(payload) => assignTodo(todo.id, payload)} />
                               <button onClick={() => deleteTodo(todo.id)}
-                                className="opacity-0 group-hover/item:opacity-100 transition-opacity text-[#ccc] hover:text-red-400 flex-shrink-0">
+                                className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-error)] p-1.5 -m-1 flex-shrink-0">
                                 <span aria-hidden="true" className="material-symbols-outlined text-[14px]">close</span>
                               </button>
                             </div>
@@ -511,7 +903,7 @@ export default function AdminDashboardPage() {
             {data.visuels_a_creer.length > 0 && (
               <div className="border-t border-[var(--color-light-border)]">
                 <button onClick={() => toggleGroup('__visuels__')}
-                  className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-light-1)] transition-colors text-left">
+                  className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[#fff8f6] transition-colors text-left">
                   <span aria-hidden="true" className="material-symbols-outlined text-[14px] text-[var(--color-dark-text-2)] transition-transform duration-150 flex-shrink-0"
                     style={{ transform: (openGroups['__visuels__'] ?? false) ? 'rotate(90deg)' : 'rotate(0deg)' }}>chevron_right</span>
                   <p className="flex-1 text-sm font-body font-semibold text-[var(--color-dark-1)] truncate">
@@ -522,10 +914,10 @@ export default function AdminDashboardPage() {
                 {(openGroups['__visuels__'] ?? false) && (
                   <div className="bg-[var(--color-light-1)] border-t border-[var(--color-light-border)]">
                     {data.visuels_a_creer.map(p => (
-                      <div key={p.id} className="flex items-center gap-3 px-6 py-2.5 border-b border-[var(--color-light-border)] last:border-0 group/item hover:bg-white transition-colors">
+                      <div key={p.id} className="flex items-center gap-3 px-6 py-2.5 border-b border-[var(--color-light-border)] last:border-0 group/item hover:bg-[#fff8f6] transition-colors">
                         <input type="checkbox" checked={false} onChange={() => toggleVisuel(p.id)} className="w-3.5 h-3.5 cursor-pointer flex-shrink-0 accent-[var(--color-brand)]" />
                         <p className="flex-1 min-w-0 text-xs font-body text-[var(--color-dark-1)] truncate">{p.titre} <span className="text-[var(--color-dark-text-2)]">· {formatDate(p.date_publication)}</span></p>
-                        <Link href="/admin/marketing" className="opacity-0 group-hover/item:opacity-100 transition-opacity text-[#ccc] hover:text-[var(--color-brand)]">
+                        <Link href="/admin/marketing" className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)]">
                           <span aria-hidden="true" className="material-symbols-outlined text-[14px]">open_in_new</span>
                         </Link>
                       </div>
@@ -539,21 +931,21 @@ export default function AdminDashboardPage() {
             {data.a_publier.length > 0 && (
               <div className="border-t border-[var(--color-light-border)]">
                 <button onClick={() => toggleGroup('__publier__')}
-                  className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[var(--color-light-1)] transition-colors text-left">
+                  className="w-full flex items-center gap-3 px-5 py-3 hover:bg-[#fff8f6] transition-colors text-left">
                   <span aria-hidden="true" className="material-symbols-outlined text-[14px] text-[var(--color-dark-text-2)] transition-transform duration-150 flex-shrink-0"
                     style={{ transform: (openGroups['__publier__'] ?? false) ? 'rotate(90deg)' : 'rotate(0deg)' }}>chevron_right</span>
                   <p className="flex-1 text-sm font-body font-semibold text-[var(--color-dark-1)] truncate">
                     À publier <span className="font-normal text-[var(--color-dark-text-2)]">· Marketing</span>
                   </p>
-                  <span className="text-[11px] font-bold font-body px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 tabular-nums">{data.a_publier.length}</span>
+                  <span className="text-[11px] font-bold font-body px-2 py-0.5 rounded-full bg-[var(--color-success-bg)] text-[var(--color-success-text)] tabular-nums">{data.a_publier.length}</span>
                 </button>
                 {(openGroups['__publier__'] ?? false) && (
                   <div className="bg-[var(--color-light-1)] border-t border-[var(--color-light-border)]">
                     {data.a_publier.map(p => (
-                      <div key={p.id} className="flex items-center gap-3 px-6 py-2.5 border-b border-[var(--color-light-border)] last:border-0 group/item hover:bg-white transition-colors">
+                      <div key={p.id} className="flex items-center gap-3 px-6 py-2.5 border-b border-[var(--color-light-border)] last:border-0 group/item hover:bg-[#fff8f6] transition-colors">
                         <input type="checkbox" checked={false} onChange={() => togglePublier(p.id)} className="w-3.5 h-3.5 cursor-pointer flex-shrink-0 accent-emerald-500" />
                         <p className="flex-1 min-w-0 text-xs font-body text-[var(--color-dark-1)] truncate">{p.titre} <span className="text-[var(--color-dark-text-2)]">· {formatDate(p.date_publication)}</span></p>
-                        <Link href="/admin/marketing" className="opacity-0 group-hover/item:opacity-100 transition-opacity text-[#ccc] hover:text-emerald-600">
+                        <Link href="/admin/marketing" className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-success)]">
                           <span aria-hidden="true" className="material-symbols-outlined text-[14px]">open_in_new</span>
                         </Link>
                       </div>
@@ -570,8 +962,8 @@ export default function AdminDashboardPage() {
 
           {/* Tâches complétées — groupées par projet */}
           {todosCochs.length > 0 && (
-            <div className="border-t border-[var(--color-light-border)]">
-              <button onClick={() => toggleGroup('__done__')} className="flex items-center gap-2 px-5 py-3 w-full text-left hover:bg-[var(--color-light-1)] transition-colors">
+            <div className="bg-[#faf7f3] border-t border-[var(--color-light-border)]">
+              <button onClick={() => toggleGroup('__done__')} className="flex items-center gap-2 px-5 py-3 w-full text-left hover:bg-[#fff8f6] transition-colors">
                 <span aria-hidden="true" className="material-symbols-outlined text-[14px] text-[var(--color-dark-text-2)] transition-transform duration-150"
                   style={{ transform: (openGroups['__done__'] ?? false) ? 'rotate(90deg)' : 'rotate(0deg)' }}>chevron_right</span>
                 <p className="text-[11px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">
@@ -591,7 +983,7 @@ export default function AdminDashboardPage() {
                       return (
                         <div key={projetNom} className={idx < arr.length - 1 ? 'border-b border-[var(--color-light-border)]' : ''}>
                           <button onClick={() => toggleGroup(key)}
-                            className="w-full flex items-center gap-3 px-5 py-2.5 bg-[var(--color-light-1)] hover:bg-[var(--color-light-0)] transition-colors text-left opacity-60">
+                            className="w-full flex items-center gap-3 px-5 py-2.5 bg-[var(--color-light-1)] hover:bg-[#fff8f6] transition-colors text-left opacity-60">
                             <span aria-hidden="true" className="material-symbols-outlined text-[13px] text-[var(--color-dark-text-2)] transition-transform duration-150 flex-shrink-0"
                               style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>chevron_right</span>
                             <p className="flex-1 min-w-0 text-xs font-body font-semibold text-[var(--color-dark-text-2)] truncate line-through">
@@ -609,7 +1001,7 @@ export default function AdminDashboardPage() {
                                   <input type="checkbox" checked={true} onChange={() => toggleTodo(todo.id)} className="w-3.5 h-3.5 cursor-pointer flex-shrink-0 accent-[var(--color-brand)]" />
                                   <p className="flex-1 min-w-0 text-xs text-[var(--color-dark-text-2)] font-body line-through truncate">{todo.texte}</p>
                                   <button onClick={() => deleteTodo(todo.id)}
-                                    className="opacity-0 group-hover/item:opacity-100 transition-opacity text-[#ccc] hover:text-red-400 flex-shrink-0">
+                                    className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-error)] p-1.5 -m-1 flex-shrink-0">
                                     <span aria-hidden="true" className="material-symbols-outlined text-[13px]">close</span>
                                   </button>
                                 </div>
@@ -629,29 +1021,85 @@ export default function AdminDashboardPage() {
       </section>
 
       {/* Stats */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-8">
-        <div className="bg-[var(--color-light-1)] rounded-xl p-4 flex flex-col gap-3">
-          <p className="text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">Total Clients</p>
-          <p className="font-display text-[var(--text-xl)] font-extrabold text-[var(--color-dark-1)]">{data.total_clients}</p>
+      <section className="mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+          {/* Total clients */}
+          <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-gray-200 shadow-sm">
+            <CardContent className="p-4 flex flex-col gap-1.5">
+              <div className="flex justify-between items-start">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">Total Clients</p>
+                <Users aria-hidden="true" className="w-4 h-4 text-gray-500 shrink-0" />
+              </div>
+              <p className="text-4xl leading-none text-[var(--color-dark-1)] font-display">{data.total_clients}</p>
+            </CardContent>
+          </Card>
+          {/* Actifs */}
+          <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-blue-500 shadow-sm">
+            <CardContent className="p-4 flex flex-col gap-1.5">
+              <div className="flex justify-between items-start">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">Actifs</p>
+                <FolderOpen aria-hidden="true" className="w-4 h-4 text-blue-500 shrink-0" />
+              </div>
+              <p className="text-4xl leading-none text-[var(--color-dark-1)] font-display">{data.projets_actifs}</p>
+              <p className="text-xs text-gray-500 font-body">projets en cours</p>
+            </CardContent>
+          </Card>
+          {/* En révision / Action */}
+          <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-[var(--color-brand)] shadow-sm">
+            <CardContent className="p-4 flex flex-col gap-1.5">
+              <div className="flex justify-between items-start">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">En révision</p>
+                <AlertTriangle aria-hidden="true" className="w-4 h-4 text-[var(--color-brand)] shrink-0" />
+              </div>
+              <p className="text-4xl leading-none text-[var(--color-brand)] font-display">{String(data.en_revision).padStart(2, '0')}</p>
+              <p className="text-xs text-gray-500 font-body">nécessitent attention</p>
+            </CardContent>
+          </Card>
+          {/* Archivés */}
+          <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-gray-200 shadow-sm">
+            <CardContent className="p-4 flex flex-col gap-1.5">
+              <div className="flex justify-between items-start">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">Archivés</p>
+                <Archive aria-hidden="true" className="w-4 h-4 text-gray-500 shrink-0" />
+              </div>
+              <p className="text-4xl leading-none text-[var(--color-dark-1)] font-display">{data.archives}</p>
+              <p className="text-xs text-gray-500 font-body">projets fermés</p>
+            </CardContent>
+          </Card>
         </div>
-        <div className="bg-[var(--color-light-1)] rounded-xl p-4 flex flex-col gap-3">
-          <div className="flex justify-between items-start">
-            <p className="text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">Actifs</p>
-            <span className="px-1.5 py-0.5 bg-[var(--color-brand)]/10 text-[var(--color-brand)] text-[9px] font-bold rounded-full font-body tracking-wide">EN COURS</span>
-          </div>
-          <p className="font-display text-[var(--text-xl)] font-extrabold text-[var(--color-dark-1)]">{data.projets_actifs}</p>
-        </div>
-        <div className="bg-[var(--color-error-bg-2)] rounded-xl p-4 flex flex-col gap-3">
-          <div className="flex justify-between items-start">
-            <p className="text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">En révision</p>
-            <span className="px-1.5 py-0.5 bg-red-100 text-red-600 text-[9px] font-bold rounded-full font-body tracking-wide">ACTION</span>
-          </div>
-          <p className="font-display text-[var(--text-xl)] font-extrabold text-[var(--color-dark-1)]">{String(data.en_revision).padStart(2, '0')}</p>
-        </div>
-        <div className="bg-[var(--color-light-1)] rounded-xl p-4 flex flex-col gap-3">
-          <p className="text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">Archivés</p>
-          <p className="font-display text-[var(--text-xl)] font-extrabold text-[var(--color-dark-1)]">{data.archives}</p>
-        </div>
+
+        {/* Répartition des projets */}
+        {(() => {
+          const repartition = Object.keys(STATUT_STYLES)
+            .map(s => ({ statut: s, count: data.projets_recents.filter(p => p.statut === s).length, style: STATUT_STYLES[s] }))
+            .filter(x => x.count > 0)
+          const total = repartition.reduce((sum, x) => sum + x.count, 0)
+          return (
+            <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-gray-200 shadow-sm">
+              <CardContent className="p-4 flex flex-col gap-3">
+                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">Répartition des projets</p>
+                <div className="flex h-2 rounded-full overflow-hidden bg-gray-100">
+                  {total === 0
+                    ? null
+                    : repartition.map(x => (
+                        <div key={x.statut} className={x.style.dot} style={{ flexGrow: x.count }} title={`${x.statut} · ${x.count}`} />
+                      ))}
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+                  {total === 0
+                    ? <p className="text-xs text-gray-500 font-body">Aucun projet.</p>
+                    : repartition.map(x => (
+                        <div key={x.statut} className="flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${x.style.dot}`} />
+                          <span className="text-xs text-gray-500 font-body">{x.statut}</span>
+                          <span className="text-xs font-bold text-[var(--color-dark-1)] tabular-nums">{x.count}</span>
+                        </div>
+                      ))}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })()}
       </section>
 
       {/* Projets + Sidebar */}
@@ -665,48 +1113,30 @@ export default function AdminDashboardPage() {
               Voir tout
             </Link>
           </div>
-          <div className="bg-[var(--color-light-1)] rounded-xl overflow-hidden">
-            <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead className="bg-[var(--color-light-0)]">
-                <tr>
-                  <th className="px-5 py-3 text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">Client & Projet</th>
-                  <th className="px-5 py-3 text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">État</th>
-                  <th className="px-5 py-3 text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest hidden sm:table-cell">Échéance</th>
-                  <th className="px-5 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-['var(--color-light-border-2)']/40">
-                {data.projets_recents.map(p => {
-                  const style = STATUT_STYLES[p.statut] || STATUT_STYLES['Annulé']
-                  return (
-                    <tr key={p.id} className="hover:bg-[var(--color-light-0)]/50 transition-colors">
-                      <td className="px-5 py-3.5">
-                        <p className="text-sm font-bold text-[var(--color-dark-1)] font-body leading-tight">{p.client_nom}</p>
-                        <p className="text-xs text-[var(--color-dark-text-2)] font-body mt-0.5">{p.nom_projet}</p>
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 ${style.bg} ${style.text} text-[10px] font-bold rounded-full uppercase font-body`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${style.dot} flex-shrink-0`} />
-                          {p.statut}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-xs text-[var(--color-dark-text-2)] font-body hidden sm:table-cell">
-                        {p.date_livraison_estimee
-                          ? new Date(p.date_livraison_estimee).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })
-                          : '—'}
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <Link href={`/admin/projet/${p.id}`}>
-                          <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)] text-[18px]">chevron_right</span>
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-            </div>
+          <div className="bg-white rounded-xl overflow-hidden">
+            {data.projets_recents.map(p => {
+              const style = STATUT_STYLES[p.statut] || STATUT_STYLES['Annulé']
+              return (
+                <Link key={p.id} href={`/admin/projet/${p.id}`}
+                  className="row-hover-group flex justify-between items-start gap-4 py-3 px-5 border-b border-[#e0d9d3] last:border-b-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="row-title font-semibold text-sm text-[var(--color-dark-1)] truncate">{p.client_nom}</p>
+                    <p className="row-desc text-xs text-gray-500 truncate">{p.nom_projet}</p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className={`row-badge inline-flex items-center gap-1.5 px-2 py-1 ${style.bg} ${style.text} text-[10px] font-bold rounded-full uppercase font-body whitespace-nowrap`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${style.dot} flex-shrink-0`} />
+                      {p.statut}
+                    </span>
+                    <span className="row-desc text-xs text-gray-500">
+                      {p.date_livraison_estimee
+                        ? new Date(p.date_livraison_estimee).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })
+                        : '—'}
+                    </span>
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         </div>
 
@@ -724,17 +1154,17 @@ export default function AdminDashboardPage() {
             <div className="flex flex-col gap-2">
               {data.top_clients.map(client => (
                 <Link key={client.id} href={`/admin/client/${client.id}`}>
-                  <div className="bg-white rounded-xl p-3 flex items-center justify-between hover:bg-[var(--color-light-1)] transition-all cursor-pointer" style={{ border: '1px solid var(--color-light-border)' }}>
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full ${client.couleur} flex items-center justify-center text-white font-bold font-display text-sm flex-shrink-0`}>
+                  <div className="row-hover-group bg-white rounded-xl py-3 px-4 flex items-center justify-between gap-3 border border-[#e0d9d3] cursor-pointer">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-9 h-9 rounded-full ${client.couleur} flex items-center justify-center text-white font-bold font-display text-sm shrink-0`}>
                         {client.initiales}
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-[var(--color-dark-1)] leading-tight font-body">{client.nom_complet}</p>
-                        <p className="text-xs text-[var(--color-dark-text-2)] font-body">{client.nom_entreprise}</p>
+                      <div className="min-w-0">
+                        <p className="row-title text-sm font-semibold text-[var(--color-dark-1)] leading-tight font-body truncate">{client.nom_complet}</p>
+                        <p className="row-desc text-xs text-gray-500 font-body truncate">{client.nom_entreprise}</p>
                       </div>
                     </div>
-                    <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-dark-text-2)] text-[16px]">chevron_right</span>
+                    <span aria-hidden="true" className="row-chevron material-symbols-outlined text-gray-300 text-[16px] shrink-0 transition-[color,transform] duration-150">chevron_right</span>
                   </div>
                 </Link>
               ))}
@@ -744,19 +1174,22 @@ export default function AdminDashboardPage() {
           {/* Liens rapides */}
           <div className="grid grid-cols-3 gap-2">
             <Link href="/admin/marketing"
-              className="bg-white rounded-xl p-3.5 flex flex-col items-center gap-1.5 hover:bg-[var(--color-light-1)] transition-all text-center" style={{ border: '1px solid var(--color-light-border)' }}>
-              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] text-[22px]">campaign</span>
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-1)] font-body">Marketing</span>
+              className="group relative bg-white rounded-xl p-3.5 flex flex-col items-center gap-1.5 hover:bg-[#fff8f6] transition-all text-center" style={{ border: '1px solid var(--color-light-border)' }}>
+              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] group-hover:text-[var(--color-brand-hover)] group-hover:scale-110 text-[22px] transition-all duration-150">campaign</span>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-1)] font-body group-hover:text-[var(--color-dark-1)]">Marketing</span>
+              <span aria-hidden="true" className="absolute bottom-2 right-2 text-gray-300 text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:text-[var(--color-brand)] transition-all duration-150">→</span>
             </Link>
             <Link href="/admin/factures"
-              className="bg-white rounded-xl p-3.5 flex flex-col items-center gap-1.5 hover:bg-[var(--color-light-1)] transition-all text-center" style={{ border: '1px solid var(--color-light-border)' }}>
-              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] text-[22px]">receipt_long</span>
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-1)] font-body">Facturation</span>
+              className="group relative bg-white rounded-xl p-3.5 flex flex-col items-center gap-1.5 hover:bg-[#fff8f6] transition-all text-center" style={{ border: '1px solid var(--color-light-border)' }}>
+              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] group-hover:text-[var(--color-brand-hover)] group-hover:scale-110 text-[22px] transition-all duration-150">receipt_long</span>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-1)] font-body group-hover:text-[var(--color-dark-1)]">Facturation</span>
+              <span aria-hidden="true" className="absolute bottom-2 right-2 text-gray-300 text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:text-[var(--color-brand)] transition-all duration-150">→</span>
             </Link>
             <Link href="/admin/soumissions"
-              className="bg-white rounded-xl p-3.5 flex flex-col items-center gap-1.5 hover:bg-[var(--color-light-1)] transition-all text-center" style={{ border: '1px solid var(--color-light-border)' }}>
-              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] text-[22px]">description</span>
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-1)] font-body">Soumissions</span>
+              className="group relative bg-white rounded-xl p-3.5 flex flex-col items-center gap-1.5 hover:bg-[#fff8f6] transition-all text-center" style={{ border: '1px solid var(--color-light-border)' }}>
+              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] group-hover:text-[var(--color-brand-hover)] group-hover:scale-110 text-[22px] transition-all duration-150">description</span>
+              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-1)] font-body group-hover:text-[var(--color-dark-1)]">Soumissions</span>
+              <span aria-hidden="true" className="absolute bottom-2 right-2 text-gray-300 text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:text-[var(--color-brand)] transition-all duration-150">→</span>
             </Link>
           </div>
 

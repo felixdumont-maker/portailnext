@@ -11,6 +11,7 @@ const PROTECTED = [
   '/pigiste',
   '/outils',
   '/guides',
+  '/entrainement',
 ]
 
 const FLASK_INTERNAL = 'http://127.0.0.1:18000'
@@ -58,5 +59,6 @@ export const config = {
     '/pigiste/:path*',
     '/outils/:path*',
     '/guides/:path*',
+    '/entrainement/:path*',
   ],
 }
