@@ -87,9 +87,9 @@ function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () =
   return (
     <div className="fixed inset-0 z-40">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto bg-[#1a1a1a] rounded-t-3xl border-t border-white/10 px-5 pt-3 pb-6 animate-[slideUp_0.2s_ease-out]"
+      <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto bg-[var(--sheet)] rounded-t-3xl border-t border-[color-mix(in_oklab,var(--ink)_10%,transparent)] px-5 pt-3 pb-6 animate-[slideUp_0.2s_ease-out]"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}>
-        <div className="w-10 h-1.5 rounded-full bg-white/20 mx-auto mb-4" />
+        <div className="w-10 h-1.5 rounded-full bg-[color-mix(in_oklab,var(--ink)_20%,transparent)] mx-auto mb-4" />
         {children}
       </div>
       <style>{`@keyframes slideUp { from { transform: translateY(24px); opacity: 0.6 } to { transform: translateY(0); opacity: 1 } }`}</style>
@@ -325,12 +325,18 @@ export default function TachesPage() {
   for (const t of tasks) buckets[bucketOf(t)].push(t)
   const detail = tasks.find(t => t.id === detailId) || null
 
-  const inputCls = 'w-full bg-white/10 border border-white/15 rounded-2xl px-4 py-3.5 text-white text-base outline-none focus:border-[var(--color-brand)] placeholder:text-white/40'
-  const labelCls = 'text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1.5 block'
-  const fieldCls = 'w-full bg-white/10 border border-white/15 rounded-xl px-3.5 py-2.5 text-white text-sm outline-none focus:border-[var(--color-brand)] placeholder:text-white/35'
+  const inputCls = 'w-full bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] border border-[color-mix(in_oklab,var(--ink)_15%,transparent)] rounded-2xl px-4 py-3.5 text-[var(--ink)] text-base outline-none focus:border-[var(--color-brand)] placeholder:text-[color-mix(in_oklab,var(--ink)_40%,transparent)]'
+  const labelCls = 'text-[10px] font-bold uppercase tracking-widest text-[color-mix(in_oklab,var(--ink)_40%,transparent)] mb-1.5 block'
+  const fieldCls = 'w-full bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] border border-[color-mix(in_oklab,var(--ink)_15%,transparent)] rounded-xl px-3.5 py-2.5 text-[var(--ink)] text-sm outline-none focus:border-[var(--color-brand)] placeholder:text-[color-mix(in_oklab,var(--ink)_35%,transparent)]'
 
   return (
-    <div className="min-h-[100dvh] bg-[#111] text-white flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="taches-app min-h-[100dvh] bg-[var(--paper)] text-[var(--ink)] flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+      <style>{`
+        .taches-app { --paper: #111111; --sheet: #1a1a1a; --ink: #ffffff; }
+        @media (prefers-color-scheme: light) {
+          .taches-app { --paper: #f7f4f0; --sheet: #ffffff; --ink: #2b2b2b; }
+        }
+      `}</style>
       {toast && (
         <div role="status" aria-live="polite" className={`fixed top-4 left-4 right-4 z-50 px-5 py-3.5 rounded-2xl shadow-2xl text-sm font-bold text-center transition-all ${toast.ok ? 'bg-emerald-600' : 'bg-red-600'}`}>{toast.msg}</div>
       )}
@@ -341,21 +347,21 @@ export default function TachesPage() {
             <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px', color: 'var(--color-brand)' }}>checklist</span>
             <div>
               <h1 className="text-xl font-extrabold tracking-tight leading-none">Tâches</h1>
-              {compte && <p className="text-white/45 text-[12px] mt-1 truncate">{compte}</p>}
+              {compte && <p className="text-[color-mix(in_oklab,var(--ink)_45%,transparent)] text-[12px] mt-1 truncate">{compte}</p>}
             </div>
           </div>
           <div className="shrink-0 flex items-center gap-2">
             {pushSupported && (
               <button onClick={pushOn ? desactiverPush : activerPush} disabled={pushBusy}
                 aria-label={pushOn ? 'Désactiver les notifications' : 'Activer les notifications'}
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${pushOn ? 'bg-[var(--color-brand)] text-white' : 'bg-white/10 text-white/60'} disabled:opacity-50`}>
+                className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors ${pushOn ? 'bg-[var(--color-brand)] text-white' : 'bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] text-[color-mix(in_oklab,var(--ink)_60%,transparent)]'} disabled:opacity-50`}>
                 <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>
                   {pushOn ? 'notifications_active' : 'notifications_off'}
                 </span>
               </button>
             )}
             <button onClick={handleLogout}
-              className="flex items-center gap-1.5 text-white/60 text-xs font-bold px-3 py-2 rounded-full bg-white/10 active:text-white">
+              className="flex items-center gap-1.5 text-[color-mix(in_oklab,var(--ink)_60%,transparent)] text-xs font-bold px-3 py-2 rounded-full bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] active:text-[var(--ink)]">
               <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>logout</span>
               Changer
             </button>
@@ -363,14 +369,14 @@ export default function TachesPage() {
         </header>
       )}
 
-      {etat === 'auth' && <div className="flex-1 grid place-items-center text-white/50">Chargement…</div>}
+      {etat === 'auth' && <div className="flex-1 grid place-items-center text-[color-mix(in_oklab,var(--ink)_50%,transparent)]">Chargement…</div>}
 
       {etat === 'login' && (
         <div className="flex-1 flex flex-col items-center justify-center px-7 gap-6">
           <div className="text-center">
             <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '48px', color: 'var(--color-brand)' }}>checklist</span>
             <h1 className="text-xl font-extrabold mt-2">Tâches — CocktailOS</h1>
-            <p className="text-white/55 text-sm mt-1.5 max-w-xs">Connecte-toi <strong>une seule fois</strong> sur cet appareil. Ensuite, l&apos;app s&apos;ouvre direct sur tes tâches.</p>
+            <p className="text-[color-mix(in_oklab,var(--ink)_55%,transparent)] text-sm mt-1.5 max-w-xs">Connecte-toi <strong>une seule fois</strong> sur cet appareil. Ensuite, l&apos;app s&apos;ouvre direct sur tes tâches.</p>
           </div>
           <div className="w-full max-w-xs space-y-3">
             <input type="email" autoComplete="username" inputMode="email" className={inputCls} placeholder="Courriel"
@@ -383,7 +389,7 @@ export default function TachesPage() {
               {loggingIn ? 'Connexion…' : 'Lier cet appareil'}
             </button>
           </div>
-          <p className="text-white/35 text-[12px] text-center max-w-xs">Réservé à l&apos;équipe. Le portail complet garde sa propre connexion.</p>
+          <p className="text-[color-mix(in_oklab,var(--ink)_35%,transparent)] text-[12px] text-center max-w-xs">Réservé à l&apos;équipe. Le portail complet garde sa propre connexion.</p>
         </div>
       )}
 
@@ -391,29 +397,29 @@ export default function TachesPage() {
         <>
           <div className="flex-1 overflow-y-auto px-5 pb-32">
             {loadingTasks && tasks.length === 0 && (
-              <div className="text-white/40 text-sm text-center mt-10">Chargement…</div>
+              <div className="text-[color-mix(in_oklab,var(--ink)_40%,transparent)] text-sm text-center mt-10">Chargement…</div>
             )}
             {!loadingTasks && tasks.length === 0 && (
               <div className="flex flex-col items-center justify-center text-center mt-16 gap-3">
                 <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '56px', color: 'var(--color-brand)', opacity: 0.6 }}>task_alt</span>
-                <p className="text-white/60 font-semibold">Rien à faire pour l&apos;instant</p>
-                <p className="text-white/35 text-sm max-w-[220px]">Ajoute une tâche avec le bouton en bas de l&apos;écran.</p>
+                <p className="text-[color-mix(in_oklab,var(--ink)_60%,transparent)] font-semibold">Rien à faire pour l&apos;instant</p>
+                <p className="text-[color-mix(in_oklab,var(--ink)_35%,transparent)] text-sm max-w-[220px]">Ajoute une tâche avec le bouton en bas de l&apos;écran.</p>
               </div>
             )}
             {marketing.length > 0 && (
               <div className="mb-6">
-                <p className="text-[11px] font-bold uppercase tracking-widest mb-2 text-white/45">
+                <p className="text-[11px] font-bold uppercase tracking-widest mb-2 text-[color-mix(in_oklab,var(--ink)_45%,transparent)]">
                   Visuels à déposer <span className="tabular-nums">· {marketing.length}</span>
                 </p>
-                <div className="rounded-2xl overflow-hidden bg-white/5 border border-white/10">
+                <div className="rounded-2xl overflow-hidden bg-[color-mix(in_oklab,var(--ink)_5%,transparent)] border border-[color-mix(in_oklab,var(--ink)_10%,transparent)]">
                   {marketing.map((m, i) => (
                     <div key={m.id}
-                      className={`flex items-center gap-3 px-4 py-3.5 ${i < marketing.length - 1 ? 'border-b border-white/10' : ''}`}>
+                      className={`flex items-center gap-3 px-4 py-3.5 ${i < marketing.length - 1 ? 'border-b border-[color-mix(in_oklab,var(--ink)_10%,transparent)]' : ''}`}>
                       <button onClick={() => handleMarketingToggle(m.id)} aria-label="Marquer les visuels comme déposés"
-                        className="w-6 h-6 rounded-full border-2 border-white/25 flex-shrink-0 active:scale-90 active:border-[var(--color-brand)] transition-all" />
+                        className="w-6 h-6 rounded-full border-2 border-[color-mix(in_oklab,var(--ink)_25%,transparent)] flex-shrink-0 active:scale-90 active:border-[var(--color-brand)] transition-all" />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-semibold truncate">{m.titre}</p>
-                        <p className="text-[12px] text-white/40 truncate mt-0.5 flex items-center gap-1">
+                        <p className="text-[12px] text-[color-mix(in_oklab,var(--ink)_40%,transparent)] truncate mt-0.5 flex items-center gap-1">
                           <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '12px' }}>photo_camera</span>
                           {m.date_publication.slice(0, 10)}
                           {m.plateformes.length > 0 ? ` · ${m.plateformes.join(', ')}` : ''}
@@ -426,21 +432,21 @@ export default function TachesPage() {
             )}
             {BUCKET_ORDER.filter(b => buckets[b].length > 0).map(b => (
               <div key={b} className="mb-6">
-                <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${b === 'retard' ? 'text-red-400' : 'text-white/45'}`}>
+                <p className={`text-[11px] font-bold uppercase tracking-widest mb-2 ${b === 'retard' ? 'text-red-400' : 'text-[color-mix(in_oklab,var(--ink)_45%,transparent)]'}`}>
                   {BUCKET_LABEL[b]} <span className="tabular-nums">· {buckets[b].length}</span>
                 </p>
-                <div className="rounded-2xl overflow-hidden bg-white/5 border border-white/10">
+                <div className="rounded-2xl overflow-hidden bg-[color-mix(in_oklab,var(--ink)_5%,transparent)] border border-[color-mix(in_oklab,var(--ink)_10%,transparent)]">
                   {buckets[b].map((t, i) => (
                     <div key={t.id}
-                      className={`flex items-center gap-3 px-4 py-3.5 ${i < buckets[b].length - 1 ? 'border-b border-white/10' : ''} active:bg-white/5 transition-colors`}>
+                      className={`flex items-center gap-3 px-4 py-3.5 ${i < buckets[b].length - 1 ? 'border-b border-[color-mix(in_oklab,var(--ink)_10%,transparent)]' : ''} active:bg-[color-mix(in_oklab,var(--ink)_5%,transparent)] transition-colors`}>
                       <button onClick={() => handleToggle(t.id)} aria-label="Cocher la tâche"
-                        className="w-6 h-6 rounded-full border-2 border-white/25 flex-shrink-0 grid place-items-center active:scale-90 active:border-[var(--color-brand)] transition-all">
+                        className="w-6 h-6 rounded-full border-2 border-[color-mix(in_oklab,var(--ink)_25%,transparent)] flex-shrink-0 grid place-items-center active:scale-90 active:border-[var(--color-brand)] transition-all">
                         <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${(PRIORITE[t.priorite as keyof typeof PRIORITE] ?? PRIORITE.normale).dot}`} />
                       </button>
                       <button onClick={() => { setDetailId(t.id); setEditTexte(t.texte) }} className="min-w-0 flex-1 text-left">
                         <p className="text-sm font-semibold truncate">{t.texte}</p>
                         {(t.projet_nom || t.client_nom || t.date_echeance || t.contact_nom) && (
-                          <p className="text-[12px] text-white/40 truncate mt-0.5 flex items-center gap-1">
+                          <p className="text-[12px] text-[color-mix(in_oklab,var(--ink)_40%,transparent)] truncate mt-0.5 flex items-center gap-1">
                             {t.calendar_event_id && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '12px' }}>event</span>}
                             {t.contact_nom && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '12px' }}>contact_phone</span>}
                             <span className="truncate">
@@ -452,12 +458,12 @@ export default function TachesPage() {
                         )}
                       </button>
                       {t.assignees && t.assignees.length > 0 && (
-                        <span className="text-[10px] font-bold text-white/50 bg-white/10 rounded-full px-2 py-1 flex-shrink-0">
+                        <span className="text-[10px] font-bold text-[color-mix(in_oklab,var(--ink)_50%,transparent)] bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] rounded-full px-2 py-1 flex-shrink-0">
                           {t.assignees.length > 1 ? `${t.assignees.length}` : t.assignees[0].nom_complet.split(' ')[0]}
                         </span>
                       )}
                       <button onClick={() => { setDetailId(t.id); setEditTexte(t.texte) }} aria-label="Assigné, projet, contact, calendrier…"
-                        className="flex-shrink-0 text-white/25 p-1 -m-1">
+                        className="flex-shrink-0 text-[color-mix(in_oklab,var(--ink)_25%,transparent)] p-1 -m-1">
                         <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>chevron_right</span>
                       </button>
                     </div>
@@ -468,13 +474,13 @@ export default function TachesPage() {
           </div>
 
           {/* Ajout rapide — ancré dans la zone du pouce */}
-          <div className="fixed bottom-0 left-0 right-0 px-4 pb-4 pt-3 bg-gradient-to-t from-[#111] via-[#111] to-transparent"
+          <div className="fixed bottom-0 left-0 right-0 px-4 pb-4 pt-3 bg-gradient-to-t from-[var(--paper)] via-[var(--paper)] to-transparent"
             style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}>
-            <div className="flex items-center gap-2 bg-white/10 border border-white/15 rounded-full pl-5 pr-2 py-2 focus-within:border-[var(--color-brand)] transition-colors">
+            <div className="flex items-center gap-2 bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] border border-[color-mix(in_oklab,var(--ink)_15%,transparent)] rounded-full pl-5 pr-2 py-2 focus-within:border-[var(--color-brand)] transition-colors">
               <input ref={inputRef} type="text" value={texte} onChange={e => setTexte(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleAdd() }}
                 placeholder="Nouvelle tâche…" disabled={sending}
-                className="flex-1 min-w-0 bg-transparent outline-none text-white text-base placeholder:text-white/40" />
+                className="flex-1 min-w-0 bg-transparent outline-none text-[var(--ink)] text-base placeholder:text-[color-mix(in_oklab,var(--ink)_40%,transparent)]" />
               <button onClick={handleAdd} disabled={sending || !texte.trim()} aria-label="Ajouter la tâche"
                 className="w-11 h-11 rounded-full bg-[var(--color-brand)] grid place-items-center disabled:opacity-40 active:scale-90 transition-transform flex-shrink-0">
                 <span aria-hidden="true" className="material-symbols-outlined text-white" style={{ fontSize: '22px' }}>
@@ -489,14 +495,14 @@ export default function TachesPage() {
             <Sheet onClose={() => setDetailId(null)}>
               <input value={editTexte} onChange={e => setEditTexte(e.target.value)}
                 onBlur={() => { if (editTexte.trim() && editTexte !== detail.texte) patchTask(detail.id, { texte: editTexte.trim() }) }}
-                className="w-full bg-transparent outline-none text-lg font-bold border-b border-white/10 pb-2 mb-4" />
+                className="w-full bg-transparent outline-none text-lg font-bold border-b border-[color-mix(in_oklab,var(--ink)_10%,transparent)] pb-2 mb-4" />
 
               <div className="mb-4">
                 <label className={labelCls}>Priorité</label>
                 <div className="flex gap-2">
                   {(['haute', 'normale', 'basse'] as const).map(p => (
                     <button key={p} onClick={() => patchTask(detail.id, { priorite: p })}
-                      className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${detail.priorite === p ? 'bg-white/15 ring-1 ring-white/30' : 'bg-white/5 opacity-60'}`}>
+                      className={`px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${detail.priorite === p ? 'bg-[color-mix(in_oklab,var(--ink)_15%,transparent)] ring-1 ring-[color-mix(in_oklab,var(--ink)_30%,transparent)]' : 'bg-[color-mix(in_oklab,var(--ink)_5%,transparent)] opacity-60'}`}>
                       <span className={`w-2 h-2 rounded-full ${PRIORITE[p].dot}`} />
                       {p === 'haute' ? 'Haute' : p === 'normale' ? 'Normale' : 'Basse'}
                     </button>
@@ -515,7 +521,7 @@ export default function TachesPage() {
                         const next = checked ? ids.filter(id => id !== m.id) : [...ids, m.id]
                         patchTask(detail.id, { assigne_admin_ids: next })
                       }}
-                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${checked ? 'bg-[var(--color-brand)] text-white' : 'bg-white/5 text-white/60'}`}>
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold transition-all ${checked ? 'bg-[var(--color-brand)] text-white' : 'bg-[color-mix(in_oklab,var(--ink)_5%,transparent)] text-[color-mix(in_oklab,var(--ink)_60%,transparent)]'}`}>
                         {m.nom_complet}
                       </button>
                     )
@@ -570,7 +576,7 @@ export default function TachesPage() {
 
               <div className="flex gap-3">
                 <button onClick={() => handleDelete(detail.id)}
-                  className="flex items-center gap-1.5 px-4 py-3 rounded-full bg-white/5 text-red-400 text-sm font-bold">
+                  className="flex items-center gap-1.5 px-4 py-3 rounded-full bg-[color-mix(in_oklab,var(--ink)_5%,transparent)] text-red-400 text-sm font-bold">
                   <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>delete</span>
                   Supprimer
                 </button>
