@@ -115,6 +115,8 @@ export default function TachesPage() {
   const [texte, setTexte] = useState('')
   const [sending, setSending] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const [completingIds, setCompletingIds] = useState<Set<number>>(new Set())
+  const completeTimers = useRef<Record<number, ReturnType<typeof setTimeout>>>({})
 
   const [team, setTeam] = useState<Personne[]>([])
   const [clients, setClients] = useState<Personne[]>([])
@@ -285,12 +287,30 @@ export default function TachesPage() {
 
   const handleToggle = async (id: number) => {
     const snapshot = tasks
-    setTasks(prev => prev.map(t => t.id === id ? { ...t, est_coche: t.est_coche ? 0 : 1 } : t))
+    const task = tasks.find(t => t.id === id)
+    if (!task) return
+    const goingDone = !task.est_coche
+    if (goingDone) {
+      // Joue l'anim coché/barré en place, puis la tâche tombe dans "Terminées" une fois l'anim finie.
+      setCompletingIds(prev => new Set(prev).add(id))
+      completeTimers.current[id] = setTimeout(() => {
+        setTasks(prev => prev.map(t => t.id === id ? { ...t, est_coche: 1 } : t))
+        setCompletingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+        delete completeTimers.current[id]
+      }, 450)
+    } else {
+      setTasks(prev => prev.map(t => t.id === id ? { ...t, est_coche: 0 } : t))
+    }
     try {
       const res = await fetch(`${API}/api/v1/taches/todos/${id}/toggle`, { method: 'POST', headers: { 'X-Task-Token': getToken() || '' } })
       if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setEtat('login'); return }
       if (!res.ok) throw new Error()
-    } catch { setTasks(snapshot); showToast("La mise à jour a échoué") }
+    } catch {
+      if (completeTimers.current[id]) { clearTimeout(completeTimers.current[id]); delete completeTimers.current[id] }
+      setTasks(snapshot)
+      setCompletingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+      showToast("La mise à jour a échoué")
+    }
   }
 
   const patchTask = async (id: number, payload: Record<string, unknown>) => {
@@ -343,6 +363,7 @@ export default function TachesPage() {
         @media (prefers-color-scheme: light) {
           .taches-app { --paper: #f7f4f0; --sheet: #ffffff; --ink: #2b2b2b; }
         }
+        @keyframes checkPop { 0% { transform: scale(0.7); opacity: 0.4 } 60% { transform: scale(1.2) } 100% { transform: scale(1); opacity: 1 } }
       `}</style>
       {toast && (
         <div role="status" aria-live="polite" className={`fixed top-4 left-4 right-4 z-50 px-5 py-3.5 rounded-2xl shadow-2xl text-sm font-bold text-center transition-all ${toast.ok ? 'bg-emerald-600' : 'bg-red-600'}`}>{toast.msg}</div>
@@ -443,15 +464,19 @@ export default function TachesPage() {
                   {BUCKET_LABEL[b]} <span className="tabular-nums">· {buckets[b].length}</span>
                 </p>
                 <div className="rounded-2xl overflow-hidden bg-[color-mix(in_oklab,var(--ink)_5%,transparent)] border border-[color-mix(in_oklab,var(--ink)_10%,transparent)]">
-                  {buckets[b].map((t, i) => (
+                  {buckets[b].map((t, i) => {
+                    const isCompleting = completingIds.has(t.id)
+                    return (
                     <div key={t.id}
-                      className={`flex items-center gap-3 px-4 py-3.5 ${i < buckets[b].length - 1 ? 'border-b border-[color-mix(in_oklab,var(--ink)_10%,transparent)]' : ''} active:bg-[color-mix(in_oklab,var(--ink)_5%,transparent)] transition-colors`}>
-                      <button onClick={() => handleToggle(t.id)} aria-label="Cocher la tâche"
-                        className="w-6 h-6 rounded-full border-2 border-[color-mix(in_oklab,var(--ink)_25%,transparent)] flex-shrink-0 grid place-items-center active:scale-90 active:border-[var(--color-brand)] transition-all">
-                        <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${(PRIORITE[t.priorite as keyof typeof PRIORITE] ?? PRIORITE.normale).dot}`} />
+                      className={`flex items-center gap-3 px-4 py-3.5 ${i < buckets[b].length - 1 ? 'border-b border-[color-mix(in_oklab,var(--ink)_10%,transparent)]' : ''} transition-opacity duration-300 ${isCompleting ? 'opacity-50' : 'active:bg-[color-mix(in_oklab,var(--ink)_5%,transparent)]'}`}>
+                      <button onClick={() => handleToggle(t.id)} disabled={isCompleting} aria-label="Cocher la tâche"
+                        className={`w-6 h-6 rounded-full flex-shrink-0 grid place-items-center transition-all duration-300 ${isCompleting ? 'bg-[var(--color-brand)] border-2 border-[var(--color-brand)]' : 'border-2 border-[color-mix(in_oklab,var(--ink)_25%,transparent)] active:scale-90 active:border-[var(--color-brand)]'}`}>
+                        {isCompleting
+                          ? <span aria-hidden="true" className="material-symbols-outlined text-white" style={{ fontSize: '16px', animation: 'checkPop 0.3s ease-out' }}>check</span>
+                          : <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${(PRIORITE[t.priorite as keyof typeof PRIORITE] ?? PRIORITE.normale).dot}`} />}
                       </button>
                       <button onClick={() => { setDetailId(t.id); setEditTexte(t.texte) }} className="min-w-0 flex-1 text-left">
-                        <p className="text-sm font-semibold truncate">{t.texte}</p>
+                        <p className={`text-sm font-semibold truncate transition-all duration-300 ${isCompleting ? 'line-through text-[color-mix(in_oklab,var(--ink)_45%,transparent)]' : ''}`}>{t.texte}</p>
                         {(t.projet_nom || t.client_nom || t.date_echeance || t.contact_nom) && (
                           <p className="text-[12px] text-[color-mix(in_oklab,var(--ink)_40%,transparent)] truncate mt-0.5 flex items-center gap-1">
                             {t.calendar_event_id && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '12px' }}>event</span>}
@@ -474,7 +499,7 @@ export default function TachesPage() {
                         <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>chevron_right</span>
                       </button>
                     </div>
-                  ))}
+                  )})}
                 </div>
               </div>
             ))}
