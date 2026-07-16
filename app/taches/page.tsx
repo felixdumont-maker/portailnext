@@ -87,7 +87,7 @@ function Sheet({ children, onClose }: { children: React.ReactNode; onClose: () =
   return (
     <div className="fixed inset-0 z-40">
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto bg-[var(--sheet)] rounded-t-3xl border-t border-[color-mix(in_oklab,var(--ink)_10%,transparent)] px-5 pt-3 pb-6 animate-[slideUp_0.2s_ease-out]"
+      <div className="absolute bottom-0 left-0 right-0 max-h-[85vh] overflow-y-auto overflow-x-hidden bg-[var(--sheet)] rounded-t-3xl border-t border-[color-mix(in_oklab,var(--ink)_10%,transparent)] px-5 pt-3 pb-6 animate-[slideUp_0.2s_ease-out]"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 24px)' }}>
         <div className="w-10 h-1.5 rounded-full bg-[color-mix(in_oklab,var(--ink)_20%,transparent)] mx-auto mb-4" />
         {children}
@@ -327,10 +327,10 @@ export default function TachesPage() {
 
   const inputCls = 'w-full bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] border border-[color-mix(in_oklab,var(--ink)_15%,transparent)] rounded-2xl px-4 py-3.5 text-[var(--ink)] text-base outline-none focus:border-[var(--color-brand)] placeholder:text-[color-mix(in_oklab,var(--ink)_40%,transparent)]'
   const labelCls = 'text-[10px] font-bold uppercase tracking-widest text-[color-mix(in_oklab,var(--ink)_40%,transparent)] mb-1.5 block'
-  const fieldCls = 'w-full bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] border border-[color-mix(in_oklab,var(--ink)_15%,transparent)] rounded-xl px-3.5 py-2.5 text-[var(--ink)] text-sm outline-none focus:border-[var(--color-brand)] placeholder:text-[color-mix(in_oklab,var(--ink)_35%,transparent)]'
+  const fieldCls = 'w-full bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] border border-[color-mix(in_oklab,var(--ink)_15%,transparent)] rounded-xl px-3.5 py-2.5 text-[var(--ink)] text-base outline-none focus:border-[var(--color-brand)] placeholder:text-[color-mix(in_oklab,var(--ink)_35%,transparent)]'
 
   return (
-    <div className="taches-app min-h-[100dvh] bg-[var(--paper)] text-[var(--ink)] flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <div className="taches-app min-h-[100dvh] overflow-x-hidden bg-[var(--paper)] text-[var(--ink)] flex flex-col" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <style>{`
         .taches-app { --paper: #111111; --sheet: #1a1a1a; --ink: #ffffff; }
         @media (prefers-color-scheme: light) {
@@ -530,16 +530,16 @@ export default function TachesPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div>
+                <div className="min-w-0">
                   <label className={labelCls}>Projet</label>
-                  <select className={fieldCls} value={detail.projet_id ?? ''} onChange={e => patchTask(detail.id, { projet_id: e.target.value ? Number(e.target.value) : null })}>
+                  <select className={fieldCls + ' min-w-0'} value={detail.projet_id ?? ''} onChange={e => patchTask(detail.id, { projet_id: e.target.value ? Number(e.target.value) : null })}>
                     <option value="">— Aucun —</option>
                     {projets.map(p => <option key={p.id} value={p.id}>{p.nom_projet}</option>)}
                   </select>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <label className={labelCls}>Client (sans projet)</label>
-                  <select className={fieldCls} value={!detail.projet_id && detail.client_id ? detail.client_id : ''} onChange={e => patchTask(detail.id, { client_id: e.target.value ? Number(e.target.value) : null })}>
+                  <select className={fieldCls + ' min-w-0'} value={!detail.projet_id && detail.client_id ? detail.client_id : ''} onChange={e => patchTask(detail.id, { client_id: e.target.value ? Number(e.target.value) : null })}>
                     <option value="">— Aucun —</option>
                     {clients.map(c => <option key={c.id} value={c.id}>{c.nom_complet}</option>)}
                   </select>
