@@ -546,9 +546,10 @@ export default function TachesPage() {
                 </div>
               </div>
 
-              <div className="mb-4">
+              <div className="mb-4 overflow-hidden">
                 <label className={labelCls}>Échéance</label>
-                <input type="date" className={fieldCls} value={detail.date_echeance && ISO_RE.test(detail.date_echeance) ? detail.date_echeance : ''}
+                <input type="date" className={fieldCls + ' min-w-0 max-w-full box-border'} style={{ width: '100%' }}
+                  value={detail.date_echeance && ISO_RE.test(detail.date_echeance) ? detail.date_echeance : ''}
                   onChange={e => patchTask(detail.id, { date_echeance: e.target.value || null })} />
               </div>
 
