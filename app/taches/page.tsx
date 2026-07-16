@@ -139,7 +139,7 @@ export default function TachesPage() {
       const res = await fetch(`${API}/api/v1/taches/todos`, { headers: { 'X-Task-Token': getToken() || '' } })
       if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setEtat('login'); return }
       const d = await res.json()
-      if (Array.isArray(d)) setTasks(d.filter((t: Task) => !t.est_coche))
+      if (Array.isArray(d)) setTasks(d)
     } catch { showToast('Erreur de connexion') }
     finally { setLoadingTasks(false) }
   }, [])
@@ -285,7 +285,7 @@ export default function TachesPage() {
 
   const handleToggle = async (id: number) => {
     const snapshot = tasks
-    setTasks(prev => prev.filter(t => t.id !== id))
+    setTasks(prev => prev.map(t => t.id === id ? { ...t, est_coche: t.est_coche ? 0 : 1 } : t))
     try {
       const res = await fetch(`${API}/api/v1/taches/todos/${id}/toggle`, { method: 'POST', headers: { 'X-Task-Token': getToken() || '' } })
       if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setEtat('login'); return }
@@ -327,7 +327,9 @@ export default function TachesPage() {
   }
 
   const buckets: Record<Bucket, Task[]> = { retard: [], aujourdhui: [], avenir: [], sans_date: [] }
-  for (const t of tasks) buckets[bucketOf(t)].push(t)
+  for (const t of tasks) if (!t.est_coche) buckets[bucketOf(t)].push(t)
+  const doneTasks = tasks.filter(t => t.est_coche)
+  const activeCount = BUCKET_ORDER.reduce((n, b) => n + buckets[b].length, 0)
   const detail = tasks.find(t => t.id === detailId) || null
 
   const inputCls = 'w-full bg-[color-mix(in_oklab,var(--ink)_10%,transparent)] border border-[color-mix(in_oklab,var(--ink)_15%,transparent)] rounded-2xl px-4 py-3.5 text-[var(--ink)] text-base outline-none focus:border-[var(--color-brand)] placeholder:text-[color-mix(in_oklab,var(--ink)_40%,transparent)]'
@@ -404,7 +406,7 @@ export default function TachesPage() {
             {loadingTasks && tasks.length === 0 && (
               <div className="text-[color-mix(in_oklab,var(--ink)_40%,transparent)] text-sm text-center mt-10">Chargement…</div>
             )}
-            {!loadingTasks && tasks.length === 0 && (
+            {!loadingTasks && activeCount === 0 && doneTasks.length === 0 && (
               <div className="flex flex-col items-center justify-center text-center mt-16 gap-3">
                 <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '56px', color: 'var(--color-brand)', opacity: 0.6 }}>task_alt</span>
                 <p className="text-[color-mix(in_oklab,var(--ink)_60%,transparent)] font-semibold">Rien à faire pour l&apos;instant</p>
@@ -476,6 +478,25 @@ export default function TachesPage() {
                 </div>
               </div>
             ))}
+            {doneTasks.length > 0 && (
+              <div className="mb-6">
+                <p className="text-[11px] font-bold uppercase tracking-widest mb-2 text-[color-mix(in_oklab,var(--ink)_45%,transparent)]">
+                  Terminées <span className="tabular-nums">· {doneTasks.length}</span>
+                </p>
+                <div className="rounded-2xl overflow-hidden bg-[color-mix(in_oklab,var(--ink)_5%,transparent)] border border-[color-mix(in_oklab,var(--ink)_10%,transparent)]">
+                  {doneTasks.map((t, i) => (
+                    <div key={t.id}
+                      className={`flex items-center gap-3 px-4 py-3.5 ${i < doneTasks.length - 1 ? 'border-b border-[color-mix(in_oklab,var(--ink)_10%,transparent)]' : ''}`}>
+                      <button onClick={() => handleToggle(t.id)} aria-label="Annuler — remettre la tâche active"
+                        className="w-6 h-6 rounded-full bg-[var(--color-brand)] flex-shrink-0 grid place-items-center active:scale-90 transition-all">
+                        <span aria-hidden="true" className="material-symbols-outlined text-white" style={{ fontSize: '16px' }}>check</span>
+                      </button>
+                      <p className="min-w-0 flex-1 text-sm font-semibold truncate text-[color-mix(in_oklab,var(--ink)_45%,transparent)] line-through">{t.texte}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Ajout rapide — ancré dans la zone du pouce */}
