@@ -258,6 +258,8 @@ const PRINCIPES = [
   { titre: '5 — Mobile d’abord', jamais: 'Interface desktop adaptée au mobile en dernier', toujours: 'Conçu mobile → adapté desktop. Gros boutons, texte lisible' },
 ]
 
+type VisionTodo = { id: number; texte: string; done: boolean }
+
 type Phase = {
   id: number
   titre: string
@@ -266,7 +268,7 @@ type Phase = {
   badge: string
   badgeBg: string
   badgeColor: string
-  todos: { texte: string; done: boolean }[]
+  todos: VisionTodo[]
   editable: boolean
 }
 
@@ -288,7 +290,7 @@ const PHASES_INIT: Phase[] = [
       'Dashboard admin complet — gestion clients, projets, services, checklists',
       'Dashboard client — liste projets, statuts, progress bar checklist',
       'Déploiement production — portail.cocktailmedia.ca',
-    ].map(texte => ({ texte, done: true })),
+    ].map((texte, i) => ({ id: -(i + 1), texte, done: true })),
   },
   { id: 1, titre: 'Phase 1 — Tests et lancement', periode: 'Fin mars → Début avril 2026', dotColor: '#f39c12', badge: 'En cours', badgeBg: '#fff3cd', badgeColor: '#856404', editable: true, todos: [] },
   { id: 2, titre: 'Phase 2 — UX Polish', periode: 'Reste avril → Première de mai 2026', dotColor: '#f39c12', badge: 'En cours', badgeBg: '#fff3cd', badgeColor: '#856404', editable: true, todos: [] },
@@ -430,21 +432,22 @@ export default function CocktailOSVision() {
   const [phases, setPhases] = useState<Phase[]>(PHASES_INIT)
   const [newTodoText, setNewTodoText] = useState<Record<number, string>>({})
 
-  // Charger les todos sauvegardés (phases éditables) depuis localStorage
+  // Todos des phases éditables — stockage serveur (table cocktailos_vision_todos),
+  // partagé entre appareils/admins. Remplace l'ancien silo localStorage
+  // (cocktailos_todos_phase_<id>) : convergence Phase 5 du module Tâches.
   useEffect(() => {
-    setPhases(prev => prev.map(phase => {
-      if (!phase.editable) return phase
-      try {
-        const raw = localStorage.getItem(`cocktailos_todos_phase_${phase.id}`)
-        if (raw) return { ...phase, todos: JSON.parse(raw) }
-      } catch { /* ignore */ }
-      return phase
-    }))
+    fetch('/api/v1/admin/roadmaps/vision-todos', { credentials: 'include' })
+      .then(r => r.json())
+      .then((rows: (VisionTodo & { phase_id: number })[]) => {
+        if (!Array.isArray(rows)) return
+        setPhases(prev => prev.map(phase => {
+          if (!phase.editable) return phase
+          const todos = rows.filter(r => r.phase_id === phase.id).map(r => ({ id: r.id, texte: r.texte, done: r.done }))
+          return { ...phase, todos }
+        }))
+      })
+      .catch(() => { /* silencieux — la page reste utilisable sans les todos */ })
   }, [])
-
-  function persistTodos(phaseId: number, todos: { texte: string; done: boolean }[]) {
-    try { localStorage.setItem(`cocktailos_todos_phase_${phaseId}`, JSON.stringify(todos)) } catch { /* ignore */ }
-  }
 
   function toggleBloc(id: string) {
     setOpenBlocs(prev => ({ ...prev, [id]: !prev[id] }))
@@ -454,34 +457,34 @@ export default function CocktailOSVision() {
     setOpenPhases(prev => ({ ...prev, [id]: !prev[id] }))
   }
 
-  function toggleTodo(phaseId: number, idx: number) {
-    setPhases(prev => prev.map(phase => {
-      if (phase.id !== phaseId) return phase
-      const todos = phase.todos.map((t, i) => i === idx ? { ...t, done: !t.done } : t)
-      persistTodos(phaseId, todos)
-      return { ...phase, todos }
+  function toggleTodo(phaseId: number, todoId: number) {
+    setPhases(prev => prev.map(phase => phase.id !== phaseId ? phase : {
+      ...phase, todos: phase.todos.map(t => t.id === todoId ? { ...t, done: !t.done } : t)
     }))
+    fetch(`/api/v1/admin/roadmaps/vision-todos/${todoId}/toggle`, { method: 'POST', credentials: 'include' }).catch(() => {})
   }
 
-  function deleteTodo(phaseId: number, idx: number) {
-    setPhases(prev => prev.map(phase => {
-      if (phase.id !== phaseId) return phase
-      const todos = phase.todos.filter((_, i) => i !== idx)
-      persistTodos(phaseId, todos)
-      return { ...phase, todos }
+  function deleteTodo(phaseId: number, todoId: number) {
+    setPhases(prev => prev.map(phase => phase.id !== phaseId ? phase : {
+      ...phase, todos: phase.todos.filter(t => t.id !== todoId)
     }))
+    fetch(`/api/v1/admin/roadmaps/vision-todos/${todoId}`, { method: 'DELETE', credentials: 'include' }).catch(() => {})
   }
 
   function addTodo(phaseId: number) {
     const texte = (newTodoText[phaseId] || '').trim()
     if (!texte) return
-    setPhases(prev => prev.map(phase => {
-      if (phase.id !== phaseId) return phase
-      const todos = [...phase.todos, { texte, done: false }]
-      persistTodos(phaseId, todos)
-      return { ...phase, todos }
-    }))
     setNewTodoText(prev => ({ ...prev, [phaseId]: '' }))
+    fetch('/api/v1/admin/roadmaps/vision-todos', {
+      method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phase_id: phaseId, texte }),
+    })
+      .then(r => r.json())
+      .then((row: VisionTodo) => {
+        if (!row.id) return
+        setPhases(prev => prev.map(phase => phase.id !== phaseId ? phase : { ...phase, todos: [...phase.todos, row] }))
+      })
+      .catch(() => {})
   }
 
   function phaseStatus(phase: Phase) {
@@ -652,12 +655,12 @@ export default function CocktailOSVision() {
                     {phase.todos.length === 0 && phase.editable && (
                       <div style={{ fontSize: '12px', color: '#aaa', padding: '8px 10px', fontStyle: 'italic' }}>Aucune tâche pour le moment — ajoutez-en ci-dessous.</div>
                     )}
-                    {phase.todos.map((todo, idx) => (
-                      <label key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '7px 10px', borderRadius: '8px', background: todo.done ? '#f0faf4' : '#f9f6f2' }}>
-                        <input type="checkbox" checked={todo.done} onChange={() => toggleTodo(phase.id, idx)} style={{ marginTop: '2px', flexShrink: 0 }} />
+                    {phase.todos.map(todo => (
+                      <label key={todo.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', padding: '7px 10px', borderRadius: '8px', background: todo.done ? '#f0faf4' : '#f9f6f2' }}>
+                        <input type="checkbox" checked={todo.done} onChange={() => toggleTodo(phase.id, todo.id)} style={{ marginTop: '2px', flexShrink: 0 }} />
                         <span style={{ fontSize: '12px', color: todo.done ? '#aaa' : '#2b2b2b', lineHeight: 1.5, flex: 1, textDecoration: todo.done ? 'line-through' : 'none' }}>{todo.texte}</span>
                         {phase.editable && (
-                          <span onClick={(e) => { e.preventDefault(); deleteTodo(phase.id, idx) }} style={{ fontSize: '11px', color: '#ccc', cursor: 'pointer', padding: '0 4px', flexShrink: 0 }} title="Supprimer">✕</span>
+                          <span onClick={(e) => { e.preventDefault(); deleteTodo(phase.id, todo.id) }} style={{ fontSize: '11px', color: '#ccc', cursor: 'pointer', padding: '0 4px', flexShrink: 0 }} title="Supprimer">✕</span>
                         )}
                       </label>
                     ))}
