@@ -56,7 +56,6 @@ interface TodoPerso {
   client_nom: string | null
   client_id?: number | null
   client_id_effectif?: number | null
-  source?: string | null
   created_at: string
   assignees?: { id: number; nom_complet: string }[]
 }
@@ -112,12 +111,28 @@ const PRIORITE_COLORS: Record<string, string> = {
   basse:   'bg-gray-100 text-gray-500',
 }
 
+type GroupKind = 'projet' | 'client' | 'personnel'
+interface TodoGroup {
+  kind: GroupKind
+  label: string
+  client_nom: string | null
+  todos: TodoPerso[]
+}
+
+// Regroupe par identifiant stable (projet_id / client_id), jamais par nom affiché :
+// deux projets homonymes (ex. générés par le booking le même jour) restent bien distincts.
 function groupByProject(list: TodoPerso[]) {
-  const groups: Record<string, { todos: TodoPerso[]; client_nom: string | null }> = {}
+  const groups: Record<string, TodoGroup> = {}
   for (const todo of list) {
-    const key = todo.projet_nom
-      || (todo.client_nom ? `👤 ${todo.client_nom}` : (todo.source === 'todoist' ? '📥 Todoist' : '— Personnel'))
-    if (!groups[key]) groups[key] = { todos: [], client_nom: todo.client_nom ?? null }
+    let key: string, kind: GroupKind, label: string
+    if (todo.projet_id) {
+      key = `projet:${todo.projet_id}`; kind = 'projet'; label = todo.projet_nom || 'Projet'
+    } else if (todo.client_id_effectif || todo.client_nom) {
+      key = `client:${todo.client_id_effectif ?? todo.client_nom}`; kind = 'client'; label = `👤 ${todo.client_nom}`
+    } else {
+      key = 'personnel'; kind = 'personnel'; label = '— Personnel'
+    }
+    if (!groups[key]) groups[key] = { kind, label, client_nom: todo.client_nom ?? null, todos: [] }
     groups[key].todos.push(todo)
   }
   return groups
@@ -317,7 +332,7 @@ export default function AdminDashboardPage() {
     setTimeout(() => setToast(null), 4000)
   }
 
-  async function renameProject(projetId: number, nom: string, oldKey: string) {
+  async function renameProject(projetId: number, nom: string) {
     setEditingGroup(null)
     const clean = nom.trim()
     if (!clean) return
@@ -330,7 +345,7 @@ export default function AdminDashboardPage() {
         body: JSON.stringify({ nom: clean }),
       })
       if (!res.ok) throw new Error()
-      setOpenGroups(prev => ({ ...prev, [clean]: prev[oldKey] ?? false }))
+      // Le groupe est identifié par projet_id, pas par nom — pas besoin de déplacer l'état d'ouverture.
     } catch {
       setTodos(snapshot); showError("Le renommage du projet a échoué.")
     }
@@ -926,31 +941,31 @@ export default function AdminDashboardPage() {
 
           {/* Liste groupes */}
           <div>
-            {Object.entries(activeGroups).map(([projetNom, group], idx, arr) => {
-              const isOpen = openGroups[projetNom] ?? false
-              const isProjet = projetNom !== '— Personnel'
-              const isRealProjet = isProjet && !projetNom.startsWith('👤') && !projetNom.startsWith('📥')
+            {Object.entries(activeGroups).map(([groupKey, group], idx, arr) => {
+              const isOpen = openGroups[groupKey] ?? false
+              const isProjet = group.kind !== 'personnel'
+              const isRealProjet = group.kind === 'projet'
               const taches = group.todos.filter(t => !t.is_titre)
               const done = taches.filter(t => t.est_coche).length
               const total = taches.length
-              const nomCourt = isProjet ? projetNom.replace(/^\d{4}-\d{2}-\d{2} — /, '') : 'Personnel'
+              const nomCourt = isProjet ? group.label.replace(/^\d{4}-\d{2}-\d{2} — /, '') : 'Personnel'
               const badgeColor = (isRealProjet || group.client_nom)
                 ? 'bg-[#fff0eb] border border-[#f5c4a0] text-[#c0521a]'
                 : 'bg-gray-100 border border-gray-200 text-gray-500'
               return (
-                <div key={projetNom} className={idx < arr.length - 1 ? 'border-b border-[var(--color-light-border)]' : ''}>
+                <div key={groupKey} className={idx < arr.length - 1 ? 'border-b border-[var(--color-light-border)]' : ''}>
                   <div className="flex items-center pr-3 hover:bg-[#fff8f6] transition-colors group group/row">
-                    {editingGroup === projetNom ? (
+                    {editingGroup === groupKey ? (
                       <div className="flex-1 min-w-0 flex items-center gap-3 px-5 py-3">
                         <span aria-hidden="true" className="material-symbols-outlined text-[14px] text-[var(--color-dark-text-2)] flex-shrink-0">chevron_right</span>
                         <input autoFocus value={editGroupText} onChange={e => setEditGroupText(e.target.value)}
-                          onBlur={() => renameProject(group.todos[0]!.projet_id!, editGroupText, projetNom)}
-                          onKeyDown={e => { if (e.key === 'Enter') renameProject(group.todos[0]!.projet_id!, editGroupText, projetNom); if (e.key === 'Escape') setEditingGroup(null) }}
+                          onBlur={() => renameProject(group.todos[0]!.projet_id!, editGroupText)}
+                          onKeyDown={e => { if (e.key === 'Enter') renameProject(group.todos[0]!.projet_id!, editGroupText); if (e.key === 'Escape') setEditingGroup(null) }}
                           aria-label="Renommer le projet"
                           className="flex-1 min-w-0 text-sm font-body font-semibold bg-transparent outline-none border-b border-[var(--color-brand)] pb-0.5" />
                       </div>
                     ) : (
-                      <button onClick={() => toggleGroup(projetNom)}
+                      <button onClick={() => toggleGroup(groupKey)}
                         className="flex-1 min-w-0 flex items-center gap-3 px-5 py-3 text-left">
                         <span aria-hidden="true" className="material-symbols-outlined text-[14px] text-[var(--color-dark-text-2)] group-hover:text-[var(--color-brand)] transition-transform duration-150 flex-shrink-0"
                           style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>
@@ -958,15 +973,15 @@ export default function AdminDashboardPage() {
                         </span>
                         <p className={`flex-1 min-w-0 text-sm font-body font-semibold truncate group-hover:text-[var(--color-dark-1)] group-hover:font-semibold ${isProjet ? 'text-[var(--color-dark-1)]' : 'text-[var(--color-dark-text-2)]'}`}>
                           {nomCourt}
-                          {group.client_nom && !projetNom.startsWith('👤') && <span className="font-normal text-[var(--color-dark-text-2)] ml-1.5">· {group.client_nom}</span>}
+                          {group.client_nom && group.kind !== 'client' && <span className="font-normal text-[var(--color-dark-text-2)] ml-1.5">· {group.client_nom}</span>}
                         </p>
                         <span className={`text-[11px] font-bold font-body px-2 py-0.5 rounded-full flex-shrink-0 tabular-nums group-hover:text-[var(--color-brand)] ${badgeColor}`}>
                           {done}/{total}
                         </span>
                       </button>
                     )}
-                    {isRealProjet && editingGroup !== projetNom && (
-                      <button onClick={() => { setEditingGroup(projetNom); setEditGroupText(nomCourt) }} title="Renommer le projet"
+                    {isRealProjet && editingGroup !== groupKey && (
+                      <button onClick={() => { setEditingGroup(groupKey); setEditGroupText(nomCourt) }} title="Renommer le projet"
                         className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/row:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
                         <span aria-hidden="true" className="material-symbols-outlined text-[14px]">edit</span>
                       </button>
@@ -976,8 +991,8 @@ export default function AdminDashboardPage() {
                         currentProjetId={group.todos[0]?.projet_id ?? null}
                         currentClientId={group.todos.find(t => t.client_id_effectif)?.client_id_effectif ?? null}
                         clients={clients} projets={projets}
-                        isOpen={groupAssignOpen === projetNom}
-                        onToggle={() => setGroupAssignOpen(groupAssignOpen === projetNom ? null : projetNom)}
+                        isOpen={groupAssignOpen === groupKey}
+                        onToggle={() => setGroupAssignOpen(groupAssignOpen === groupKey ? null : groupKey)}
                         onAssign={(payload) => assignGroup(group.todos.map(t => t.id), payload)} />
                     )}
                   </div>
@@ -1251,21 +1266,21 @@ export default function AdminDashboardPage() {
                 const doneGroups = groupByProject(todosCochs)
                 return (
                   <div className="border-t border-[var(--color-light-border)]">
-                    {Object.entries(doneGroups).map(([projetNom, group], idx, arr) => {
-                      const key = `__done_${projetNom}__`
+                    {Object.entries(doneGroups).map(([groupKey, group], idx, arr) => {
+                      const key = `__done_${groupKey}__`
                       const isOpen = openGroups[key] ?? false
-                      const nomCourt = projetNom !== '— Personnel'
-                        ? projetNom.replace(/^\d{4}-\d{2}-\d{2} — /, '')
+                      const nomCourt = group.kind !== 'personnel'
+                        ? group.label.replace(/^\d{4}-\d{2}-\d{2} — /, '')
                         : 'Personnel'
                       return (
-                        <div key={projetNom} className={idx < arr.length - 1 ? 'border-b border-[var(--color-light-border)]' : ''}>
+                        <div key={groupKey} className={idx < arr.length - 1 ? 'border-b border-[var(--color-light-border)]' : ''}>
                           <button onClick={() => toggleGroup(key)}
                             className="w-full flex items-center gap-3 px-5 py-2.5 bg-[var(--color-light-1)] hover:bg-[#fff8f6] transition-colors text-left opacity-60">
                             <span aria-hidden="true" className="material-symbols-outlined text-[13px] text-[var(--color-dark-text-2)] transition-transform duration-150 flex-shrink-0"
                               style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}>chevron_right</span>
                             <p className="flex-1 min-w-0 text-xs font-body font-semibold text-[var(--color-dark-text-2)] truncate line-through">
                               {nomCourt}
-                              {group.client_nom && <span className="font-normal ml-1.5">· {group.client_nom}</span>}
+                              {group.client_nom && group.kind !== 'client' && <span className="font-normal ml-1.5">· {group.client_nom}</span>}
                             </p>
                             <span className="text-[10px] font-body text-[var(--color-dark-text-2)] tabular-nums flex-shrink-0">
                               {group.todos.length}

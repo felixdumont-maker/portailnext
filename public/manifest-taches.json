@@ -1,0 +1,17 @@
+{
+  "name": "Tâches — CocktailOS",
+  "short_name": "Tâches",
+  "description": "Ajouter et gérer ses tâches en un tap",
+  "start_url": "/taches",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#c0321a",
+  "icons": [
+    {
+      "src": "/cos-icone-noir.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

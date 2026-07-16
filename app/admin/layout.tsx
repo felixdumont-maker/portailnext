@@ -86,7 +86,7 @@ function tempsRelatif(iso: string): string {
 }
 
 const NOTIF_ICON: Record<string, string> = {
-  info: 'info', todo: 'checklist', todoist: 'add_task',
+  info: 'info', todo: 'checklist',
   assignation: 'person_add', facture: 'receipt_long', agenda: 'event',
 }
 

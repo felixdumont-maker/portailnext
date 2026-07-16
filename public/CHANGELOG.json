@@ -1,6 +1,59 @@
 {
   "entries": [
     {
+      "id": "2026-07-16-004",
+      "date": "2026-07-16",
+      "session": "PWA Tâches — Phase 4 : convergence marketing",
+      "category": "feature",
+      "module": "Tâches",
+      "description": "Audit du code a révélé que la convergence roadmap ↔ tâche perso ↔ post marketing existait déjà côté serveur (_sync_roadmap_todo_completion propage le coché entre les 3 depuis longtemps) : un item roadmap créé avec un·e assigné·e crée automatiquement une tâche todos_perso liée, donc apparaissait déjà dans la PWA sans travail supplémentaire. Le vrai angle mort : les posts marketing créés directement sur /admin/marketing (la majorité, pas liés à une roadmap) n'apparaissaient nulle part dans /taches. Ajout d'une section « Visuels à déposer » dans la PWA, visible seulement pour le rôle production, listant les posts todo_felix_done=0 non liés à une roadmap (pour éviter les doublons avec la liste principale). todo_marie_done n'est PAS exposé ici : ce n'est pas une case à cocher personnelle mais un indicateur « Félix a notifié Marie », posé automatiquement par l'envoi groupé de courriel côté /admin/marketing — l'exposer en case à cocher dans la PWA aurait dupliqué la saisie sans corriger de vrai angle mort.",
+      "files_modified": [
+        "portail/app.py (routes GET/POST /api/v1/taches/marketing, /api/v1/taches/marketing/<id>/toggle)",
+        "portail-next/app/taches/page.tsx (section Visuels à déposer, rôle production uniquement)"
+      ],
+      "author": "Claude Code"
+    },
+    {
+      "id": "2026-07-16-003",
+      "date": "2026-07-16",
+      "session": "PWA Tâches — Phase 3 : push natif",
+      "category": "feature",
+      "module": "Tâches",
+      "description": "Abonnement Web Push branché depuis la PWA /taches elle-même (réutilise l'infra VAPID/push_subscriptions existante du portail desktop) : bouton cloche dans l'entête, jumelage via /api/v1/taches/push/{vapid-public-key,subscribe,unsubscribe} gated par le jeton d'appareil (X-Task-Token) plutôt que la session CRM. L'abonnement est rattaché au courriel du compte jumelé. Ajout d'une notification push ciblée (pas de broadcast) quand une tâche est assignée à quelqu'un dans _update_todo — seules les personnes nouvellement ajoutées à assigne_admin_ids reçoivent la notif, pas toute l'équipe à chaque modification.",
+      "files_modified": [
+        "portail/app.py (routes /api/v1/taches/push/*, notif push ciblée dans _update_todo sur nouvelle assignation)",
+        "portail-next/app/taches/page.tsx (activation/désactivation push, réutilise public/sw.js existant)"
+      ],
+      "author": "Claude Code"
+    },
+    {
+      "id": "2026-07-16-002",
+      "date": "2026-07-16",
+      "session": "PWA Tâches — Phase 2 : fiche détail + import contact",
+      "category": "feature",
+      "module": "Tâches",
+      "description": "Fiche détail (feuille du bas) ajoutée dans la PWA /taches : priorité, assignés (chips équipe via /api/v1/taches/team), projet/client (/api/v1/taches/projets, /api/v1/taches/clients), échéance, et contact avec import .vcf côté client (parsing JS minimal FN/TEL/EMAIL — pas de Web Share Target, iOS ne le supporte pas pour les PWA installées ; flux : Contacts iOS → Partager → Enregistrer dans Fichiers → bouton Importer). Colonnes contact_nom/contact_telephone/contact_courriel ajoutées à todos_perso.",
+      "files_modified": [
+        "portail/app.py (colonnes contact_* sur todos_perso, routes /api/v1/taches/team,clients,projets)",
+        "portail-next/app/taches/page.tsx (fiche détail, import .vcf)"
+      ],
+      "author": "Claude Code"
+    },
+    {
+      "id": "2026-07-16-001",
+      "date": "2026-07-16",
+      "session": "PWA Tâches — Phase 1 : jumelage d'appareil + logique partagée",
+      "category": "feature",
+      "module": "Tâches",
+      "description": "Table task_devices (miroir de capture_devices) pour le jumelage d'appareil de la PWA /taches, par personne (chaque membre de l'équipe jumelle son propre appareil, pas juste l'admin principal comme Capture) — jeton longue durée émis à la connexion, transmis via le header X-Task-Token. Routes /api/v1/taches/{login,verify,logout} + /todos/* + /team,/clients,/projets. La logique todos a été extraite en fonctions partagées (_todos_query, _create_todo, _toggle_todo, _update_todo, _delete_todo, _planifier_todo, _deplanifier_todo) utilisées à la fois par les routes admin (session CRM) et les routes taches (jeton d'appareil), pour éviter la duplication de SQL.",
+      "files_modified": [
+        "portail/app.py (table task_devices, fonctions _xxx_todo partagées, routes /api/v1/taches/*)",
+        "portail-next/app/taches/page.tsx, layout.tsx (nouveau)",
+        "portail-next/public/manifest-taches.json (nouveau)"
+      ],
+      "author": "Claude Code"
+    },
+    {
       "id": "2026-06-09-003",
       "date": "2026-06-09",
       "session": "Fix scroll invitation + bug connexion post-reset",
