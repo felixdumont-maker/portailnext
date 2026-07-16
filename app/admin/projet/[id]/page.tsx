@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'next/navigation'
 import Link from 'next/link'
+import { statutMeta, pipelineStepIndex, STATUTS_CANONIQUES } from '@/lib/statuts'
 
 const API = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -11,8 +12,13 @@ interface Projet {
   nom_projet: string
   titre_affiche: string | null
   statut: string
+  pipeline_steps: string[]
+  progress_pct: number
+  is_site_web: boolean
   lien_gdrive: string | null
   date_livraison_estimee: string | null
+  localisation: string | null
+  lien_site_test: string | null
   client_id: number
   client_nom: string
   client_email: string
@@ -30,6 +36,7 @@ interface ChecklistItem {
   requires_file: boolean
   is_required: boolean
   is_revision: boolean
+  admin_resolu: boolean
   item_type: string
   file_category: string
   field_type: string
@@ -50,6 +57,7 @@ interface Pigiste {
   nom_complet: string
   email: string
   specialite: string | null
+  is_producteur_principal: boolean
 }
 
 interface Mandat {
@@ -76,41 +84,7 @@ interface RessourceBundleLite {
   icone: string
 }
 
-const PIPELINE_STEPS = [
-  'Documents à donner',
-  'Documents reçus',
-  'Travaux en cours',
-  'En révision',
-  'Complété',
-]
-
-const STEP_INDEX: Record<string, number> = {
-  'Documents à donner': 0,
-  'Documents reçus': 1,
-  'Travaux en cours': 2,
-  'En révision': 3,
-  'Complété': 4,
-}
-
-const STATUTS = [
-  'Documents à donner',
-  'En attente de rendez-vous',
-  'Documents reçus',
-  'Travaux en cours',
-  'En révision',
-  'Complété',
-  'Annulé',
-]
-
-const STATUT_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
-  'Documents à donner':        { bg: 'bg-red-50',     text: 'text-red-600',    dot: 'bg-red-500' },
-  'En attente de rendez-vous': { bg: 'bg-gray-100',   text: 'text-gray-600',   dot: 'bg-gray-400' },
-  'Documents reçus':           { bg: 'bg-blue-50',    text: 'text-blue-600',   dot: 'bg-blue-500' },
-  'Travaux en cours':          { bg: 'bg-orange-50',  text: 'text-orange-600', dot: 'bg-orange-500' },
-  'En révision':               { bg: 'bg-yellow-50',  text: 'text-yellow-600', dot: 'bg-yellow-500' },
-  'Complété':                  { bg: 'bg-green-50',   text: 'text-green-600',  dot: 'bg-green-500' },
-  'Annulé':                    { bg: 'bg-gray-100',   text: 'text-gray-500',   dot: 'bg-gray-400' },
-}
+const STATUTS = STATUTS_CANONIQUES
 
 const TYPE_OPTIONS = [
   { value: 'photo',      label: '📷 Photo' },
@@ -124,11 +98,22 @@ const TYPE_OPTIONS = [
 ]
 
 const MANDAT_BADGE: Record<string, string> = {
-  en_attente: 'bg-orange-100 text-orange-700',
-  en_cours:   'bg-blue-100 text-blue-700',
-  remis:      'bg-green-100 text-green-700',
-  approuve:   'bg-green-100 text-green-700',
-  annule:     'bg-gray-100 text-gray-500',
+  en_attente: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-text)]',
+  en_cours:   'bg-[var(--color-info-bg)] text-[var(--color-info-text)]',
+  remis:      'bg-[var(--color-success-bg)] text-[var(--color-success-text)]',
+  approuve:   'bg-[var(--color-success-bg)] text-[var(--color-success-text)]',
+  annule:     'bg-[var(--color-light-border)] text-[var(--color-dark-text-2)]',
+}
+
+// Type de service → icône + couleur (même détection par mot-clé que la page Liste des projets)
+function serviceType(nom: string | null): { label: string; color: string; icon: string } {
+  const s = (nom || '').toLowerCase()
+  if (/(vid[ée]o|short|reel|a[ée]rien)/.test(s))          return { label: 'Vidéo', color: 'var(--color-brand)', icon: 'videocam' }
+  if (/photo|portrait|drone/.test(s))                      return { label: 'Photo', color: 'var(--color-info)', icon: 'photo_camera' }
+  if (/(site|web|shopify|vercel|transactionnel|vitrine)/.test(s)) return { label: 'Web', color: 'var(--color-success)', icon: 'language' }
+  if (/(marketing|r[ée]seaux|plan d.affaires|campagne)/.test(s))  return { label: 'Marketing', color: 'oklch(55% 0.17 300)', icon: 'campaign' }
+  if (/(logo|identit[ée]|design|visuel|support|pr[ée]sentation|powerpoint|graph|imprim)/.test(s)) return { label: 'Design', color: 'var(--color-warning-mid-2)', icon: 'palette' }
+  return { label: nom ? 'Service' : '—', color: 'var(--color-dark-text-2)', icon: 'category' }
 }
 
 interface Member { name: string; title: string; desc: string }
@@ -150,6 +135,8 @@ const REVISION_CHECKLIST_SITE_WEB_VITRINE = [
   'Nom de domaine et certificat SSL (https)',
 ]
 
+const inputCls = "w-full bg-[var(--color-light-0)] border-none rounded-xl px-4 py-3 outline-none font-body text-sm focus:ring-2 focus:ring-[var(--color-brand)]/40"
+
 function ChecklistItemContent({ item, apiBase }: { item: ChecklistItem; apiBase: string }) {
   const fileUrl = `${apiBase}/api/v1/admin/item/${item.id}/file`
   const isImage = item.has_file && /\.(jpe?g|png|gif|webp|svg)$/i.test(item.file_name || '')
@@ -160,7 +147,7 @@ function ChecklistItemContent({ item, apiBase }: { item: ChecklistItem; apiBase:
     return (
       <div className="space-y-2">
         {members.map((m, i) => (
-          <div key={i} className="bg-white border border-[var(--color-light-border-2)] rounded-lg p-3">
+          <div key={i} className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-lg p-3">
             <p className="font-body font-bold text-sm text-[var(--color-dark-1)]">{m.name}</p>
             {m.title && <p className="font-body text-xs text-[var(--color-brand)]">{m.title}</p>}
             {m.desc && <p className="font-body text-xs text-[var(--color-dark-text-2)] mt-1">{m.desc}</p>}
@@ -176,7 +163,7 @@ function ChecklistItemContent({ item, apiBase }: { item: ChecklistItem; apiBase:
         {isImage && (
           <a href={fileUrl} target="_blank" rel="noopener noreferrer">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={fileUrl} alt={item.nom_item} className="max-h-40 rounded-lg object-contain border border-[var(--color-light-border-2)] bg-white" />
+            <img src={fileUrl} alt={item.nom_item} className="max-h-40 rounded-lg object-contain border border-[var(--color-light-border)] bg-[var(--color-light-2)]" />
           </a>
         )}
         <a href={fileUrl} target="_blank" rel="noopener noreferrer"
@@ -190,7 +177,7 @@ function ChecklistItemContent({ item, apiBase }: { item: ChecklistItem; apiBase:
 
   if (item.text_value) {
     return (
-      <p className="font-body text-sm text-[var(--color-dark-1)] bg-white border border-[var(--color-light-border-2)] rounded-lg px-3 py-2 whitespace-pre-wrap">
+      <p className="font-body text-sm text-[var(--color-dark-1)] bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-lg px-3 py-2 whitespace-pre-wrap">
         {item.text_value}
       </p>
     )
@@ -211,12 +198,17 @@ export default function AdminProjetDetailPage() {
 
   const [projet, setProjet] = useState<Projet | null>(null)
   const [items, setItems] = useState<ChecklistItem[]>([])
+  const [showComplete, setShowComplete] = useState(false)
+  const [showRevisionDone, setShowRevisionDone] = useState(false)
   const [actionLoading, setActionLoading] = useState('')
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
 
   // Panels
   const [forceStatusOpen, setForceStatusOpen] = useState(false)
-  const [forcedStatut, setForcedStatut] = useState(STATUTS[0])
+  const [outilsOpen, setOutilsOpen] = useState(false)
+  const [startPanelOpen, setStartPanelOpen] = useState(false)
+  const [startDateInput, setStartDateInput] = useState('')
+  const [forcedStatut, setForcedStatut] = useState<string>(STATUTS[0])
   const [revisionOpen, setRevisionOpen] = useState(false)
   const [revisionDraft, setRevisionDraft] = useState<RevisionDraftItem[]>([])
   const [editItemsOpen, setEditItemsOpen] = useState(false)
@@ -287,6 +279,11 @@ export default function AdminProjetDetailPage() {
     }
   }
 
+  const handleToggleResolu = async (itemId: number) => {
+    const ok = await postAction(`/api/v1/admin/item/${itemId}/resoudre`)
+    if (ok) await fetchData()
+  }
+
   const handleMarkDocumentsRecus = async () => {
     if (!confirm('Marquer les documents comme reçus ?')) return
     setActionLoading('docs')
@@ -295,12 +292,31 @@ export default function AdminProjetDetailPage() {
     setActionLoading('')
   }
 
+  // Ouvre le petit panneau de confirmation (date de livraison optionnelle) au lieu de
+  // démarrer directement — laisse vide pour garder le calcul automatique par défaut.
+  const openStartPanel = () => { setStartDateInput(''); setStartPanelOpen(true) }
+
   const handleStart = async () => {
-    if (!confirm('Démarrer les travaux ? Un email sera envoyé au client.')) return
     setActionLoading('start')
-    const ok = await postAction(`/api/v1/admin/projet/${id}/start`)
-    if (ok) { showToast('Travaux démarrés !'); await fetchData() }
+    const ok = await postAction(`/api/v1/admin/projet/${id}/start`, startDateInput ? { date_livraison: startDateInput } : undefined)
+    if (ok) { showToast('Travaux démarrés !'); setStartPanelOpen(false); await fetchData() }
     setActionLoading('')
+  }
+
+  // Filet de sécurité manuel — le lien automatique avec la réservation (voir booking)
+  // n'a pas pu s'appliquer (aucun rendez-vous trouvé, ou plusieurs projets en attente pour
+  // ce client). Avance vers l'étape suivante réelle du pipeline de ce service.
+  const handleConfirmRdv = async () => {
+    const requiresDocs = (projet?.pipeline_steps || []).includes('Documents à donner')
+    if (requiresDocs) {
+      if (!confirm('Confirmer le rendez-vous et demander les documents au client ?')) return
+      setActionLoading('rdv')
+      const ok = await postAction(`/api/v1/admin/projet/${id}/force-status`, { statut: 'Documents à donner' })
+      if (ok) { showToast('Rendez-vous confirmé !'); await fetchData() }
+      setActionLoading('')
+    } else {
+      openStartPanel()
+    }
   }
 
   const handleRevision = async () => {
@@ -308,6 +324,16 @@ export default function AdminProjetDetailPage() {
     setActionLoading('revision')
     const ok = await postAction(`/api/v1/admin/projet/${id}/revision`, { items: validItems })
     if (ok) { showToast('Projet en révision — client notifié !'); setRevisionOpen(false); setRevisionDraft([]); await fetchData() }
+    setActionLoading('')
+  }
+
+  // Corrections appliquées côté équipe -> renvoie au client pour une nouvelle passe.
+  // Réutilise le même item de checklist (pas de reseed, ils existent déjà depuis la 1re ronde).
+  const handleBackToRevision = async () => {
+    if (!confirm('Renvoyer en révision ? Le client sera notifié.')) return
+    setActionLoading('backrevision')
+    const ok = await postAction(`/api/v1/admin/projet/${id}/revision`, { items: [] })
+    if (ok) { showToast('Renvoyé en révision — client notifié !'); await fetchData() }
     setActionLoading('')
   }
 
@@ -475,18 +501,35 @@ export default function AdminProjetDetailPage() {
   }
 
   const statut = projet?.statut || ''
-  const stepIndex = STEP_INDEX[statut] ?? -1
-  const style = STATUT_STYLES[statut] || STATUT_STYLES['Annulé']
+  const pipelineSteps = projet?.pipeline_steps && projet.pipeline_steps.length > 0
+    ? projet.pipeline_steps
+    : ['Documents à donner', 'Documents reçus', 'Travaux en cours', 'En révision', 'Complété']
+  const stepIndex = pipelineStepIndex(pipelineSteps, statut) - 1 // 0-based pour le rendu ci-dessous
+  const meta = statutMeta(statut)
+  const type = serviceType(projet?.nom_service || null)
 
+  const isEnAttenteRdv = statut === 'En attente de rendez-vous'
   const isDocuments = statut === 'Documents à donner'
   const isDocumentsRecus = statut === 'Documents reçus'
   const isTravaux = statut === 'Travaux en cours'
   const isRevision = statut === 'En révision'
+  const isCorrections = statut === 'Corrections en cours'
   const isComplete = statut === 'Complété'
+  const travauxDemarres = isTravaux || isRevision || isCorrections || isComplete
 
   const itemsNormaux = items.filter(i => !i.is_revision)
   const itemsRevision = items.filter(i => i.is_revision)
   const done = itemsNormaux.filter(i => i.est_coche).length
+  const itemsEnAttente = itemsNormaux.filter(i => !i.est_coche)
+  const itemsCompletes = itemsNormaux.filter(i => i.est_coche)
+  // Un item coché avec un commentaire/fichier reste une action à traiter (le client
+  // a signalé un problème) — seul un item coché SANS rien joint est vraiment classé.
+  const itemsRevisionEnAttente = itemsRevision.filter(i => !i.est_coche)
+  const itemsRevisionACorriger = itemsRevision.filter(i => i.est_coche && (i.text_value || i.has_file))
+  const itemsRevisionApprouves = itemsRevision.filter(i => i.est_coche && !i.text_value && !i.has_file)
+  const itemsRevisionCompletes = itemsRevisionApprouves
+
+  const sousTitre = projet?.localisation || projet?.lien_site_test || projet?.nom_service || ''
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -501,35 +544,61 @@ export default function AdminProjetDetailPage() {
         </div>
       )}
 
+      {/* Fil d'Ariane */}
+      <nav className="flex items-center gap-1.5 text-xs font-body text-[var(--color-dark-text-2)] mb-5">
+        <span className="font-bold uppercase tracking-wide text-[var(--color-brand)]">CRM</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_right</span>
+        <Link href="/admin/projets" className="hover:text-[var(--color-brand)] transition-colors">Projets</Link>
+        <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_right</span>
+        <span className="text-[var(--color-dark-1)] font-semibold">#{String(id).padStart(3, '0')}</span>
+      </nav>
+
       {/* Header */}
-      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 flex-wrap">
-            <span className="bg-[var(--color-brand)]/10 text-[var(--color-brand)] px-4 py-1 rounded-full text-xs font-extrabold uppercase tracking-widest font-body">
+      <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-6">
+        <div className="space-y-3 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="bg-[var(--color-brand-muted)] text-[var(--color-brand)] px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest font-body">
               #{String(id).padStart(3, '0')}
             </span>
-            <span className={`${style.bg} ${style.text} px-4 py-1 rounded-full text-xs font-extrabold uppercase tracking-widest flex items-center gap-2 font-body`}>
-              <span className={`w-2 h-2 rounded-full ${style.dot}`} />
+            <span style={{ background: meta.bg, color: meta.text }} className="px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1.5 font-body">
+              <span style={{ background: meta.dot }} className="w-1.5 h-1.5 rounded-full" />
               {statut || '...'}
             </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-widest font-body bg-[var(--color-light-0)]" style={{ color: type.color }}>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '13px' }}>{type.icon}</span>
+              {type.label}
+            </span>
             {projet?.is_archived && (
-              <span className="bg-gray-200 text-gray-500 px-3 py-1 rounded-full text-xs font-bold font-body uppercase tracking-widest">
+              <span className="bg-[var(--color-light-border)] text-[var(--color-dark-text-2)] px-3 py-1 rounded-full text-[10px] font-bold font-body uppercase tracking-widest">
                 Archivé
               </span>
             )}
           </div>
-          <h1 className="font-display text-[var(--text-3xl)] leading-none tracking-tight text-[var(--color-dark-1)] uppercase">
+          <h1 className="font-display text-[var(--color-dark-0)] leading-tight truncate" style={{ fontSize: '24px', fontWeight: 800, letterSpacing: '-0.03em' }}>
             {projet?.titre_affiche || projet?.nom_projet || '...'}
           </h1>
-          {projet?.nom_service && (
-            <p className="text-[var(--color-dark-text-2)] font-body text-sm">{projet.nom_service}</p>
+          {sousTitre && (
+            <p className="text-[var(--color-dark-text-2)] font-body text-sm truncate">{sousTitre}</p>
           )}
         </div>
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2 items-stretch">
+          <div className="flex items-center gap-2">
+            <button disabled
+              title="Intégration QuickBooks — à venir"
+              className="inline-flex items-center gap-2 bg-[var(--color-light-0)] border border-[var(--color-light-border)] text-[var(--color-dark-text-2)] px-4 py-2.5 rounded-full font-body text-xs font-bold uppercase tracking-wide cursor-not-allowed opacity-60 whitespace-nowrap">
+              <span aria-hidden="true" className="material-symbols-outlined text-base">account_balance</span>
+              QuickBooks
+            </button>
+            <Link href={`/admin/projet/${id}/edit`}
+              className="inline-flex items-center gap-2 bg-[var(--color-light-2)] border border-[var(--color-light-border)] text-[var(--color-dark-1)] px-4 py-2.5 rounded-full font-body text-xs font-bold uppercase tracking-wide hover:border-[var(--color-brand)] transition-colors whitespace-nowrap">
+              <span aria-hidden="true" className="material-symbols-outlined text-base">edit</span>
+              Modifier
+            </Link>
+          </div>
           {projet?.facturation_mode ? (
-            <div className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-[var(--color-light-0)] border border-[var(--color-light-border-2)]">
+            <div className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[var(--color-light-0)] border border-[var(--color-light-border)] justify-center">
               <span aria-hidden="true" className="material-symbols-outlined text-sm text-[var(--color-dark-text-2)]">money_off</span>
-              <span className="font-body font-bold text-xs uppercase tracking-wide text-[var(--color-dark-text-2)]">
+              <span className="font-body font-bold text-[10px] uppercase tracking-wide text-[var(--color-dark-text-2)]">
                 {projet.facturation_mode === 'deja_paye' && 'Déjà payé'}
                 {projet.facturation_mode === 'quickbooks' && 'QuickBooks'}
                 {projet.facturation_mode === 'forfait' && 'Forfait'}
@@ -539,42 +608,41 @@ export default function AdminProjetDetailPage() {
             <button
               onClick={handleNotifierFacture}
               disabled={actionLoading === 'facture'}
-              className="bg-[var(--color-brand)] text-white px-8 py-4 rounded-2xl font-body font-bold flex items-center justify-center gap-3 hover:bg-[var(--color-brand-hover)] transition-all disabled:opacity-60">
-              <span aria-hidden="true" className="material-symbols-outlined">description</span>
-              {actionLoading === 'facture' ? 'ENVOI...' : 'NOTIFIER FACTURE'}
+              className="bg-[var(--color-brand)] text-white px-5 py-2.5 rounded-full font-body font-bold text-xs uppercase tracking-wide flex items-center justify-center gap-2 hover:bg-[var(--color-brand-hover)] transition-colors disabled:opacity-60">
+              <span aria-hidden="true" className="material-symbols-outlined text-base">description</span>
+              {actionLoading === 'facture' ? 'Envoi…' : 'Notifier facture'}
             </button>
           )}
-          <Link href={`/admin/projet/${id}/edit`}
-            className="border border-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-8 py-3 rounded-2xl font-body font-bold flex items-center justify-center gap-2 hover:bg-[var(--color-light-1)] transition-all text-sm">
-            <span aria-hidden="true" className="material-symbols-outlined text-sm">edit</span>
-            MODIFIER
-          </Link>
         </div>
       </header>
 
       {/* Pipeline stepper */}
-      <div className="bg-white rounded-2xl p-6 mb-4 overflow-x-auto">
+      <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] p-6 mb-4 overflow-x-auto">
         <div className="flex items-start min-w-max">
-          {PIPELINE_STEPS.map((step, idx) => {
+          {pipelineSteps.map((step, idx) => {
             const isDone = stepIndex > idx
             const isActive = stepIndex === idx
             return (
               <div key={step} className="flex items-center">
                 <div className="flex flex-col items-center gap-2" style={{ minWidth: 100 }}>
-                  <div className={`w-9 h-9 rounded-full flex items-center justify-center font-body font-bold text-sm border-2 transition-all
-                    ${isDone ? 'bg-emerald-500 border-emerald-500 text-white' : isActive ? 'bg-[var(--color-brand)] border-[var(--color-brand)] text-white shadow-[0_0_0_4px_rgba(232,59,20,0.15)]' : 'bg-white border-[var(--color-light-border-2)] text-[var(--color-light-text-3)]'}`}>
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center font-body font-bold text-sm border-2 transition-all"
+                    style={isDone
+                      ? { background: 'var(--color-success)', borderColor: 'var(--color-success)', color: 'white' }
+                      : isActive
+                        ? { background: 'var(--color-brand)', borderColor: 'var(--color-brand)', color: 'white', boxShadow: '0 0 0 4px var(--color-brand-muted)' }
+                        : { background: 'var(--color-light-2)', borderColor: 'var(--color-light-border)', color: 'var(--color-dark-text-2)' }}>
                     {isDone
                       ? <span aria-hidden="true" className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
                       : idx + 1}
                   </div>
-                  <span className={`text-[10px] font-extrabold uppercase tracking-widest text-center leading-tight font-body
-                    ${isDone ? 'text-emerald-600' : isActive ? 'text-[var(--color-brand)]' : 'text-[var(--color-light-text-3)]'}`}
-                    style={{ maxWidth: 90 }}>
+                  <span className="text-[10px] font-extrabold uppercase tracking-widest text-center leading-tight font-body"
+                    style={{ maxWidth: 90, color: isDone ? 'var(--color-success-text)' : isActive ? 'var(--color-brand)' : 'var(--color-dark-text-2)' }}>
                     {step}
                   </span>
                 </div>
-                {idx < PIPELINE_STEPS.length - 1 && (
-                  <div className={`h-0.5 w-12 mx-1 mb-5 flex-shrink-0 rounded-full ${stepIndex > idx ? 'bg-emerald-400' : 'bg-[var(--color-light-border-2)]'}`} />
+                {idx < pipelineSteps.length - 1 && (
+                  <div className="h-0.5 w-12 mx-1 mb-5 flex-shrink-0 rounded-full"
+                    style={{ background: stepIndex > idx ? 'var(--color-success)' : 'var(--color-light-border)' }} />
                 )}
               </div>
             )
@@ -582,114 +650,184 @@ export default function AdminProjetDetailPage() {
         </div>
       </div>
 
-      {/* Action bar contextuelle */}
-      <div className="bg-[var(--color-light-0)] p-2 rounded-2xl mb-4 flex flex-wrap gap-2">
+      {/* Barre d'actions unifiée : actions contextuelles + outils + utilitaires, une seule rangée */}
+      <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] p-2 rounded-[18px] mb-6 flex flex-wrap items-center gap-2">
 
         {/* Bouton principal selon étape */}
+        {isEnAttenteRdv && (
+          <button onClick={handleConfirmRdv} disabled={actionLoading === 'rdv'}
+            className="flex-1 min-w-[160px] text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90"
+            style={{ background: 'var(--color-dark-text-2)' }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">event_available</span>
+            {actionLoading === 'rdv' ? '...' : 'Confirmer le rendez-vous'}
+          </button>
+        )}
         {isDocuments && (
           <>
             <button onClick={handleMarkDocumentsRecus} disabled={actionLoading === 'docs'}
-              className="flex-1 min-w-[160px] bg-blue-600 text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-blue-700">
+              className="flex-1 min-w-[160px] py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 text-white hover:opacity-90"
+              style={{ background: 'var(--color-info)' }}>
               <span aria-hidden="true" className="material-symbols-outlined text-sm">inbox</span>
-              {actionLoading === 'docs' ? '...' : 'DOCS REÇUS'}
+              {actionLoading === 'docs' ? '...' : 'Docs reçus'}
             </button>
             <button onClick={handleRappelDocuments} disabled={actionLoading === 'rappel'}
-              className="flex-1 min-w-[160px] bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] text-[var(--color-dark-1)] py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-[var(--color-light-0)]">
+              className="flex-1 min-w-[160px] bg-[var(--color-light-0)] border border-[var(--color-light-border)] text-[var(--color-dark-1)] py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-[var(--color-light-1)]">
               <span aria-hidden="true" className="material-symbols-outlined text-sm">notifications</span>
-              {actionLoading === 'rappel' ? '...' : 'RAPPEL CLIENT'}
+              {actionLoading === 'rappel' ? '...' : 'Rappel client'}
             </button>
           </>
         )}
-        {isDocumentsRecus && (
-          <button onClick={handleStart} disabled={actionLoading === 'start'}
-            className="flex-1 min-w-[160px] bg-orange-500 text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-orange-600">
-            <span aria-hidden="true" className="material-symbols-outlined text-sm">play_arrow</span>
-            {actionLoading === 'start' ? '...' : 'DÉMARRER TRAVAUX'}
-          </button>
-        )}
         {isTravaux && (
           <button onClick={openRevisionPanel}
-            className="flex-1 min-w-[160px] bg-yellow-500 text-[var(--color-dark-1)] py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-yellow-400">
+            className="flex-1 min-w-[160px] bg-[var(--color-brand)] text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-[var(--color-brand-hover)]">
             <span aria-hidden="true" className="material-symbols-outlined text-sm">rate_review</span>
-            EN RÉVISION
+            En révision
           </button>
         )}
         {isRevision && (
           <>
             <button onClick={openCompletePanel} disabled={actionLoading === 'complete'}
-              className="flex-1 min-w-[160px] bg-emerald-600 text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-emerald-700">
+              className="flex-1 min-w-[160px] text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90"
+              style={{ background: 'var(--color-success)' }}>
               <span aria-hidden="true" className="material-symbols-outlined text-sm">check_circle</span>
-              {actionLoading === 'complete' ? '...' : 'MARQUER COMPLÉTÉ'}
+              {actionLoading === 'complete' ? '...' : 'Marquer complété'}
             </button>
             <button onClick={handleNotifierRevision} disabled={actionLoading === 'notif'}
-              className="flex-1 min-w-[160px] bg-yellow-600 text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-yellow-700">
+              className="flex-1 min-w-[160px] bg-[var(--color-light-2)] border-2 border-[var(--color-brand)] text-[var(--color-brand)] py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:bg-[var(--color-brand)] hover:text-white">
               <span aria-hidden="true" className="material-symbols-outlined text-sm">mail</span>
-              {actionLoading === 'notif' ? '...' : 'NOTIFIER CLIENT'}
+              {actionLoading === 'notif' ? '...' : 'Notifier client'}
             </button>
           </>
         )}
+        {isCorrections && (
+          <button onClick={handleBackToRevision} disabled={actionLoading === 'backrevision'}
+            className="flex-1 min-w-[160px] text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90"
+            style={{ background: 'var(--color-brand)' }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">rate_review</span>
+            {actionLoading === 'backrevision' ? '...' : 'Renvoyer en révision'}
+          </button>
+        )}
         {isComplete && (
-          <div className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-4 text-emerald-600 font-body font-bold text-xs uppercase tracking-widest">
+          <div className="flex-1 min-w-[160px] flex items-center justify-center gap-2 py-4 font-body font-bold text-xs uppercase tracking-widest" style={{ color: 'var(--color-success-text)' }}>
             <span aria-hidden="true" className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-            PROJET COMPLÉTÉ
+            Projet complété
           </div>
         )}
 
-        {/* Outils toujours visibles */}
-        <Link href={`/admin/projet/${id}/identite-visuelle`}
-          className="flex-1 min-w-[140px] bg-[var(--color-dark-1)] text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-black">
-          <span aria-hidden="true" className="material-symbols-outlined text-sm">palette</span>
-          IDENTITÉ VISUELLE
-        </Link>
-        <Link href={`/admin/projet/${id}/decision`}
-          className="flex-1 min-w-[140px] bg-[var(--color-dark-text-2)] text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-[var(--color-dark-2)]">
-          <span aria-hidden="true" className="material-symbols-outlined text-sm">quiz</span>
-          DECISION BOARD
-        </Link>
-        <Link href={`/admin/sites/nouveau?from_projet=${id}`}
-          className="flex-1 min-w-[140px] bg-emerald-600 text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:bg-emerald-700">
-          <span aria-hidden="true" className="material-symbols-outlined text-sm">web</span>
-          PRÉPARER SITE
-        </Link>
-      </div>
+        {/* Démarrer les travaux — visible tant que les travaux n'ont pas commencé, pour forcer
+            la séquence peu importe l'étape d'avant (rdv/documents) où on est bloqué */}
+        {!travauxDemarres && (
+          <button onClick={openStartPanel} disabled={actionLoading === 'start'}
+            className="flex-1 min-w-[160px] text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-60 hover:opacity-90"
+            style={{ background: 'var(--color-warning)' }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">play_arrow</span>
+            {actionLoading === 'start' ? '...' : 'Démarrer les travaux'}
+          </button>
+        )}
 
-      {/* Actions secondaires */}
-      <div className="flex flex-wrap gap-2 mb-6">
+        {/* Préparer site — seulement pour un service lié au web, à partir de Documents reçus */}
+        {projet?.is_site_web && isDocumentsRecus && (
+          <Link href={`/admin/sites/nouveau?from_projet=${id}`}
+            className="flex-1 min-w-[140px] text-white py-4 rounded-xl font-body font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 hover:opacity-90"
+            style={{ background: 'var(--color-success)' }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">web</span>
+            Préparer site
+          </Link>
+        )}
+
+        {/* Séparateur vertical entre actions et utilitaires */}
+        <div className="w-px self-stretch bg-[var(--color-light-border)] mx-1 hidden md:block" />
+
+        {/* Utilitaires */}
         <button onClick={() => { setForcedStatut(statut || STATUTS[0]); setForceStatusOpen(v => !v) }}
-          className="bg-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-5 py-2.5 rounded-xl font-body font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-[var(--color-light-border-2)] transition-colors">
+          className="flex-shrink-0 bg-transparent text-[var(--color-dark-text-2)] px-4 py-2.5 rounded-full font-body font-bold text-xs uppercase tracking-wide flex items-center gap-2 hover:bg-[var(--color-light-0)] transition-colors">
           <span aria-hidden="true" className="material-symbols-outlined text-sm">tune</span>
           Forcer statut
         </button>
         <button onClick={handleArchive} disabled={actionLoading === 'archive'}
-          className="bg-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-5 py-2.5 rounded-xl font-body font-bold text-xs uppercase tracking-widest flex items-center gap-2 disabled:opacity-60 hover:bg-[var(--color-light-border-2)] transition-colors">
+          className="flex-shrink-0 bg-transparent text-[var(--color-dark-text-2)] px-4 py-2.5 rounded-full font-body font-bold text-xs uppercase tracking-wide flex items-center gap-2 disabled:opacity-60 hover:bg-[var(--color-light-0)] transition-colors">
           <span aria-hidden="true" className="material-symbols-outlined text-sm">{projet?.is_archived ? 'unarchive' : 'archive'}</span>
           {projet?.is_archived ? 'Désarchiver' : 'Archiver'}
         </button>
-        <button onClick={openEditItems}
-          className="bg-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-5 py-2.5 rounded-xl font-body font-bold text-xs uppercase tracking-widest flex items-center gap-2 hover:bg-[var(--color-light-border-2)] transition-colors">
-          <span aria-hidden="true" className="material-symbols-outlined text-sm">edit_note</span>
-          Modifier items
-        </button>
+
+        {/* Dropdown Outils — Identité visuelle / Decision board / Modifier items */}
+        <div style={{ position: 'relative' }}>
+          <button onClick={() => setOutilsOpen(v => !v)}
+            className="flex-shrink-0 bg-transparent text-[var(--color-dark-text-2)] px-4 py-2.5 rounded-full font-body font-bold text-xs uppercase tracking-wide flex items-center gap-2 hover:bg-[var(--color-light-0)] transition-colors">
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">apps</span>
+            Outils de présentation
+            <span aria-hidden="true" className="material-symbols-outlined text-sm">{outilsOpen ? 'expand_less' : 'expand_more'}</span>
+          </button>
+          {outilsOpen && (
+            <>
+              <div onClick={() => setOutilsOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+              <div className="bg-white border border-[var(--color-light-border)] rounded-xl shadow-lg overflow-hidden"
+                style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', minWidth: '220px', zIndex: 41 }}>
+                <Link href={`/admin/projet/${id}/identite-visuelle`} onClick={() => setOutilsOpen(false)}
+                  className="flex items-center gap-2 px-4 py-3 font-body text-sm font-semibold text-[var(--color-dark-1)] hover:bg-[var(--color-light-1)] transition-colors">
+                  <span aria-hidden="true" className="material-symbols-outlined text-base">palette</span>
+                  Identité visuelle
+                </Link>
+                <Link href={`/admin/projet/${id}/decision`} onClick={() => setOutilsOpen(false)}
+                  className="flex items-center gap-2 px-4 py-3 font-body text-sm font-semibold text-[var(--color-dark-1)] hover:bg-[var(--color-light-1)] transition-colors border-t border-[var(--color-light-border)]">
+                  <span aria-hidden="true" className="material-symbols-outlined text-base">quiz</span>
+                  Decision board
+                </Link>
+                <button onClick={() => { setOutilsOpen(false); openEditItems() }}
+                  className="w-full flex items-center gap-2 px-4 py-3 font-body text-sm font-semibold text-[var(--color-dark-1)] hover:bg-[var(--color-light-1)] transition-colors border-t border-[var(--color-light-border)] text-left">
+                  <span aria-hidden="true" className="material-symbols-outlined text-base">edit_note</span>
+                  Modifier items
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Panel — Démarrer les travaux */}
+      {startPanelOpen && (
+        <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] p-6 mb-6">
+          <h3 className="font-display text-sm uppercase tracking-wide text-[var(--color-dark-1)] mb-1">Démarrer les travaux</h3>
+          <p className="font-body text-xs text-[var(--color-dark-text-2)] mb-4">
+            Date de livraison estimée (optionnel) — laisse vide pour garder le calcul automatique par défaut.
+          </p>
+          <div className="flex flex-wrap gap-3 items-center">
+            <input
+              type="date"
+              value={startDateInput}
+              onChange={e => setStartDateInput(e.target.value)}
+              className={`flex-1 min-w-[220px] ${inputCls}`}
+            />
+            <button onClick={handleStart} disabled={actionLoading === 'start'}
+              className="bg-[var(--color-brand)] text-white px-6 py-3 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:bg-[var(--color-brand-hover)] transition-colors">
+              {actionLoading === 'start' ? 'Envoi...' : 'Confirmer'}
+            </button>
+            <button onClick={() => setStartPanelOpen(false)}
+              className="bg-[var(--color-light-0)] text-[var(--color-dark-1)] px-5 py-3 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-border)] transition-colors">
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Panel — Forcer statut */}
       {forceStatusOpen && (
-        <div className="bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] rounded-2xl p-6 mb-6">
-          <h3 className="font-display text-[var(--text-lg)] text-[var(--color-dark-1)] mb-4">FORCER LE STATUT</h3>
+        <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] p-6 mb-6">
+          <h3 className="font-display text-sm uppercase tracking-wide text-[var(--color-dark-1)] mb-4">Forcer le statut</h3>
           <div className="flex flex-wrap gap-3 items-center">
             <select
               value={forcedStatut}
               onChange={e => setForcedStatut(e.target.value)}
-              className="flex-1 min-w-[220px] bg-white border border-[var(--color-light-border-2)] rounded-xl px-4 py-3 font-body text-sm text-[var(--color-dark-1)] outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30"
+              className={`flex-1 min-w-[220px] ${inputCls}`}
             >
               {STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
             <button onClick={handleForceStatus} disabled={actionLoading === 'force'}
-              className="bg-[var(--color-brand)] text-white px-8 py-3 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:bg-[var(--color-brand-hover)] transition-colors">
+              className="bg-[var(--color-brand)] text-white px-6 py-3 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:bg-[var(--color-brand-hover)] transition-colors">
               {actionLoading === 'force' ? 'Envoi...' : 'Appliquer'}
             </button>
             <button onClick={() => setForceStatusOpen(false)}
-              className="bg-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-6 py-3 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-border-2)] transition-colors">
+              className="bg-[var(--color-light-0)] text-[var(--color-dark-1)] px-5 py-3 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-border)] transition-colors">
               Annuler
             </button>
           </div>
@@ -698,9 +836,9 @@ export default function AdminProjetDetailPage() {
 
       {/* Panel — Envoyer en révision */}
       {revisionOpen && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 mb-6">
-          <h3 className="font-display text-[var(--text-lg)] text-amber-800 mb-4">CRÉER UNE LISTE DE RÉVISIONS</h3>
-          <p className="text-amber-700 font-body text-sm mb-4">
+        <div className="rounded-[18px] p-6 mb-6" style={{ background: 'var(--color-warning-bg)', border: '1px solid color-mix(in oklch, var(--color-warning) 30%, transparent)' }}>
+          <h3 className="font-display text-sm uppercase tracking-wide mb-3" style={{ color: 'var(--color-warning-text)' }}>Créer une liste de révisions</h3>
+          <p className="font-body text-sm mb-4" style={{ color: 'var(--color-warning-text)' }}>
             Décochez les items qui ne s&apos;appliquent pas à ce projet. Le client recevra un courriel de notification automatiquement et pourra cocher chaque item ou signaler un changement (texte ou fichier).
           </p>
           <div className="space-y-2 mb-4">
@@ -710,36 +848,39 @@ export default function AdminProjetDetailPage() {
                   type="checkbox"
                   checked={row.included}
                   onChange={e => setRevisionDraft(prev => prev.map(r => r.key === row.key ? { ...r, included: e.target.checked } : r))}
-                  className="w-5 h-5 accent-amber-500 flex-shrink-0"
+                  className="w-5 h-5 flex-shrink-0"
+                  style={{ accentColor: 'var(--color-warning)' }}
                 />
                 <input
                   type="text"
                   value={row.label}
                   onChange={e => setRevisionDraft(prev => prev.map(r => r.key === row.key ? { ...r, label: e.target.value } : r))}
                   placeholder="Item de révision..."
-                  className={`flex-1 bg-white border border-amber-200 rounded-xl px-4 py-2 font-body text-sm outline-none focus:ring-2 focus:ring-amber-400/40 ${!row.included ? 'opacity-50' : ''}`}
+                  className={`flex-1 bg-[var(--color-light-2)] border-none rounded-xl px-4 py-2 font-body text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30 ${!row.included ? 'opacity-50' : ''}`}
                 />
                 <button onClick={() => setRevisionDraft(prev => prev.filter(r => r.key !== row.key))}
-                  className="text-red-400 hover:text-red-600 px-2">
+                  className="px-2 hover:opacity-70" style={{ color: 'var(--color-warning-text)' }}>
                   <span aria-hidden="true" className="material-symbols-outlined text-sm">close</span>
                 </button>
               </div>
             ))}
             {revisionDraft.length === 0 && (
-              <p className="text-amber-700/70 font-body text-sm">Aucun item. Cliquez sur « + Ajouter un item ».</p>
+              <p className="font-body text-sm opacity-70" style={{ color: 'var(--color-warning-text)' }}>Aucun item. Cliquez sur « + Ajouter un item ».</p>
             )}
           </div>
           <div className="flex flex-wrap gap-3">
             <button onClick={() => setRevisionDraft(prev => [...prev, { key: newRevisionKey(), label: '', included: true }])}
-              className="border border-dashed border-amber-400 text-amber-700 px-4 py-2 rounded-xl font-body text-sm font-bold hover:bg-amber-100 transition-colors">
+              className="border border-dashed px-4 py-2 rounded-xl font-body text-sm font-bold hover:bg-[var(--color-light-2)] transition-colors"
+              style={{ borderColor: 'var(--color-warning)', color: 'var(--color-warning-text)' }}>
               + Ajouter un item
             </button>
             <button onClick={handleRevision} disabled={actionLoading === 'revision'}
-              className="bg-amber-500 text-white px-8 py-2 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:bg-amber-600 transition-colors">
+              className="text-white px-6 py-2 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:opacity-90 transition-colors"
+              style={{ background: 'var(--color-warning)' }}>
               {actionLoading === 'revision' ? 'Envoi...' : 'Envoyer en révision + notifier'}
             </button>
             <button onClick={() => { setRevisionOpen(false); setRevisionDraft([]) }}
-              className="bg-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-6 py-2 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-border-2)] transition-colors">
+              className="bg-[var(--color-light-2)] px-5 py-2 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-0)] transition-colors" style={{ color: 'var(--color-dark-1)' }}>
               Annuler
             </button>
           </div>
@@ -748,24 +889,24 @@ export default function AdminProjetDetailPage() {
 
       {/* Panel — Modifier items checklist */}
       {editItemsOpen && (
-        <div className="bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] rounded-2xl p-6 mb-6">
-          <h3 className="font-display text-[var(--text-lg)] text-[var(--color-dark-1)] mb-4">MODIFIER LES ITEMS DE LA CHECKLIST</h3>
+        <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] p-6 mb-6">
+          <h3 className="font-display text-sm uppercase tracking-wide text-[var(--color-dark-1)] mb-4">Modifier les items de la checklist</h3>
           {editedItems.length === 0 ? (
             <p className="text-[var(--color-dark-text-2)] font-body text-sm">Aucun item à modifier.</p>
           ) : (
             <div className="space-y-2 mb-4">
               {editedItems.map((item, idx) => (
-                <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_200px_auto] gap-2 bg-white border border-[var(--color-light-border-2)] rounded-xl p-3">
+                <div key={item.id} className="grid grid-cols-1 md:grid-cols-[1fr_200px_auto] gap-2 bg-[var(--color-light-0)] border border-[var(--color-light-border)] rounded-xl p-3">
                   <input
                     type="text"
                     value={item.nom}
                     onChange={e => setEditedItems(prev => { const n = [...prev]; n[idx] = { ...n[idx], nom: e.target.value }; return n })}
-                    className="bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] rounded-lg px-3 py-2 font-body text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30"
+                    className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-lg px-3 py-2 font-body text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30"
                   />
                   <select
                     value={item.type}
                     onChange={e => setEditedItems(prev => { const n = [...prev]; n[idx] = { ...n[idx], type: e.target.value }; return n })}
-                    className="bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] rounded-lg px-3 py-2 font-body text-sm outline-none"
+                    className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-lg px-3 py-2 font-body text-sm outline-none"
                   >
                     {TYPE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                   </select>
@@ -774,7 +915,8 @@ export default function AdminProjetDetailPage() {
                       type="checkbox"
                       checked={item.is_required}
                       onChange={e => setEditedItems(prev => { const n = [...prev]; n[idx] = { ...n[idx], is_required: e.target.checked }; return n })}
-                      className="w-4 h-4 accent-['var(--color-brand)']"
+                      className="w-4 h-4"
+                      style={{ accentColor: 'var(--color-brand)' }}
                     />
                     Obligatoire
                   </label>
@@ -784,11 +926,11 @@ export default function AdminProjetDetailPage() {
           )}
           <div className="flex gap-3">
             <button onClick={handleSaveItems} disabled={actionLoading === 'edit'}
-              className="bg-[var(--color-brand)] text-white px-8 py-3 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:bg-[var(--color-brand-hover)] transition-colors">
+              className="bg-[var(--color-brand)] text-white px-6 py-3 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:bg-[var(--color-brand-hover)] transition-colors">
               {actionLoading === 'edit' ? 'Sauvegarde...' : 'Sauvegarder'}
             </button>
             <button onClick={() => setEditItemsOpen(false)}
-              className="bg-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-6 py-3 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-border-2)] transition-colors">
+              className="bg-[var(--color-light-0)] text-[var(--color-dark-1)] px-5 py-3 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-border)] transition-colors">
               Annuler
             </button>
           </div>
@@ -797,15 +939,15 @@ export default function AdminProjetDetailPage() {
 
       {/* Panel — Marquer complété + ressources à envoyer */}
       {completeOpen && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6 mb-6">
-          <h3 className="font-display text-[var(--text-lg)] text-emerald-800 mb-4">MARQUER COMPLÉTÉ — RESSOURCES À ENVOYER</h3>
-          <p className="text-emerald-700 font-body text-sm mb-4">
+        <div className="rounded-[18px] p-6 mb-6" style={{ background: 'var(--color-success-bg)', border: '1px solid color-mix(in oklch, var(--color-success) 30%, transparent)' }}>
+          <h3 className="font-display text-sm uppercase tracking-wide mb-3" style={{ color: 'var(--color-success-text)' }}>Marquer complété — ressources à envoyer</h3>
+          <p className="font-body text-sm mb-4" style={{ color: 'var(--color-success-text)' }}>
             Cochez les ressources à attribuer à {projet?.client_nom || 'la cliente'}. Elles seront ajoutées à son portail et incluses dans le courriel de livraison.
           </p>
           {loadingRessources ? (
-            <p className="text-emerald-700/70 font-body text-sm mb-4">Chargement des ressources...</p>
+            <p className="font-body text-sm mb-4 opacity-70" style={{ color: 'var(--color-success-text)' }}>Chargement des ressources...</p>
           ) : completeRessources.length === 0 ? (
-            <p className="text-emerald-700/70 font-body text-sm mb-4">
+            <p className="font-body text-sm mb-4 opacity-70" style={{ color: 'var(--color-success-text)' }}>
               Aucune ressource disponible. <Link href="/admin/ressources" className="underline font-bold">Créer une ressource</Link>.
             </p>
           ) : (
@@ -815,18 +957,18 @@ export default function AdminProjetDetailPage() {
                 if (items.length === 0) return null
                 return (
                   <div key={b.id}>
-                    <p className="font-body text-xs font-bold uppercase tracking-widest text-emerald-700 mb-2 flex items-center gap-1.5">
+                    <p className="font-body text-xs font-bold uppercase tracking-widest mb-2 flex items-center gap-1.5" style={{ color: 'var(--color-success-text)' }}>
                       <span aria-hidden="true" className="material-symbols-outlined text-sm">{b.icone}</span>
                       {b.nom}
                     </p>
                     <div className="space-y-1.5">
                       {items.map(r => (
-                        <label key={r.id} className="flex items-center gap-2 bg-white border border-emerald-200 rounded-xl px-3 py-2 cursor-pointer">
+                        <label key={r.id} className="flex items-center gap-2 bg-[var(--color-light-2)] rounded-xl px-3 py-2 cursor-pointer" style={{ border: '1px solid color-mix(in oklch, var(--color-success) 25%, transparent)' }}>
                           <input type="checkbox" checked={selectedRessourceIds.has(r.id)} onChange={() => toggleRessource(r.id)}
-                            className="w-4 h-4 accent-emerald-600" />
+                            className="w-4 h-4" style={{ accentColor: 'var(--color-success)' }} />
                           <span className="flex-1 font-body text-sm text-[var(--color-dark-1)]">{r.titre}</span>
                           {r.is_global && (
-                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-body">Tous</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[var(--color-light-border)] text-[var(--color-dark-text-2)] font-body">Tous</span>
                           )}
                         </label>
                       ))}
@@ -839,15 +981,15 @@ export default function AdminProjetDetailPage() {
                 if (sansBundle.length === 0) return null
                 return (
                   <div>
-                    <p className="font-body text-xs font-bold uppercase tracking-widest text-emerald-700 mb-2">Sans bundle</p>
+                    <p className="font-body text-xs font-bold uppercase tracking-widest mb-2" style={{ color: 'var(--color-success-text)' }}>Sans bundle</p>
                     <div className="space-y-1.5">
                       {sansBundle.map(r => (
-                        <label key={r.id} className="flex items-center gap-2 bg-white border border-emerald-200 rounded-xl px-3 py-2 cursor-pointer">
+                        <label key={r.id} className="flex items-center gap-2 bg-[var(--color-light-2)] rounded-xl px-3 py-2 cursor-pointer" style={{ border: '1px solid color-mix(in oklch, var(--color-success) 25%, transparent)' }}>
                           <input type="checkbox" checked={selectedRessourceIds.has(r.id)} onChange={() => toggleRessource(r.id)}
-                            className="w-4 h-4 accent-emerald-600" />
+                            className="w-4 h-4" style={{ accentColor: 'var(--color-success)' }} />
                           <span className="flex-1 font-body text-sm text-[var(--color-dark-1)]">{r.titre}</span>
                           {r.is_global && (
-                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 font-body">Tous</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-[var(--color-light-border)] text-[var(--color-dark-text-2)] font-body">Tous</span>
                           )}
                         </label>
                       ))}
@@ -859,81 +1001,236 @@ export default function AdminProjetDetailPage() {
           )}
           <div className="flex flex-wrap gap-3">
             <button onClick={handleComplete} disabled={actionLoading === 'complete'}
-              className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:bg-emerald-700 transition-colors">
+              className="text-white px-6 py-3 rounded-xl font-body font-bold text-sm disabled:opacity-60 hover:opacity-90 transition-colors"
+              style={{ background: 'var(--color-success)' }}>
               {actionLoading === 'complete' ? 'Envoi...' : selectedRessourceIds.size > 0 ? `Attribuer (${selectedRessourceIds.size}) + Marquer complété` : 'Marquer complété'}
             </button>
             <button onClick={() => setCompleteOpen(false)}
-              className="bg-[var(--color-light-border-2)] text-[var(--color-dark-1)] px-6 py-3 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-border-2)] transition-colors">
+              className="bg-[var(--color-light-2)] px-5 py-3 rounded-xl font-body font-bold text-sm hover:bg-[var(--color-light-0)] transition-colors" style={{ color: 'var(--color-dark-1)' }}>
               Annuler
             </button>
           </div>
         </div>
       )}
 
+      {/* Révisions du client — toujours en haut de page dès qu'il y en a : c'est
+          l'action prioritaire, elle ne doit pas se perdre plus bas dans la page. */}
+      {itemsRevision.length > 0 && (
+        <div className="rounded-[18px] p-6 space-y-4 mb-6" style={{ background: 'var(--color-warning-bg)', border: '1px solid color-mix(in oklch, var(--color-warning) 30%, transparent)' }}>
+          <div>
+            <h2 className="font-display text-base uppercase tracking-wide" style={{ color: 'var(--color-warning-text)' }}>Liste de révisions</h2>
+            {itemsRevisionACorriger.length > 0 && (
+              <p className="font-body text-xs mt-1" style={{ color: 'var(--color-warning-text)' }}>
+                {itemsRevisionACorriger.filter(i => i.admin_resolu).length}/{itemsRevisionACorriger.length} corrections cochées —
+                une fois toutes cochées, le client est automatiquement renotifié pour une dernière vérification.
+              </p>
+            )}
+          </div>
+          <div className="space-y-3">
+            {itemsRevisionEnAttente.map(item => (
+              <div key={item.id}>
+                <div className="flex items-center gap-3">
+                  <div className="w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center"
+                    style={{ borderColor: 'color-mix(in oklch, var(--color-warning) 50%, transparent)' }} />
+                  <span className="flex-1 font-body text-sm font-medium" style={{ color: 'var(--color-warning-text)' }}>
+                    {item.nom_item}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body" style={{ background: 'var(--color-warning)', color: 'white' }}>
+                    En attente
+                  </span>
+                </div>
+                {(item.text_value || item.has_file) && (
+                  <div className="pl-8 pt-1.5">
+                    <ChecklistItemContent item={item} apiBase={API} />
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {/* Coché + commentaire/fichier joint = le client a signalé un problème — reste
+                visible et actionnable ici tant que ce n'est pas coché "corrigé" par l'admin. */}
+            {itemsRevisionACorriger.map(item => (
+              <div key={item.id} className="rounded-xl p-2"
+                style={{
+                  background: item.admin_resolu ? 'var(--color-success-bg)' : 'var(--color-error-bg)',
+                  border: `1px solid color-mix(in oklch, ${item.admin_resolu ? 'var(--color-success)' : 'var(--color-error)'} 30%, transparent)`,
+                }}>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleResolu(item.id)}
+                    title={item.admin_resolu ? 'Corrigé — cliquer pour annuler' : 'Marquer comme corrigé'}
+                    className="w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center cursor-pointer"
+                    style={item.admin_resolu
+                      ? { borderColor: 'var(--color-success)', background: 'var(--color-success)', color: 'white' }
+                      : { borderColor: 'var(--color-error)', background: 'transparent' }}
+                  >
+                    {item.admin_resolu && (
+                      <span aria-hidden="true" className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                    )}
+                  </button>
+                  <span className="flex-1 font-body text-sm font-medium"
+                    style={{
+                      color: item.admin_resolu ? 'var(--color-success-text)' : 'var(--color-error-text)',
+                      textDecoration: item.admin_resolu ? 'line-through' : 'none',
+                      opacity: item.admin_resolu ? 0.6 : 1,
+                    }}>
+                    {item.nom_item}
+                  </span>
+                  <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body"
+                    style={{ background: item.admin_resolu ? 'var(--color-success)' : 'var(--color-error)', color: 'white' }}>
+                    {item.admin_resolu ? 'Corrigé' : 'À corriger'}
+                  </span>
+                </div>
+                <div className="pl-8 pt-1.5">
+                  <ChecklistItemContent item={item} apiBase={API} />
+                </div>
+              </div>
+            ))}
+
+            {itemsRevisionCompletes.length > 0 && (
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setShowRevisionDone(v => !v)}
+                  aria-expanded={showRevisionDone}
+                  className="flex items-center gap-2 py-1.5 transition-colors"
+                  style={{ color: 'var(--color-warning-text)' }}
+                >
+                  <span aria-hidden="true" className="material-symbols-outlined text-lg transition-transform" style={{ transform: showRevisionDone ? 'rotate(180deg)' : 'none' }}>
+                    expand_more
+                  </span>
+                  <span className="font-body text-xs font-bold uppercase tracking-widest">
+                    {showRevisionDone ? 'Masquer' : 'Voir'} approuvé ({itemsRevisionCompletes.length})
+                  </span>
+                </button>
+                {showRevisionDone && (
+                  <div className="space-y-3 mt-2">
+                    {itemsRevisionCompletes.map(item => (
+                      <div key={item.id} className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center"
+                          style={{ borderColor: 'var(--color-warning)', background: 'var(--color-warning)', color: 'white' }}>
+                          <span aria-hidden="true" className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                        </div>
+                        <span className="flex-1 font-body text-sm font-medium line-through opacity-50" style={{ color: 'var(--color-warning-text)' }}>
+                          {item.nom_item}
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body" style={{ background: 'var(--color-warning)', color: 'white' }}>
+                          Approuvé
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Grid principal */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
         {/* Colonne gauche */}
-        <div className="lg:col-span-8 space-y-8">
+        <div className="lg:col-span-8 space-y-6">
 
           {/* Checklist + Drive */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
             {/* Checklist normale */}
-            <div className="bg-white p-8 rounded-3xl space-y-4">
+            {itemsNormaux.length === 0 ? (
+              <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] px-6 py-4 flex items-center gap-3">
+                <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-dark-text-2)]">checklist</span>
+                <p className="text-[var(--color-dark-text-2)] text-sm font-body">Aucun item pour ce type de service.</p>
+              </div>
+            ) : (
+            <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] p-6 rounded-[18px] space-y-4">
               <div className="flex items-center justify-between">
-                <h2 className="font-display text-[var(--text-xl)] text-[var(--color-dark-1)]">CHECKLIST PROJET</h2>
+                <h2 className="font-display text-base uppercase tracking-wide text-[var(--color-dark-1)]">Checklist projet</h2>
                 <span className="text-xs text-[var(--color-dark-text-2)] font-body">{done}/{itemsNormaux.length}</span>
               </div>
-              <div className="h-1.5 bg-[var(--color-light-border-2)] rounded-full overflow-hidden">
+              <div className="h-1.5 bg-[var(--color-light-0)] rounded-full overflow-hidden">
                 <div className="h-full bg-[var(--color-brand)] rounded-full transition-all"
                   style={{ width: `${itemsNormaux.length ? (done / itemsNormaux.length) * 100 : 0}%` }} />
               </div>
               <div className="space-y-3">
-                {itemsNormaux.length === 0 && (
-                  <p className="text-[var(--color-dark-text-2)] text-sm font-body">Aucun item.</p>
-                )}
-                {itemsNormaux.map(item => (
-                  <div key={item.id} className={`rounded-xl border transition-all ${item.est_coche ? 'border-[var(--color-brand)]/20 bg-[var(--color-brand)]/3' : 'border-[var(--color-light-border-2)]'}`}>
+                {itemsEnAttente.map(item => (
+                  <div key={item.id} className="rounded-xl border transition-all" style={{ borderColor: 'var(--color-light-border)' }}>
                     <div className="flex items-center gap-3 px-3 py-2.5">
-                      <div className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center ${item.est_coche ? 'border-[var(--color-brand)] bg-[var(--color-brand)] text-white' : 'border-[var(--color-light-border-2)]'}`}>
-                        {item.est_coche && <span aria-hidden="true" className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>}
-                      </div>
-                      <span className={`flex-1 font-body text-sm font-medium ${item.est_coche ? 'text-[var(--color-dark-1)]' : 'text-[var(--color-dark-text-2)]'}`}>
+                      <div className="w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center" style={{ borderColor: 'var(--color-light-border)' }} />
+                      <span className="flex-1 font-body text-sm font-medium text-[var(--color-dark-text-2)]">
                         {item.nom_item}
                       </span>
                       {item.requires_file && !item.has_file && (
-                        <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body ${item.is_required ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
+                        <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body"
+                          style={item.is_required ? { background: 'var(--color-error-bg)', color: 'var(--color-error-text)' } : { background: 'var(--color-light-border)', color: 'var(--color-dark-text-2)' }}>
                           {item.is_required ? 'Requis' : 'Optionnel'}
                         </span>
                       )}
                     </div>
-                    {item.est_coche && (item.text_value || item.has_file) && (
-                      <div className="px-3 pb-3">
-                        <ChecklistItemContent item={item} apiBase={API} />
+                  </div>
+                ))}
+
+                {itemsCompletes.length > 0 && (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowComplete(v => !v)}
+                      aria-expanded={showComplete}
+                      className="flex items-center gap-2 py-1.5 text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)] transition-colors"
+                    >
+                      <span aria-hidden="true" className="material-symbols-outlined text-lg transition-transform" style={{ transform: showComplete ? 'rotate(180deg)' : 'none' }}>
+                        expand_more
+                      </span>
+                      <span className="font-body text-xs font-bold uppercase tracking-widest">
+                        {showComplete ? 'Masquer' : 'Voir'} complété ({itemsCompletes.length})
+                      </span>
+                    </button>
+                    {showComplete && (
+                      <div className="space-y-3 mt-2">
+                        {itemsCompletes.map(item => (
+                          <div key={item.id} className="rounded-xl border transition-all"
+                            style={{ borderColor: 'color-mix(in oklch, var(--color-brand) 20%, transparent)', background: 'var(--color-brand-muted)' }}>
+                            <div className="flex items-center gap-3 px-3 py-2.5">
+                              <div className="w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center"
+                                style={{ borderColor: 'var(--color-brand)', background: 'var(--color-brand)', color: 'white' }}>
+                                <span aria-hidden="true" className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                              </div>
+                              <span className="flex-1 font-body text-sm font-medium text-[var(--color-dark-1)]">
+                                {item.nom_item}
+                              </span>
+                            </div>
+                            {(item.text_value || item.has_file) && (
+                              <div className="px-3 pb-3">
+                                <ChecklistItemContent item={item} apiBase={API} />
+                              </div>
+                            )}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
-                ))}
+                )}
               </div>
             </div>
+            )}
 
-            {/* Drive */}
-            <div className="bg-[var(--color-brand)]/5 p-8 rounded-3xl flex flex-col justify-between overflow-hidden relative">
-              <div className="relative z-10">
-                <h2 className="font-display text-[var(--text-xl)] text-[var(--color-brand)] mb-2">DRIVE DU PROJET</h2>
-                <p className="text-[var(--color-dark-text-2)] text-sm mb-6 font-body">
-                  Accédez à tous les assets et livrables.
-                </p>
-                <div className="flex flex-col gap-3">
+            {/* Fichiers du projet — Drive + Logo vectorisé fusionnés (fond standard) */}
+            <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] p-6 rounded-[18px] space-y-4">
+              <div>
+                <h2 className="font-display text-base uppercase tracking-wide text-[var(--color-dark-1)] mb-2">Fichiers du projet</h2>
+                <div className="flex flex-col gap-2">
                   {projet?.lien_gdrive ? (
                     <a href={projet.lien_gdrive} target="_blank" rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 text-[var(--color-brand)] font-body font-bold hover:underline text-sm">
-                      <span aria-hidden="true" className="material-symbols-outlined">folder_open</span>
-                      Ouvrir dans Drive
+                      className="inline-flex items-center gap-2 font-body font-bold hover:underline text-sm text-[var(--color-brand)]">
+                      <span aria-hidden="true" className="material-symbols-outlined text-lg">folder_open</span>
+                      Drive du projet — Ouvrir →
                     </a>
                   ) : (
-                    <span className="text-[var(--color-dark-text-2)] text-sm font-body">Aucun lien Drive.</span>
+                    <span className="inline-flex items-center gap-2 text-[var(--color-dark-text-2)] text-sm font-body">
+                      <span aria-hidden="true" className="material-symbols-outlined text-lg">folder_off</span>
+                      Aucun lien Drive.
+                    </span>
                   )}
                   <button
                     onClick={async () => {
@@ -955,135 +1252,115 @@ export default function AdminProjetDetailPage() {
                   </button>
                 </div>
               </div>
-              <span aria-hidden="true" className="material-symbols-outlined absolute -bottom-10 -right-10 text-[120px] text-[var(--color-brand)]/10 rotate-12">
-                folder
-              </span>
+
+              <div className="h-px bg-[var(--color-light-border)]" />
+
+              <div>
+                <h3 className="font-body text-xs font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] mb-2">Logo vectorisé</h3>
+                <p className="text-[var(--color-dark-text-2)] text-xs font-body mb-3">
+                  Déposez un ou plusieurs fichiers (logo, variantes) — ils iront dans un dossier Drive « Logo » dédié et seront proposés au téléchargement dans le courriel de livraison du projet.
+                </p>
+                {projet && projet.logo_fichiers.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {projet.logo_fichiers.map(f => (
+                      <div key={f.id} className="flex items-center gap-3 bg-[var(--color-light-0)] rounded-xl px-3 py-2">
+                        <a href={`${API}/api/v1/projet/${id}/logo/${f.id}`} target="_blank" rel="noopener noreferrer"
+                          className="flex-1 inline-flex items-center gap-2 font-body font-bold hover:underline text-sm min-w-0 truncate" style={{ color: 'var(--color-brand)' }}>
+                          <span aria-hidden="true" className="material-symbols-outlined text-sm flex-shrink-0">download</span>
+                          {f.filename}
+                        </a>
+                        <button onClick={() => handleDeleteLogo(f.id)} disabled={deletingLogoId === f.id}
+                          className="text-[var(--color-dark-text-2)] hover:text-red-600 transition-colors flex-shrink-0" aria-label="Retirer">
+                          <span aria-hidden="true" className="material-symbols-outlined text-base">{deletingLogoId === f.id ? 'progress_activity' : 'close'}</span>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <label className={`flex flex-col items-center justify-center gap-2 p-5 border-2 border-dashed rounded-xl transition-all ${uploadingLogo ? 'opacity-60 cursor-default' : 'cursor-pointer hover:border-[var(--color-brand)]'}`}
+                  style={{ borderColor: 'var(--color-light-border)' }}>
+                  <input type="file" accept=".svg,.ai,.eps,.pdf,.png" multiple className="hidden" disabled={uploadingLogo}
+                    onChange={e => { if (e.target.files?.length) handleUploadLogo(e.target.files); e.target.value = '' }} />
+                  <span aria-hidden="true" className="material-symbols-outlined text-2xl text-[var(--color-dark-text-2)]">
+                    {uploadingLogo ? 'hourglass_top' : 'upload_file'}
+                  </span>
+                  <span className="font-body text-xs font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] text-center">
+                    {uploadingLogo ? 'Envoi…' : 'Déposer un ou plusieurs fichiers (SVG, AI, EPS, PDF, PNG)'}
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
 
-          {/* Logo vectorisé */}
-          <div className="bg-white p-8 rounded-3xl space-y-4">
-            <h2 className="font-display text-[var(--text-xl)] text-[var(--color-dark-1)]">LOGO VECTORISÉ</h2>
-            <p className="text-[var(--color-dark-text-2)] text-sm font-body">
-              Déposez un ou plusieurs fichiers (logo, variantes) — ils iront dans un dossier Drive « Logo » dédié et seront proposés au téléchargement dans le courriel de livraison du projet.
-            </p>
-            {projet && projet.logo_fichiers.length > 0 && (
-              <div className="space-y-2">
-                {projet.logo_fichiers.map(f => (
-                  <div key={f.id} className="flex items-center gap-3 bg-[var(--color-light-1)] rounded-xl px-3 py-2">
-                    <a href={`${API}/api/v1/projet/${id}/logo/${f.id}`} target="_blank" rel="noopener noreferrer"
-                      className="flex-1 inline-flex items-center gap-2 text-[var(--color-brand)] font-body font-bold hover:underline text-sm min-w-0 truncate">
-                      <span aria-hidden="true" className="material-symbols-outlined text-sm flex-shrink-0">download</span>
-                      {f.filename}
-                    </a>
-                    <button onClick={() => handleDeleteLogo(f.id)} disabled={deletingLogoId === f.id}
-                      className="text-[var(--color-dark-text-2)] hover:text-red-600 transition-colors flex-shrink-0" aria-label="Retirer">
-                      <span aria-hidden="true" className="material-symbols-outlined text-base">{deletingLogoId === f.id ? 'progress_activity' : 'close'}</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-            <label className={`flex flex-col items-center justify-center gap-2 p-6 border-2 border-dashed rounded-xl transition-all ${uploadingLogo ? 'opacity-60 cursor-default' : 'cursor-pointer hover:border-[var(--color-brand)]'}`}
-              style={{ borderColor: 'var(--color-light-border-2)' }}>
-              <input type="file" accept=".svg,.ai,.eps,.pdf,.png" multiple className="hidden" disabled={uploadingLogo}
-                onChange={e => { if (e.target.files?.length) handleUploadLogo(e.target.files); e.target.value = '' }} />
-              <span aria-hidden="true" className="material-symbols-outlined text-2xl text-[var(--color-dark-text-2)]">
-                {uploadingLogo ? 'hourglass_top' : 'upload_file'}
-              </span>
-              <span className="font-body text-xs font-bold uppercase tracking-widest text-[var(--color-dark-text-2)]">
-                {uploadingLogo ? 'Envoi…' : 'Déposer un ou plusieurs fichiers (SVG, AI, EPS, PDF, PNG)'}
-              </span>
-            </label>
-          </div>
-
-          {/* Items de révision */}
-          {itemsRevision.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-3xl p-8 space-y-4">
-              <h2 className="font-display text-[var(--text-xl)] text-amber-800">LISTE DE RÉVISIONS</h2>
-              <div className="space-y-3">
-                {itemsRevision.map(item => (
-                  <div key={item.id} className="flex items-center gap-3">
-                    <div className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center ${item.est_coche ? 'border-amber-500 bg-amber-500 text-white' : 'border-amber-300'}`}>
-                      {item.est_coche && <span aria-hidden="true" className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>}
-                    </div>
-                    <span className={`flex-1 font-body text-sm font-medium ${item.est_coche ? 'line-through text-amber-400' : 'text-amber-900'}`}>
-                      {item.nom_item}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body bg-amber-200 text-amber-700">
-                      Révision
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Colonne droite */}
         <div className="lg:col-span-4 space-y-6">
 
-          {/* Client card */}
-          <div className="bg-[var(--color-dark-1)] text-white p-8 rounded-3xl space-y-6">
-            <div className="space-y-1">
-              <span className="text-[var(--color-brand)] text-xs font-bold uppercase tracking-widest font-body">CLIENT</span>
-              <h2 className="font-display text-[var(--text-2xl)] text-white">{projet?.client_nom || '...'}</h2>
-            </div>
-            <div className="pt-6 border-t border-white/10 space-y-4">
-              <div className="flex items-center gap-4">
-                <span aria-hidden="true" className="material-symbols-outlined text-white/40">mail</span>
-                <span className="text-sm font-body text-white/80 break-all">{projet?.client_email}</span>
-              </div>
-              <div className="flex items-center gap-4">
-                <span aria-hidden="true" className="material-symbols-outlined text-white/40">call</span>
-                <span className="text-sm font-body text-white/80">{projet?.client_telephone}</span>
-              </div>
-            </div>
-            <Link href={`/admin/client/${projet?.client_id}`}
-              className="block w-full py-4 bg-white/10 hover:bg-white/20 rounded-xl font-body font-bold text-xs uppercase tracking-widest text-center transition-colors">
-              VOIR LE PROFIL CLIENT
-            </Link>
-          </div>
+          {/* Client + suivi + pigiste — une seule carte à sections */}
+          <div className="rounded-[18px] overflow-hidden border border-[var(--color-light-border)]">
 
-          {/* Stats */}
-          <div className="bg-[var(--color-light-1)] p-8 rounded-3xl space-y-8">
-            <div>
+            {/* Section Client (en-tête sombre) */}
+            <div className="text-white p-6 space-y-5" style={{ background: 'linear-gradient(160deg, var(--color-dark-1), var(--color-dark-0))' }}>
+              <div className="space-y-1">
+                <span className="text-xs font-bold uppercase tracking-widest font-body" style={{ color: 'var(--color-brand)' }}>Client</span>
+                <h2 className="font-display text-xl text-white">{projet?.client_nom || '...'}</h2>
+              </div>
+              <div className="pt-5 border-t border-white/10 space-y-3">
+                <div className="flex items-center gap-3">
+                  <span aria-hidden="true" className="material-symbols-outlined text-white/40 text-lg">mail</span>
+                  <span className="text-sm font-body text-white/80 break-all">{projet?.client_email}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span aria-hidden="true" className="material-symbols-outlined text-white/40 text-lg">call</span>
+                  <span className="text-sm font-body text-white/80">{projet?.client_telephone}</span>
+                </div>
+              </div>
+              <Link href={`/admin/client/${projet?.client_id}`}
+                className="block w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl font-body font-bold text-xs uppercase tracking-widest text-center transition-colors">
+                Voir le profil client
+              </Link>
+            </div>
+
+            {/* Section Échéance */}
+            <div className="bg-[var(--color-light-2)] p-6 border-t border-[var(--color-light-border)]">
               <span className="block text-[10px] font-extrabold uppercase text-[var(--color-dark-text-2)] tracking-widest mb-2 font-body">
-                ÉCHÉANCE LIVRABLE
+                Échéance livrable
               </span>
-              <span className="font-display text-[var(--text-xl)] text-[var(--color-dark-1)]">
+              <span className="font-display text-lg text-[var(--color-dark-1)]">
                 {projet?.date_livraison_estimee
-                  ? new Date(projet.date_livraison_estimee).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' }).toUpperCase()
+                  ? new Date(projet.date_livraison_estimee).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short', year: 'numeric' })
                   : '—'}
               </span>
             </div>
-            <div>
+
+            {/* Section Progression — même calcul (done/itemsNormaux) que la carte Checklist */}
+            <div className="bg-[var(--color-light-2)] p-6 border-t border-[var(--color-light-border)]">
               <span className="block text-[10px] font-extrabold uppercase text-[var(--color-dark-text-2)] tracking-widest mb-2 font-body">
-                PROGRESSION CHECKLIST
+                Progression checklist
               </span>
               <div className="flex items-center gap-3">
-                <span className="font-display text-[var(--text-xl)] text-[var(--color-dark-1)]">{done}/{itemsNormaux.length}</span>
-                <div className="flex-1 h-2 bg-[var(--color-light-border-2)] rounded-full overflow-hidden">
+                <span className="font-display text-lg text-[var(--color-dark-1)]">{done}/{itemsNormaux.length}</span>
+                <div className="flex-1 h-1.5 bg-[var(--color-light-0)] rounded-full overflow-hidden">
                   <div className="h-full bg-[var(--color-brand)] rounded-full transition-all"
                     style={{ width: `${itemsNormaux.length ? (done / itemsNormaux.length) * 100 : 0}%` }} />
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Section Pigiste */}
-          <div className="bg-white border border-[var(--color-light-border-2)] rounded-3xl p-6 space-y-4">
-            <h3 className="font-display text-[var(--text-lg)] text-[var(--color-dark-1)]">PIGISTE ASSIGNÉ</h3>
+            {/* Section Pigiste assigné */}
+            <div className="bg-[var(--color-light-2)] p-6 border-t border-[var(--color-light-border)] space-y-4">
+              <h3 className="font-display text-base uppercase tracking-wide text-[var(--color-dark-1)]">Pigiste assigné</h3>
 
             {/* Formulaire */}
             <div className="space-y-2">
               <select
                 value={selectedPigiste}
                 onChange={e => setSelectedPigiste(e.target.value)}
-                className="w-full bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] rounded-xl px-3 py-2.5 font-body text-sm text-[var(--color-dark-1)] outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30"
+                className={inputCls}
               >
                 <option value="">-- Sélectionner un pigiste --</option>
-                {pigistes.map(p => (
+                {pigistes.filter(p => p.is_producteur_principal).map(p => (
                   <option key={p.id} value={p.id}>
                     {p.nom_complet}{p.specialite ? ` — ${p.specialite}` : ''}
                   </option>
@@ -1094,7 +1371,7 @@ export default function AdminProjetDetailPage() {
                 placeholder="Titre du mandat (ex: Montage vidéo)"
                 value={mandatTitre}
                 onChange={e => setMandatTitre(e.target.value)}
-                className="w-full bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] rounded-xl px-3 py-2.5 font-body text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30"
+                className={inputCls}
               />
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -1103,13 +1380,13 @@ export default function AdminProjetDetailPage() {
                   value={mandatMontant}
                   onChange={e => setMandatMontant(e.target.value)}
                   min={0} step={0.01}
-                  className="bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] rounded-xl px-3 py-2.5 font-body text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30"
+                  className={inputCls}
                 />
                 <input
                   type="date"
                   value={mandatEcheance}
                   onChange={e => setMandatEcheance(e.target.value)}
-                  className="bg-[var(--color-light-1)] border border-[var(--color-light-border-2)] rounded-xl px-3 py-2.5 font-body text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30"
+                  className={inputCls}
                 />
               </div>
               <button
@@ -1123,16 +1400,16 @@ export default function AdminProjetDetailPage() {
 
             {/* Liste mandats */}
             {mandats.length > 0 && (
-              <div className="space-y-2 pt-2 border-t border-[var(--color-light-border-2)]">
+              <div className="space-y-2 pt-2 border-t border-[var(--color-light-border)]">
                 {mandats.map(m => (
-                  <div key={m.id} className="flex items-start gap-3 bg-[var(--color-light-1)] rounded-xl p-3">
+                  <div key={m.id} className="flex items-start gap-3 bg-[var(--color-light-0)] rounded-xl p-3">
                     <div className="flex-1 min-w-0">
                       <p className="font-body font-bold text-sm text-[var(--color-dark-1)] truncate">{m.titre}</p>
                       <p className="font-body text-xs text-[var(--color-dark-text-2)]">
                         {m.nom_pigiste || '—'}{m.montant_convenu ? ` · ${m.montant_convenu.toFixed(2)} $` : ''}{m.date_echeance ? ` · ${m.date_echeance}` : ''}
                       </p>
                     </div>
-                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body flex-shrink-0 ${MANDAT_BADGE[m.statut] || 'bg-gray-100 text-gray-500'}`}>
+                    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full font-body flex-shrink-0 ${MANDAT_BADGE[m.statut] || 'bg-[var(--color-light-border)] text-[var(--color-dark-text-2)]'}`}>
                       {m.statut.replace('_', ' ')}
                     </span>
                   </div>
@@ -1142,6 +1419,8 @@ export default function AdminProjetDetailPage() {
             {mandats.length === 0 && (
               <p className="text-[var(--color-dark-text-2)] font-body text-xs">Aucun mandat assigné.</p>
             )}
+            </div>
+
           </div>
 
         </div>

@@ -73,14 +73,16 @@ export default function AdminPigistesPage() {
   }
 
   const handleToggleActive = async (p: Pigiste) => {
+    const snapshot = pigistes
+    setPigistes(prev => prev.map(x => x.id === p.id ? { ...x, is_active: !x.is_active } : x))
     try {
-      await fetch(`/api/v1/admin/pigistes/${p.id}`, {
+      const res = await fetch(`/api/v1/admin/pigistes/${p.id}`, {
         method: 'PUT', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: p.is_active ? 0 : 1 }),
       })
-      setPigistes(prev => prev.map(x => x.id === p.id ? { ...x, is_active: !x.is_active } : x))
-    } catch { showToast('Erreur', false) }
+      if (!res.ok) { setPigistes(snapshot); showToast('Erreur', false) }
+    } catch { setPigistes(snapshot); showToast('Erreur', false) }
   }
 
   const filtered = pigistes.filter(p =>
@@ -102,14 +104,12 @@ export default function AdminPigistesPage() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
-          <h1 className="font-display text-[var(--text-3xl)] text-[var(--color-dark-1)] uppercase tracking-tight leading-none">
-            PIGISTES
-          </h1>
-          <p className="text-[var(--color-dark-text-2)] font-body text-sm mt-1">
+          <p className="font-body font-bold text-[11px] uppercase tracking-[0.16em] text-[var(--color-dark-text-2)] mb-1">
             {pigistes.length} pigiste{pigistes.length !== 1 ? 's' : ''} enregistré{pigistes.length !== 1 ? 's' : ''}
           </p>
+          <h1 className="font-display text-[var(--color-dark-0)] leading-none" style={{ fontSize: '32px', fontWeight: 800, letterSpacing: '-0.03em' }}>Pigistes</h1>
         </div>
         <div className="flex items-center gap-3">
           <div className="relative">
@@ -122,7 +122,7 @@ export default function AdminPigistesPage() {
               onChange={e => setSearch(e.target.value)}
               placeholder="Rechercher un pigiste..."
               aria-label="Rechercher un pigiste"
-              className="bg-white border border-[var(--color-light-border-2)] rounded-full pl-12 pr-6 py-3 font-body text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30 w-72"
+              className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-full pl-12 pr-6 py-3 font-body text-sm outline-none focus:ring-2 focus:ring-[var(--color-brand)]/30 w-72"
             />
           </div>
           <Link
@@ -140,7 +140,7 @@ export default function AdminPigistesPage() {
         <p className="text-[var(--color-dark-text-2)] font-body text-center py-20">Chargement...</p>
       ) : pigistes.length === 0 ? (
         <div className="text-center py-20">
-          <span aria-hidden="true" className="material-symbols-outlined text-5xl text-[var(--color-light-border-2)] block mb-4">
+          <span aria-hidden="true" className="material-symbols-outlined text-5xl text-[var(--color-light-border)] block mb-4">
             handyman
           </span>
           <p className="text-[var(--color-dark-text-2)] font-body">Aucun pigiste encore.</p>
@@ -151,10 +151,10 @@ export default function AdminPigistesPage() {
           </Link>
         </div>
       ) : (
-        <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+        <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-[var(--color-light-0)]">
+              <thead className="bg-[var(--color-light-1)]">
                 <tr>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest">Nom légal</th>
                   <th className="px-6 py-4 text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body tracking-widest hidden md:table-cell">Courriel</th>
@@ -165,7 +165,7 @@ export default function AdminPigistesPage() {
                   <th className="px-6 py-4" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[var(--color-light-0)]">
+              <tbody className="divide-y divide-[var(--color-light-border)]">
                 {filtered.map(p => {
                   const initiales = p.nom_complet.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
                   const niveauStyle = p.niveau ? (NIVEAU_STYLES[p.niveau] ?? NIVEAU_STYLES['junior']) : null
@@ -175,7 +175,7 @@ export default function AdminPigistesPage() {
                       {/* Nom légal */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-[var(--color-dark-1)] flex items-center justify-center text-white font-display text-lg flex-shrink-0">
+                          <div className="w-10 h-10 rounded-full bg-[var(--color-brand)] flex items-center justify-center text-white font-display text-lg flex-shrink-0">
                             {initiales}
                           </div>
                           <div>

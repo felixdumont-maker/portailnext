@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -35,6 +35,17 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Marketing', icon: 'campaign', href: '/admin/marketing' },
       { label: 'Roadmaps',  icon: 'timeline', href: '/admin/roadmaps'  },
       { label: 'Changelog', icon: 'history',  href: '/admin/changelog' },
+    ],
+  },
+  {
+    label: 'Comptabilité', icon: 'account_balance_wallet',
+    children: [
+      { label: 'Factures',  icon: 'request_quote', href: '/admin/factures' },
+      { label: 'À valider', icon: 'inbox',       href: '/admin/comptabilite/a-valider' },
+      { label: 'Revenus',   icon: 'trending_up', href: '/admin/comptabilite/revenus'   },
+      { label: 'Dépenses',  icon: 'payments',    href: '/admin/comptabilite/depenses'  },
+      { label: 'Bilan',     icon: 'summarize',   href: '/admin/comptabilite/bilan'     },
+      { label: 'Taxes',     icon: 'receipt_long', href: '/admin/comptabilite/taxes' },
     ],
   },
   {
@@ -283,11 +294,15 @@ function NotifBell() {
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router   = useRouter()
   const pathname = usePathname()
-  const [user, setUser]             = useState<AdminUser | null>(null)
-  const [accountOpen, setAccountOpen] = useState(false)
-  const [openGroup, setOpenGroup]   = useState<string | null>(null)
+  const [user, setUser]                     = useState<AdminUser | null>(null)
+  const [accountOpen, setAccountOpen]       = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [collapsed, setCollapsed]           = useState(false)
+  const [openGroups, setOpenGroups]         = useState<Set<string>>(() => {
+    const s = new Set<string>()
+    NAV_GROUPS.forEach(g => { if (g.children && isGroupActive(g, pathname)) s.add(g.label) })
+    return s
+  })
 
   useEffect(() => {
     fetch('/api/v1/auth/me', { credentials: 'include' })
@@ -300,6 +315,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       .catch(() => router.push('/'))
   }, [router])
 
+  // Restaure la préférence de repli de la sidebar
+  useEffect(() => {
+    try { if (localStorage.getItem('admin-sidebar-collapsed') === '1') setCollapsed(true) } catch {}
+  }, [])
+
+  // Garde le groupe actif ouvert lors de la navigation
+  useEffect(() => {
+    NAV_GROUPS.forEach(g => {
+      if (g.children && isGroupActive(g, pathname)) {
+        setOpenGroups(prev => (prev.has(g.label) ? prev : new Set(prev).add(g.label)))
+      }
+    })
+  }, [pathname])
+
   const initiales = user?.nom
     ? user.nom.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'AD'
@@ -309,186 +338,195 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       .then(() => router.push('/'))
   }
 
-  function showGroup(label: string) {
-    if (closeTimer.current) clearTimeout(closeTimer.current)
-    setOpenGroup(label)
+  function setCollapsedPersist(v: boolean) {
+    setCollapsed(v)
+    try { localStorage.setItem('admin-sidebar-collapsed', v ? '1' : '0') } catch {}
   }
-  function hideGroup() {
-    closeTimer.current = setTimeout(() => setOpenGroup(null), 150)
+  function toggleCollapse() { setCollapsedPersist(!collapsed) }
+
+  function toggleGroup(label: string) {
+    setOpenGroups(prev => {
+      const n = new Set(prev)
+      if (n.has(label)) n.delete(label); else n.add(label)
+      return n
+    })
   }
+
+  // Style commun d'un item de nav de la sidebar (dépend de `collapsed`)
+  const navItemStyle = (active: boolean, strong: boolean): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+    justifyContent: collapsed ? 'center' : 'flex-start',
+    padding: collapsed ? '10px 0' : '9px 12px',
+    width: '100%', minHeight: '40px',
+    borderRadius: 'var(--radius-md)',
+    border: 'none', cursor: 'pointer',
+    color: active ? 'white' : 'var(--color-dark-text-2)',
+    background: active ? (strong ? 'var(--color-brand)' : 'rgba(255,255,255,0.06)') : 'transparent',
+    textDecoration: 'none',
+    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '0.8rem', letterSpacing: '0.02em',
+    transition: 'background var(--duration-fast), color var(--duration-fast)',
+  })
+  const hoverOn  = (active: boolean) => (e: React.MouseEvent<HTMLElement>) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.05)' }
+  const hoverOff = (active: boolean) => (e: React.MouseEvent<HTMLElement>) => { if (!active) e.currentTarget.style.background = 'transparent' }
 
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--color-light-1)' }}>
+    <div style={{
+      minHeight: '100dvh',
+      background: 'var(--color-light-1)',
+      ['--admin-sidebar-w' as string]: collapsed ? '54px' : '220px',
+    } as React.CSSProperties}>
 
-      {/* ── Desktop navbar — floating dark pill ── */}
-      <nav
+      {/* marge du contenu = largeur sidebar (desktop uniquement) */}
+      <style>{`
+        #main-content {
+          margin-left: 0;
+          padding: var(--space-6);
+          padding-bottom: 72px;
+          transition: margin-left var(--duration-base) var(--ease-out-quart);
+        }
+        @media (min-width: 768px) {
+          #main-content {
+            margin-left: var(--admin-sidebar-w, 220px);
+            padding-bottom: var(--space-8);
+          }
+        }
+      `}</style>
+
+      {/* ── Desktop sidebar — verticale collapsible ── */}
+      <aside
         aria-label="Navigation admin"
         className="hidden md:flex"
         style={{
-          position: 'fixed',
-          top: '14px',
-          left: '50%',
-          transform: 'translateX(-50%)',
+          position: 'fixed', top: 0, left: 0, bottom: 0,
           zIndex: 'var(--z-sticky)' as never,
-          width: 'clamp(420px, 72vw, 780px)',
-          height: '52px',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '0 var(--space-5)',
+          width: collapsed ? '54px' : '220px',
+          flexDirection: 'column',
           background: 'var(--color-dark-1)',
-          border: '1px solid var(--color-dark-border)',
-          borderRadius: 'var(--radius-full)',
-          boxShadow: 'var(--shadow-lg)',
+          borderRight: '1px solid var(--color-dark-border)',
+          transition: 'width var(--duration-base) var(--ease-out-quart)',
+          overflow: 'hidden',
         }}
       >
-        {/* Logo */}
-        <button
-          onClick={() => router.push('/admin')}
-          aria-label="Dashboard"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', minHeight: '44px' }}
-        >
-          <Image
-            src="/cos-logo-blanc.png"
-            alt="CocktailOS"
-            width={110}
-            height={28}
-            loading="eager"
-            style={{ objectFit: 'contain', height: '22px', width: 'auto' }}
-          />
-        </button>
+        {/* Header : logo + toggle collapse */}
+        <div style={{
+          display: 'flex',
+          flexDirection: collapsed ? 'column' : 'row',
+          alignItems: 'center',
+          justifyContent: collapsed ? 'center' : 'space-between',
+          gap: collapsed ? 'var(--space-2)' : 0,
+          padding: collapsed ? 'var(--space-4) 0' : 'var(--space-4)',
+          minHeight: '60px',
+          borderBottom: '1px solid var(--color-dark-border)',
+        }}>
+          <button
+            onClick={() => router.push('/admin')}
+            aria-label="Dashboard"
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+          >
+            <Image
+              src={collapsed ? '/cos-icone-blanc.png' : '/cos-logo-blanc.png'}
+              alt="CocktailOS"
+              width={collapsed ? 26 : 110}
+              height={collapsed ? 26 : 28}
+              loading="eager"
+              style={{ objectFit: 'contain', height: collapsed ? '24px' : '22px', width: 'auto' }}
+            />
+          </button>
+          <button
+            onClick={toggleCollapse}
+            aria-label={collapsed ? 'Déplier le menu' : 'Replier le menu'}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              color: 'var(--color-dark-text-2)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              width: '30px', height: '30px', borderRadius: 'var(--radius-sm)',
+              transition: 'color var(--duration-fast)',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'white')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-dark-text-2)')}
+          >
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+              {collapsed ? 'chevron_right' : 'chevron_left'}
+            </span>
+          </button>
+        </div>
 
         {/* Nav groups */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: 'var(--space-3) var(--space-2)', display: 'flex', flexDirection: 'column', gap: '2px' }}>
           {NAV_GROUPS.map(group => {
-            const isActive = isGroupActive(group, pathname)
-            const isOpen   = openGroup === group.label
+            const active = isGroupActive(group, pathname)
 
-            /* ── Solo link (Dashboard) ── */
+            /* ── Lien simple (Dashboard) ── */
             if (!group.children) {
               return (
                 <Link
                   key={group.label}
                   href={group.href!}
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    letterSpacing: '0.07em',
-                    textTransform: 'uppercase',
-                    color: isActive ? 'white' : 'var(--color-dark-text-2)',
-                    textDecoration: 'none',
-                    padding: '6px 14px',
-                    borderRadius: 'var(--radius-full)',
-                    background: isActive ? 'var(--color-brand)' : 'transparent',
-                    transition: 'color var(--duration-fast), background var(--duration-fast)',
-                    minHeight: '36px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                  }}
+                  title={collapsed ? group.label : undefined}
+                  style={navItemStyle(active, true)}
+                  onMouseEnter={hoverOn(active)}
+                  onMouseLeave={hoverOff(active)}
                 >
-                  {group.label}
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px', flexShrink: 0 }}>{group.icon}</span>
+                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{group.label}</span>}
                 </Link>
               )
             }
 
-            /* ── Group with dropdown ── */
+            /* ── Groupe avec enfants (expand/collapse au clic) ── */
+            const open = openGroups.has(group.label)
             return (
-              <div
-                key={group.label}
-                style={{ position: 'relative' }}
-                onMouseEnter={() => showGroup(group.label)}
-                onMouseLeave={hideGroup}
-              >
+              <div key={group.label}>
                 <button
-                  aria-expanded={isOpen}
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontWeight: 700,
-                    fontSize: '0.78rem',
-                    letterSpacing: '0.07em',
-                    textTransform: 'uppercase',
-                    color: isActive ? 'white' : 'var(--color-dark-text-2)',
-                    background: isActive
-                      ? 'var(--color-brand)'
-                      : isOpen
-                        ? 'rgba(255,255,255,0.07)'
-                        : 'transparent',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '6px 12px',
-                    borderRadius: 'var(--radius-full)',
-                    transition: 'color var(--duration-fast), background var(--duration-fast)',
-                    minHeight: '36px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '3px',
+                  aria-expanded={open}
+                  title={collapsed ? group.label : undefined}
+                  onClick={() => {
+                    if (collapsed) {
+                      setCollapsedPersist(false)
+                      setOpenGroups(prev => new Set(prev).add(group.label))
+                    } else {
+                      toggleGroup(group.label)
+                    }
                   }}
+                  style={navItemStyle(active, false)}
+                  onMouseEnter={hoverOn(active)}
+                  onMouseLeave={hoverOff(active)}
                 >
-                  {group.label}
-                  <span
-                    className="material-symbols-outlined"
-                    style={{
-                      fontSize: '15px',
-                      opacity: 0.65,
-                      transition: 'transform var(--duration-fast)',
-                      transform: isOpen ? 'rotate(180deg)' : 'none',
-                    }}
-                  >
-                    expand_more
-                  </span>
+                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px', flexShrink: 0 }}>{group.icon}</span>
+                  {!collapsed && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{group.label}</span>}
+                  {!collapsed && (
+                    <span
+                      aria-hidden="true"
+                      className="material-symbols-outlined"
+                      style={{ fontSize: '18px', marginLeft: 'auto', opacity: 0.6, transition: 'transform var(--duration-fast)', transform: open ? 'rotate(180deg)' : 'none' }}
+                    >
+                      expand_more
+                    </span>
+                  )}
                 </button>
 
-                {/* Dropdown panel */}
-                {isOpen && (
-                  <div
-                    onMouseEnter={() => showGroup(group.label)}
-                    onMouseLeave={hideGroup}
-                    style={{
-                      position: 'absolute',
-                      top: 'calc(100% + 6px)',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
-                      background: 'var(--color-dark-1)',
-                      border: '1px solid var(--color-dark-border)',
-                      borderRadius: 'var(--radius-md)',
-                      boxShadow: 'var(--shadow-xl)',
-                      overflow: 'hidden',
-                      minWidth: '170px',
-                      zIndex: 200,
-                      padding: 'var(--space-1) 0',
-                    }}
-                  >
+                {open && !collapsed && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', margin: '2px 0 var(--space-1)' }}>
                     {group.children.map(child => {
                       const childActive = pathname.startsWith(child.href)
                       return (
                         <Link
                           key={child.href}
                           href={child.href}
-                          onClick={() => setOpenGroup(null)}
                           style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 'var(--space-3)',
-                            padding: '9px 16px',
+                            display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                            padding: '8px 10px 8px 42px',
+                            borderRadius: 'var(--radius-sm)',
                             color: childActive ? 'var(--color-brand)' : 'var(--color-dark-text-2)',
                             textDecoration: 'none',
-                            fontFamily: 'var(--font-body)',
-                            fontSize: 'var(--text-sm)',
-                            fontWeight: childActive ? 700 : 400,
+                            fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', fontWeight: childActive ? 700 : 400,
                             background: childActive ? 'rgba(255,255,255,0.05)' : 'transparent',
-                            whiteSpace: 'nowrap',
                             transition: 'background var(--duration-fast), color var(--duration-fast)',
                           }}
-                          onMouseEnter={e => {
-                            if (!childActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.07)'
-                          }}
-                          onMouseLeave={e => {
-                            if (!childActive) (e.currentTarget as HTMLElement).style.background = 'transparent'
-                          }}
+                          onMouseEnter={e => { if (!childActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)' }}
+                          onMouseLeave={e => { if (!childActive) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
                         >
-                          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>
-                            {child.icon}
-                          </span>
+                          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>{child.icon}</span>
                           {child.label}
                         </Link>
                       )
@@ -498,70 +536,79 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               </div>
             )
           })}
-        </div>
+        </nav>
 
-        {/* Notifications + Avatar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
-        <NotifBell />
-        <div style={{ position: 'relative' }}>
-          <button
-            onClick={() => setAccountOpen(d => !d)}
-            aria-label="Menu compte"
-            aria-expanded={accountOpen}
-            style={{
-              width: '34px', height: '34px',
-              borderRadius: '50%',
-              background: 'var(--color-brand)',
-              border: 'none', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontFamily: 'var(--font-display)', fontWeight: 800,
-              fontSize: '0.75rem', color: 'white',
-              transition: 'background var(--duration-fast)',
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-brand-hover)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-brand)')}
-          >
-            {initiales}
-          </button>
+        {/* Bas de sidebar : notifications + avatar */}
+        <div style={{
+          borderTop: '1px solid var(--color-dark-border)',
+          padding: 'var(--space-3)',
+          display: 'flex',
+          flexDirection: collapsed ? 'column' : 'row',
+          alignItems: 'center',
+          gap: 'var(--space-2)',
+        }}>
+          <NotifBell />
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setAccountOpen(d => !d)}
+              aria-label="Menu compte"
+              aria-expanded={accountOpen}
+              style={{
+                width: '34px', height: '34px', borderRadius: '50%',
+                background: 'var(--color-brand)', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.75rem', color: 'white',
+                transition: 'background var(--duration-fast)', flexShrink: 0,
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = 'var(--color-brand-hover)')}
+              onMouseLeave={e => (e.currentTarget.style.background = 'var(--color-brand)')}
+            >
+              {initiales}
+            </button>
 
-          {accountOpen && (
-            <>
-              <div
-                onClick={() => setAccountOpen(false)}
-                style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-dropdown)' as never }}
-              />
-              <div style={{
-                position: 'absolute', right: 0, top: 'calc(100% + 10px)',
-                background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
-                borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-md)',
-                overflow: 'hidden', width: '190px',
-                zIndex: 'calc(var(--z-dropdown) + 1)' as never,
-              }}>
-                {user && (
-                  <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-light-border)' }}>
-                    <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-light-text)', margin: 0 }}>{user.nom}</p>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: 0 }}>{user.email}</p>
-                  </div>
-                )}
-                <button
-                  onClick={logout}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
-                    padding: 'var(--space-3) var(--space-4)',
-                    color: 'var(--color-brand)', background: 'none', border: 'none',
-                    cursor: 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)',
-                    width: '100%', textAlign: 'left',
-                  }}
-                >
-                  <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>logout</span>
-                  Déconnexion
-                </button>
-              </div>
-            </>
+            {accountOpen && (
+              <>
+                <div
+                  onClick={() => setAccountOpen(false)}
+                  style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-dropdown)' as never }}
+                />
+                <div style={{
+                  position: 'absolute', left: 0, bottom: 'calc(100% + 10px)',
+                  background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+                  borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-md)',
+                  overflow: 'hidden', width: '190px',
+                  zIndex: 'calc(var(--z-dropdown) + 1)' as never,
+                }}>
+                  {user && (
+                    <div style={{ padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-light-border)' }}>
+                      <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-light-text)', margin: 0 }}>{user.nom}</p>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: 0 }}>{user.email}</p>
+                    </div>
+                  )}
+                  <button
+                    onClick={logout}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 'var(--space-3)',
+                      padding: 'var(--space-3) var(--space-4)',
+                      color: 'var(--color-brand)', background: 'none', border: 'none',
+                      cursor: 'pointer', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)',
+                      width: '100%', textAlign: 'left',
+                    }}
+                  >
+                    <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>logout</span>
+                    Déconnexion
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+          {!collapsed && user && (
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: 'var(--text-xs)', color: 'white', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.nom}</p>
+            </div>
           )}
         </div>
-        </div>
-      </nav>
+      </aside>
 
       {/* ── Mobile navbar — bottom tabs ── */}
       <nav
@@ -695,13 +742,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* ── Content ── */}
-      <main id="main-content" style={{
-        paddingTop: '80px',
-        paddingBottom: '72px',
-        paddingLeft: 'var(--space-6)',
-        paddingRight: 'var(--space-6)',
-      }}>
-        <div style={{ maxWidth: '1024px', margin: '0 auto' }}>
+      <main id="main-content">
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           {children}
         </div>
       </main>

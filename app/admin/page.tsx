@@ -2,8 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo } from 'react'
 import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/card'
-import { Users, FolderOpen, AlertTriangle, Archive, ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 
 const API = process.env.NEXT_PUBLIC_API_URL || ''
 
@@ -22,6 +21,8 @@ interface DashboardData {
   top_clients: Client[]
   visuels_a_creer: MarketingPostTodo[]
   a_publier: MarketingPostTodo[]
+  factures_ouvertes?: number | string
+  factures_en_retard?: number
 }
 
 interface Projet {
@@ -38,6 +39,7 @@ interface Client {
   nom_entreprise: string
   initiales: string
   couleur: string
+  nb_projets?: number
 }
 
 interface TodoPerso {
@@ -56,6 +58,14 @@ interface TodoPerso {
   client_id_effectif?: number | null
   source?: string | null
   created_at: string
+  assignees?: { id: number; nom_complet: string }[]
+}
+
+interface TeamMember {
+  id: number
+  nom_complet: string
+  email: string
+  role: string | null
 }
 
 const MOCK_DATA: DashboardData = {
@@ -69,14 +79,32 @@ const MOCK_DATA: DashboardData = {
   a_publier: [],
 }
 
-const STATUT_STYLES: Record<string, { bg: string; text: string; dot: string }> = {
-  'Documents à donner': { bg: 'bg-red-50',    text: 'text-red-600',    dot: 'bg-red-500' },
-  'Documents reçus':    { bg: 'bg-blue-50',   text: 'text-blue-600',   dot: 'bg-blue-500' },
-  'Travaux en cours':   { bg: 'bg-orange-50', text: 'text-orange-600', dot: 'bg-orange-500' },
-  'En révision':        { bg: 'bg-yellow-50', text: 'text-yellow-700', dot: 'bg-yellow-500' },
-  'Travaux terminés':   { bg: 'bg-green-50',  text: 'text-green-600',  dot: 'bg-green-500' },
-  'Annulé':             { bg: 'bg-gray-100',  text: 'text-gray-500',   dot: 'bg-gray-400' },
+const BADGE_STYLES: Record<string, { bg: string; color: string }> = {
+  'Documents à donner':        { bg: '#fdecea', color: '#c0321a' },
+  'Documents reçus':           { bg: '#e8f0fe', color: '#1a56c0' },
+  'Travaux en cours':          { bg: '#fff3e0', color: '#b45309' },
+  'En révision':               { bg: '#fdf2f8', color: '#9c2e7a' },
+  'Travaux terminés':          { bg: '#dcfce7', color: '#166534' },
+  'Complété':                  { bg: '#dcfce7', color: '#166534' },
+  'Terminé':                   { bg: '#dcfce7', color: '#166534' },
+  'En attente de rendez-vous': { bg: '#f3f4f6', color: '#6b7280' },
+  'Annulé':                    { bg: '#f3f4f6', color: '#6b7280' },
 }
+const BADGE_FALLBACK = { bg: '#f3f4f6', color: '#6b7280' }
+// Couleur du bullet à gauche de chaque row (FIX 3) : surcharge sémantique, sinon = couleur du badge
+const BADGE_DOTS: Record<string, string> = {
+  'Documents à donner':        '#c0321a',
+  'Travaux en cours':          '#b45309',
+  'En révision':               'var(--color-brand)',
+  'Travaux terminés':          '#166534',
+  'Complété':                  '#166534',
+  'Terminé':                   '#166534',
+  'En attente de rendez-vous': '#9ca3af',
+}
+const AVATAR_COLORS = [
+  '#1a56c0', '#166534', '#9c2e7a', '#b45309',
+  '#0e7490', '#7c2d12', '#4338ca', '#065f46',
+]
 
 const PRIORITE_COLORS: Record<string, string> = {
   haute:   'bg-red-100 text-red-600',
@@ -131,22 +159,24 @@ function useAnchoredCoords(isOpen: boolean, panelH: number, panelW: number) {
   return { btnRef, coords }
 }
 
-function AssignMenu({ currentProjetId, currentClientId, currentTitreId, clients, projets, titres, isOpen, onToggle, onAssign }: {
+function AssignMenu({ currentProjetId, currentClientId, currentTitreId, currentAssigneeIds, clients, projets, titres, team, isOpen, onToggle, onAssign }: {
   currentProjetId: number | null
   currentClientId: number | null
   currentTitreId?: number | null
+  currentAssigneeIds?: number[]
   clients: { id: number; nom_complet: string }[]
   projets: { id: number; nom_projet: string; client_nom: string | null }[]
   titres?: { id: number; texte: string }[]
+  team?: TeamMember[]
   isOpen: boolean
   onToggle: () => void
-  onAssign: (payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null }) => void
+  onAssign: (payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null; assigne_admin_ids?: number[] }) => void
 }) {
   const clientSeul = !currentProjetId && currentClientId ? String(currentClientId) : ''
-  const { btnRef, coords } = useAnchoredCoords(isOpen, titres && titres.length ? 260 : 190, 256)
+  const { btnRef, coords } = useAnchoredCoords(isOpen, titres && titres.length ? 320 : 250, 256)
   return (
     <div className="relative flex-shrink-0">
-      <button ref={btnRef} onClick={onToggle} title="Assigner à un client / projet"
+      <button ref={btnRef} onClick={onToggle} title="Assigner à un client / projet / personne"
         className={`transition-opacity flex-shrink-0 p-1.5 -m-1 hover:text-[var(--color-brand)] ${isOpen ? 'opacity-100 text-[var(--color-brand)]' : 'text-[var(--color-dark-text-2)] opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/row:opacity-100 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100'}`}>
         <span aria-hidden="true" className="material-symbols-outlined text-[14px]">sell</span>
       </button>
@@ -155,6 +185,29 @@ function AssignMenu({ currentProjetId, currentClientId, currentTitreId, clients,
           <div className="fixed inset-0 z-40" onClick={onToggle} />
           <div className="fixed z-50 w-64 bg-white border border-[var(--color-light-border)] rounded-md shadow-lg p-3 space-y-3 text-left"
             style={{ top: coords.top, left: coords.left }}>
+            {team && team.length > 0 && (
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-dark-text-2)] mb-1">Assignée à</label>
+                <div className="space-y-1">
+                  {team.map(m => {
+                    const checked = (currentAssigneeIds || []).includes(m.id)
+                    return (
+                      <label key={m.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input type="checkbox" checked={checked} onChange={e => {
+                          const cur = currentAssigneeIds || []
+                          const next = e.target.checked ? [...cur, m.id] : cur.filter(id => id !== m.id)
+                          onAssign({ assigne_admin_ids: next })
+                        }} />
+                        {m.nom_complet}
+                      </label>
+                    )
+                  })}
+                  {(currentAssigneeIds || []).length === 0 && (
+                    <p className="text-[10px] text-[var(--color-dark-text-2)] italic">Partagée (toute l&apos;équipe)</p>
+                  )}
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-dark-text-2)] mb-1">Projet</label>
               <select value={currentProjetId ?? ''} aria-label="Assigner à un projet" onChange={e => onAssign({ projet_id: e.target.value ? Number(e.target.value) : null })}
@@ -243,6 +296,10 @@ function ScheduleMenu({ todo, isOpen, onToggle, onSchedule, onUnschedule }: {
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData>(MOCK_DATA)
+  const [adminNom, setAdminNom] = useState('')
+  const [adminId, setAdminId] = useState<number | null>(null)
+  const [team, setTeam] = useState<TeamMember[]>([])
+  const [todoView, setTodoView] = useState<'mine' | 'all'>('mine')
   const [todos, setTodos] = useState<TodoPerso[]>([])
   const [clients, setClients] = useState<{ id: number; nom_complet: string }[]>([])
   const [projets, setProjets] = useState<{ id: number; nom_projet: string; client_nom: string | null; is_archived?: number }[]>([])
@@ -298,11 +355,37 @@ export default function AdminDashboardPage() {
   }, [])
 
   useEffect(() => {
-    fetch(`${API}/api/v1/admin/todos`, { credentials: 'include' })
+    fetch(`${API}/api/v1/auth/me`, { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => {
+        if (d?.nom) setAdminNom(String(d.nom).split(' ')[0])
+        if (d?.id) setAdminId(d.id)
+      })
+      .catch(() => {})
+    fetch(`${API}/api/v1/admin/team`, { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setTeam(d) })
+      .catch(() => {})
+  }, [])
+
+  // Date du jour pour le header (calculée côté client → pas de mismatch d'hydratation)
+  const [todayLabel, setTodayLabel] = useState('')
+  useEffect(() => {
+    const d = new Date()
+    const jour = d.toLocaleDateString('fr-CA', { weekday: 'long' })
+    const date = d.toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })
+    setTodayLabel(`${jour} ${date}`)
+  }, [])
+
+  // Plage du graphique d'activité de facturation (FIX 4 — mock statique pour l'instant)
+  const [chartRange, setChartRange] = useState<'6m' | 'annee'>('6m')
+
+  useEffect(() => {
+    fetch(`${API}/api/v1/admin/todos?view=${todoView}`, { credentials: 'include' })
       .then(r => r.json())
       .then(d => Array.isArray(d) ? setTodos(d) : null)
       .catch(() => {})
-  }, [])
+  }, [todoView])
 
   // Clients + projets pour le sélecteur d'assignation
   useEffect(() => {
@@ -317,7 +400,7 @@ export default function AdminDashboardPage() {
   }, [])
 
   // Calcule les champs d'un todo après (ré)assignation, pour la mise à jour optimiste
-  function applyAssign(t: TodoPerso, payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null }): TodoPerso {
+  function applyAssign(t: TodoPerso, payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null; assigne_admin_ids?: number[] }): TodoPerso {
     const next = { ...t }
     if ('projet_id' in payload) {
       const p = payload.projet_id ? projets.find(x => x.id === payload.projet_id) : null
@@ -333,10 +416,13 @@ export default function AdminDashboardPage() {
       if (payload.client_id) next.parent_titre_id = null
     }
     if ('parent_titre_id' in payload) next.parent_titre_id = payload.parent_titre_id ?? null
+    if ('assigne_admin_ids' in payload) {
+      next.assignees = (payload.assigne_admin_ids || []).map(id => team.find(m => m.id === id)).filter((m): m is TeamMember => !!m)
+    }
     return next
   }
 
-  async function assignTodo(id: number, payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null }) {
+  async function assignTodo(id: number, payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null; assigne_admin_ids?: number[] }) {
     setAssignOpen(null)
     const snapshot = todos
     setTodos(prev => prev.map(t => t.id === id ? applyAssign(t, payload) : t))
@@ -567,18 +653,181 @@ export default function AdminDashboardPage() {
       )}
 
       {/* Welcome */}
-      <section className="mb-8">
-        <h1 className="font-display text-[var(--text-2xl)] font-extrabold text-[var(--color-dark-1)] mb-0.5">
-          Bonjour, Félix.
-        </h1>
-        <p className="text-xs text-[var(--color-dark-text-2)] font-body uppercase tracking-widest">
-          Tableau de bord · Cocktail Média
-        </p>
+      <section className="mb-8 flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-body font-bold mb-1"
+            style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '.16em', color: 'var(--color-light-text-3)' }}>
+            Tableau de bord · {todayLabel}
+          </p>
+          <h1 className="font-display"
+            style={{ fontSize: '36px', fontWeight: 800, letterSpacing: '-0.03em', lineHeight: 1, color: 'var(--color-dark-1)' }}>
+            Bonjour{adminNom ? `, ${adminNom}` : ''}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Recherche */}
+          <div className="relative">
+            <span aria-hidden="true" className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px]"
+              style={{ color: 'var(--color-light-text-3)' }}>search</span>
+            <input
+              placeholder="Rechercher client, projet…"
+              aria-label="Rechercher"
+              className="font-body"
+              style={{
+                background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+                borderRadius: '11px', padding: '12px 14px 12px 38px', fontSize: '13px',
+                color: 'var(--color-dark-1)', width: '240px', outline: 'none',
+              }}
+            />
+          </div>
+          {/* Nouveau client */}
+          <Link href="/admin/clients/new" className="flex items-center gap-2 font-display transition-colors"
+            style={{
+              background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+              color: 'var(--color-dark-1)', borderRadius: '11px', padding: '12px 18px', fontSize: '13px',
+            }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">person_add</span>
+            Nouveau client
+          </Link>
+          {/* Nouveau projet */}
+          <Link href="/admin/projets/new" className="flex items-center gap-2 font-display transition-opacity hover:opacity-90"
+            style={{
+              background: 'var(--color-brand)', color: 'white',
+              borderRadius: '11px', padding: '12px 18px', fontSize: '13px',
+            }}>
+            <span aria-hidden="true" className="material-symbols-outlined text-[18px]">add</span>
+            Nouveau projet
+          </Link>
+        </div>
       </section>
 
-      {/* Mes tâches */}
+      {/* Stats — KPIs */}
       <section className="mb-8">
-        <div className="bg-white rounded-2xl shadow-sm overflow-hidden" style={{ border: '1px solid var(--color-light-border)' }}>
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5" style={{ gap: '14px' }}>
+
+          {/* Card 1 — Clients */}
+          <div className="kpi-card"
+            style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)', borderRadius: '18px', padding: '16px' }}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] uppercase tracking-widest font-body font-bold" style={{ color: 'var(--color-light-text-3)' }}>Clients</p>
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]" style={{ color: 'var(--color-info)' }}>group</span>
+            </div>
+            <p className="font-display" style={{ fontSize: '34px', fontWeight: 800, lineHeight: 1, color: 'var(--color-dark-1)' }}>{data.total_clients}</p>
+            <p className="flex items-center gap-1 mt-1.5 text-xs font-body font-semibold" style={{ color: 'var(--color-success)' }}>
+              <span aria-hidden="true" className="material-symbols-outlined text-[15px]">trending_up</span>
+              +3 ce mois
+            </p>
+          </div>
+
+          {/* Card 2 — Projets actifs */}
+          <div className="kpi-card"
+            style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)', borderRadius: '18px', padding: '16px' }}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] uppercase tracking-widest font-body font-bold" style={{ color: 'var(--color-light-text-3)' }}>Projets actifs</p>
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]" style={{ color: 'var(--color-warning)' }}>folder_open</span>
+            </div>
+            <p className="font-display" style={{ fontSize: '34px', fontWeight: 800, lineHeight: 1, color: 'var(--color-dark-1)' }}>{data.projets_actifs}</p>
+            <p className="mt-1.5 text-xs font-body" style={{ color: 'var(--color-light-text-3)' }}>en cours</p>
+          </div>
+
+          {/* Card 3 — En révision (accentuée) */}
+          <div className="relative overflow-hidden"
+            style={{ background: 'linear-gradient(135deg, var(--color-brand), var(--color-brand-hover))', borderRadius: '18px', padding: '16px', color: 'white' }}>
+            <span aria-hidden="true" className="material-symbols-outlined"
+              style={{ position: 'absolute', right: '-10px', top: '-8px', fontSize: '80px', opacity: 0.16, color: 'white' }}>priority_high</span>
+            <div className="flex items-center justify-between mb-2 relative">
+              <p className="text-[11px] uppercase tracking-widest font-body font-bold" style={{ color: 'white' }}>En révision</p>
+            </div>
+            <p className="font-display relative" style={{ fontSize: '34px', fontWeight: 800, lineHeight: 1, color: 'white' }}>{data.en_revision}</p>
+            <p className="mt-1.5 text-xs font-body font-semibold relative" style={{ color: 'white' }}>à traiter</p>
+          </div>
+
+          {/* Card 4 — Factures ouvertes */}
+          <div className="kpi-card"
+            style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)', borderRadius: '18px', padding: '16px' }}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] uppercase tracking-widest font-body font-bold" style={{ color: 'var(--color-light-text-3)' }}>Factures ouv.</p>
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]" style={{ color: 'var(--color-warning)' }}>receipt_long</span>
+            </div>
+            <p className="font-display" style={{ fontSize: '34px', fontWeight: 800, lineHeight: 1, color: 'var(--color-dark-1)' }}>
+              {data.factures_ouvertes || '—'} <span style={{ fontSize: '18px', fontWeight: 700 }}>$</span>
+            </p>
+            <p className="mt-1.5 text-xs font-body font-semibold"
+              style={{ color: (data.factures_en_retard ?? 0) > 0 ? 'var(--color-error)' : 'var(--color-light-text-3)' }}>
+              {(data.factures_en_retard ?? 0) > 0 ? `${data.factures_en_retard} en retard` : '—'}
+            </p>
+          </div>
+
+          {/* Card 5 — Mes tâches */}
+          <div className="kpi-card"
+            style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)', borderRadius: '18px', padding: '16px' }}>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] uppercase tracking-widest font-body font-bold" style={{ color: 'var(--color-light-text-3)' }}>Mes tâches</p>
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]" style={{ color: 'var(--color-dark-text-2)' }}>checklist</span>
+            </div>
+            <p className="font-display" style={{ fontSize: '34px', fontWeight: 800, lineHeight: 1, color: 'var(--color-dark-1)' }}>{todosActifs.length}</p>
+            <p className="mt-1.5 text-xs font-body" style={{ color: 'var(--color-light-text-3)' }}>à faire</p>
+          </div>
+
+        </div>
+      </section>
+
+      {/* Activité de facturation */}
+      <section className="mb-8">
+        <div style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)', borderRadius: '20px', padding: '22px' }}>
+          <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
+            <div>
+              <p className="font-display uppercase" style={{ fontSize: '12px', letterSpacing: '.14em', color: 'var(--color-light-text-3)' }}>Activité de facturation</p>
+              <div className="flex items-center gap-2 mt-1">
+                <span className="font-display" style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--color-dark-1)' }}>18 940 $</span>
+                <span className="font-body font-bold" style={{ color: 'var(--color-success)', fontSize: '13px' }}>▲ 18%</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 self-center"
+              style={{ background: 'var(--color-light-1)', border: '1px solid var(--color-light-border)', borderRadius: '999px', padding: '3px' }}>
+              {([['6m', '6 mois'], ['annee', 'Année']] as const).map(([val, label]) => {
+                const active = chartRange === val
+                return (
+                  <button key={val} onClick={() => setChartRange(val)} className="font-display transition-colors"
+                    style={{
+                      fontSize: '12px', fontWeight: 700, padding: '6px 14px', borderRadius: '999px',
+                      border: 'none', cursor: 'pointer',
+                      background: active ? 'var(--color-brand)' : 'transparent',
+                      color: active ? 'white' : 'var(--color-dark-text-2)',
+                    }}>
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+          <svg viewBox="0 0 640 140" preserveAspectRatio="none" style={{ width: '100%', height: '140px', display: 'block' }}>
+            <defs>
+              <linearGradient id="chartArea" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" style={{ stopColor: 'var(--color-brand)', stopOpacity: 0.26 }} />
+                <stop offset="100%" style={{ stopColor: 'var(--color-brand)', stopOpacity: 0 }} />
+              </linearGradient>
+            </defs>
+            <path d="M0,104 L107,80 L213,90 L320,54 L427,66 L533,38 L640,16 L640,140 L0,140 Z" fill="url(#chartArea)" />
+            <path d="M0,104 L107,80 L213,90 L320,54 L427,66 L533,38 L640,16"
+              fill="none" stroke="var(--color-brand)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+            <circle cx="640" cy="16" r="5" fill="var(--color-brand)" />
+            <circle cx="640" cy="16" r="10" fill="var(--color-brand)" opacity="0.2" />
+          </svg>
+          <div className="mt-2" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'var(--color-light-text-3)' }}>
+            <span>FÉV</span><span>MAR</span><span>AVR</span><span>MAI</span><span>JUIN</span><span>JUIL</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Grille 2 colonnes : (Mes tâches + Projets récents) | rail droit */}
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px]" style={{ gap: '20px', alignItems: 'start' }}>
+
+        {/* Colonne gauche : Mes tâches + Projets récents */}
+        <div className="flex flex-col gap-5">
+
+          {/* Mes tâches */}
+          <div className="tasks-card rounded-[20px] overflow-hidden" style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)', maxHeight: '520px', overflowY: 'auto', scrollbarWidth: 'thin' }}>
 
           {/* Header */}
           <button
@@ -589,18 +838,34 @@ export default function AdminDashboardPage() {
               {tachesOpen
                 ? <ChevronDown aria-hidden="true" className="w-4 h-4 text-[var(--color-brand)] shrink-0" />
                 : <ChevronRight aria-hidden="true" className="w-4 h-4 text-[var(--color-brand)] shrink-0" />}
-              <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)]">Mes tâches</h3>
+              <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)]">
+                {todoView === 'mine' ? 'Mes tâches' : 'Toutes les tâches'}
+              </h3>
               {todosActifs.length > 0 && (
                 <span className="text-[10px] tracking-wide font-bold font-body bg-[var(--color-brand)] text-white px-2 py-0.5 rounded-full">
                   {todosActifs.length}
                 </span>
               )}
             </div>
-            <button
-              onClick={e => { e.stopPropagation(); setAddingTodo(v => !v); setTimeout(() => inputRef.current?.focus(), 50) }}
-              className="text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] transition-colors p-1">
-              <span aria-hidden="true" className="material-symbols-outlined text-[20px]">add_circle</span>
-            </button>
+            <div className="flex items-center gap-2">
+              {team.length > 0 && (
+                <div onClick={e => e.stopPropagation()} className="flex text-[10px] font-bold uppercase tracking-wide rounded-full overflow-hidden border border-[var(--color-light-border-2)]">
+                  <button onClick={() => setTodoView('mine')}
+                    className={`px-2.5 py-1 transition-colors ${todoView === 'mine' ? 'bg-[var(--color-brand)] text-white' : 'bg-white text-[var(--color-dark-text-2)] hover:bg-[var(--color-light-1)]'}`}>
+                    Mine
+                  </button>
+                  <button onClick={() => setTodoView('all')}
+                    className={`px-2.5 py-1 transition-colors ${todoView === 'all' ? 'bg-[var(--color-brand)] text-white' : 'bg-white text-[var(--color-dark-text-2)] hover:bg-[var(--color-light-1)]'}`}>
+                    Toutes
+                  </button>
+                </div>
+              )}
+              <button
+                onClick={e => { e.stopPropagation(); setAddingTodo(v => !v); setTimeout(() => inputRef.current?.focus(), 50) }}
+                className="text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] transition-colors p-1">
+                <span aria-hidden="true" className="material-symbols-outlined text-[20px]">add_circle</span>
+              </button>
+            </div>
           </button>
 
           {tachesOpen && <>
@@ -781,6 +1046,11 @@ export default function AdminDashboardPage() {
                                         className={`flex-1 min-w-0 text-xs font-body leading-snug ${t.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
                                         {t.texte}
                                         {t.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
+                                        {todoView === 'all' && (t.assignees || []).map(a => (
+                                          <span key={a.id} className="ml-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--color-light-1)] text-[var(--color-dark-text-2)] align-middle">
+                                            {a.nom_complet.split(' ')[0]}
+                                          </span>
+                                        ))}
                                       </p>
                                     )}
                                     <button onClick={() => { setEditingId(t.id); setEditText(t.texte) }} title="Modifier"
@@ -796,7 +1066,8 @@ export default function AdminDashboardPage() {
                                       currentProjetId={t.projet_id}
                                       currentClientId={t.client_id_effectif ?? null}
                                       currentTitreId={t.parent_titre_id}
-                                      clients={clients} projets={projets} titres={titres}
+                                      currentAssigneeIds={(t.assignees || []).map(a => a.id)}
+                                      clients={clients} projets={projets} titres={titres} team={team}
                                       isOpen={assignOpen === t.id}
                                       onToggle={() => setAssignOpen(assignOpen === t.id ? null : t.id)}
                                       onAssign={(payload) => assignTodo(t.id, payload)} />
@@ -867,6 +1138,11 @@ export default function AdminDashboardPage() {
                                   {todo.texte}
                                   {todo.date_echeance && <span className="ml-2 text-[10px] text-[var(--color-light-text-2)]">{formatDate(todo.date_echeance)}</span>}
                                   {todo.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
+                                  {todoView === 'all' && (todo.assignees || []).map(a => (
+                                    <span key={a.id} className="ml-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--color-light-1)] text-[var(--color-dark-text-2)] align-middle">
+                                      {a.nom_complet.split(' ')[0]}
+                                    </span>
+                                  ))}
                                 </p>
                               )}
                               <button onClick={() => { setEditingId(todo.id); setEditText(todo.texte) }} title="Modifier"
@@ -882,7 +1158,8 @@ export default function AdminDashboardPage() {
                                 currentProjetId={todo.projet_id}
                                 currentClientId={todo.client_id_effectif ?? null}
                                 currentTitreId={todo.parent_titre_id}
-                                clients={clients} projets={projets} titres={titres}
+                                currentAssigneeIds={(todo.assignees || []).map(a => a.id)}
+                                clients={clients} projets={projets} titres={titres} team={team}
                                 isOpen={assignOpen === todo.id}
                                 onToggle={() => setAssignOpen(assignOpen === todo.id ? null : todo.id)}
                                 onAssign={(payload) => assignTodo(todo.id, payload)} />
@@ -1017,180 +1294,118 @@ export default function AdminDashboardPage() {
             </div>
           )}
           </>}
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="mb-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
-          {/* Total clients */}
-          <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-gray-200 shadow-sm">
-            <CardContent className="p-4 flex flex-col gap-1.5">
-              <div className="flex justify-between items-start">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">Total Clients</p>
-                <Users aria-hidden="true" className="w-4 h-4 text-gray-500 shrink-0" />
-              </div>
-              <p className="text-4xl leading-none text-[var(--color-dark-1)] font-display">{data.total_clients}</p>
-            </CardContent>
-          </Card>
-          {/* Actifs */}
-          <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-blue-500 shadow-sm">
-            <CardContent className="p-4 flex flex-col gap-1.5">
-              <div className="flex justify-between items-start">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">Actifs</p>
-                <FolderOpen aria-hidden="true" className="w-4 h-4 text-blue-500 shrink-0" />
-              </div>
-              <p className="text-4xl leading-none text-[var(--color-dark-1)] font-display">{data.projets_actifs}</p>
-              <p className="text-xs text-gray-500 font-body">projets en cours</p>
-            </CardContent>
-          </Card>
-          {/* En révision / Action */}
-          <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-[var(--color-brand)] shadow-sm">
-            <CardContent className="p-4 flex flex-col gap-1.5">
-              <div className="flex justify-between items-start">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">En révision</p>
-                <AlertTriangle aria-hidden="true" className="w-4 h-4 text-[var(--color-brand)] shrink-0" />
-              </div>
-              <p className="text-4xl leading-none text-[var(--color-brand)] font-display">{String(data.en_revision).padStart(2, '0')}</p>
-              <p className="text-xs text-gray-500 font-body">nécessitent attention</p>
-            </CardContent>
-          </Card>
-          {/* Archivés */}
-          <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-gray-200 shadow-sm">
-            <CardContent className="p-4 flex flex-col gap-1.5">
-              <div className="flex justify-between items-start">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">Archivés</p>
-                <Archive aria-hidden="true" className="w-4 h-4 text-gray-500 shrink-0" />
-              </div>
-              <p className="text-4xl leading-none text-[var(--color-dark-1)] font-display">{data.archives}</p>
-              <p className="text-xs text-gray-500 font-body">projets fermés</p>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Répartition des projets */}
-        {(() => {
-          const repartition = Object.keys(STATUT_STYLES)
-            .map(s => ({ statut: s, count: data.projets_recents.filter(p => p.statut === s).length, style: STATUT_STYLES[s] }))
-            .filter(x => x.count > 0)
-          const total = repartition.reduce((sum, x) => sum + x.count, 0)
-          return (
-            <Card className="bg-white rounded-xl gap-0 py-0 border border-[#e0d9d3] border-t-4 border-t-gray-200 shadow-sm">
-              <CardContent className="p-4 flex flex-col gap-3">
-                <p className="text-xs uppercase tracking-widest text-gray-500 font-body">Répartition des projets</p>
-                <div className="flex h-2 rounded-full overflow-hidden bg-gray-100">
-                  {total === 0
-                    ? null
-                    : repartition.map(x => (
-                        <div key={x.statut} className={x.style.dot} style={{ flexGrow: x.count }} title={`${x.statut} · ${x.count}`} />
-                      ))}
-                </div>
-                <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-                  {total === 0
-                    ? <p className="text-xs text-gray-500 font-body">Aucun projet.</p>
-                    : repartition.map(x => (
-                        <div key={x.statut} className="flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${x.style.dot}`} />
-                          <span className="text-xs text-gray-500 font-body">{x.statut}</span>
-                          <span className="text-xs font-bold text-[var(--color-dark-1)] tabular-nums">{x.count}</span>
-                        </div>
-                      ))}
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })()}
-      </section>
-
-      {/* Projets + Sidebar */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-
-        {/* Projets récents */}
-        <div className="xl:col-span-2">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)]">Projets Récents</h2>
-            <Link href="/admin/projets" className="text-[10px] font-bold uppercase text-[var(--color-brand)] hover:underline font-body tracking-wide">
-              Voir tout
-            </Link>
           </div>
-          <div className="bg-white rounded-xl overflow-hidden">
-            {data.projets_recents.map(p => {
-              const style = STATUT_STYLES[p.statut] || STATUT_STYLES['Annulé']
-              return (
-                <Link key={p.id} href={`/admin/projet/${p.id}`}
-                  className="row-hover-group flex justify-between items-start gap-4 py-3 px-5 border-b border-[#e0d9d3] last:border-b-0">
-                  <div className="flex-1 min-w-0">
-                    <p className="row-title font-semibold text-sm text-[var(--color-dark-1)] truncate">{p.client_nom}</p>
-                    <p className="row-desc text-xs text-gray-500 truncate">{p.nom_projet}</p>
-                  </div>
-                  <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className={`row-badge inline-flex items-center gap-1.5 px-2 py-1 ${style.bg} ${style.text} text-[10px] font-bold rounded-full uppercase font-body whitespace-nowrap`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${style.dot} flex-shrink-0`} />
+
+          {/* Projets récents */}
+          <div className="rounded-[18px] overflow-hidden"
+            style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)' }}>
+            <div className="flex justify-between items-center px-5 py-4" style={{ borderBottom: '1px solid var(--color-light-border)' }}>
+              <h2 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)]">Projets récents</h2>
+              <Link href="/admin/projets" className="text-[10px] font-bold uppercase text-[var(--color-brand)] hover:underline font-body tracking-wide">
+                Voir tout
+              </Link>
+            </div>
+            <div>
+              {data.projets_recents.map(p => {
+                const badge = BADGE_STYLES[p.statut] ?? BADGE_FALLBACK
+                const dotColor = BADGE_DOTS[p.statut] ?? badge.color
+                return (
+                  <Link key={p.id} href={`/admin/projet/${p.id}`}
+                    className="rowh flex items-center gap-3 py-3 px-5 last:border-b-0"
+                    style={{ borderBottom: '1px solid var(--color-light-border)' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm text-[var(--color-dark-1)] truncate font-body">{p.client_nom}</p>
+                      <p className="text-xs truncate font-body" style={{ color: 'var(--color-light-text-3)' }}>{p.nom_projet}</p>
+                    </div>
+                    <span className="font-body flex-shrink-0"
+                      style={{ background: badge.bg, color: badge.color, fontSize: '10px', fontWeight: 800, textTransform: 'uppercase', padding: '4px 10px', borderRadius: '999px', whiteSpace: 'nowrap' }}>
                       {p.statut}
                     </span>
-                    <span className="row-desc text-xs text-gray-500">
+                    <span className="text-xs flex-shrink-0 tabular-nums" style={{ color: 'var(--color-light-text-3)' }}>
                       {p.date_livraison_estimee
                         ? new Date(p.date_livraison_estimee).toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })
                         : '—'}
                     </span>
-                  </div>
-                </Link>
-              )
-            })}
+                  </Link>
+                )
+              })}
+              {data.projets_recents.length === 0 && (
+                <p className="text-sm font-body italic px-5 py-4" style={{ color: 'var(--color-light-text-3)' }}>Aucun projet récent.</p>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Sidebar */}
-        <div className="xl:col-span-1 flex flex-col gap-5">
+        {/* Colonne droite — rail fixe */}
+        <div className="flex flex-col gap-5 xl:sticky xl:top-4 self-start" style={{ position: 'sticky', top: '26px', alignSelf: 'start' }}>
 
-          {/* Top clients */}
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)]">Top Clients</h2>
-              <Link href="/admin/clients">
-                <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)] text-[20px]">add_circle</span>
+          {/* Widget 1 — Action requise */}
+          {data.en_revision > 0 && (
+            <div className="rounded-[18px] p-5"
+              style={{ background: 'var(--color-light-2)', border: '1px solid color-mix(in oklch, var(--color-brand) 40%, var(--color-light-border))' }}>
+              <div className="flex items-center gap-2 mb-2">
+                <span aria-hidden="true" className="material-symbols-outlined text-[20px]" style={{ color: 'var(--color-error)' }}>priority_high</span>
+                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)]">Action requise</h3>
+              </div>
+              <p className="text-sm font-body mb-4" style={{ color: 'var(--color-dark-text-2)' }}>
+                {data.en_revision} projet{data.en_revision > 1 ? 's' : ''} en révision
+              </p>
+              <Link href="/admin/projets?statut=En+r%C3%A9vision"
+                className="flex items-center justify-center gap-2 font-display transition-opacity hover:opacity-90"
+                style={{ background: 'var(--color-brand)', color: 'white', borderRadius: '11px', padding: '11px', width: '100%', fontSize: '13px' }}>
+                Ouvrir la file de révision
               </Link>
             </div>
+          )}
+
+          {/* Widget 2 — Factures ouvertes */}
+          <div className="rounded-[18px] p-5"
+            style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)' }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span aria-hidden="true" className="material-symbols-outlined text-[20px]" style={{ color: 'var(--color-warning)' }}>receipt_long</span>
+              <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)]">Factures ouvertes</h3>
+            </div>
             <div className="flex flex-col gap-2">
-              {data.top_clients.map(client => (
-                <Link key={client.id} href={`/admin/client/${client.id}`}>
-                  <div className="row-hover-group bg-white rounded-xl py-3 px-4 flex items-center justify-between gap-3 border border-[#e0d9d3] cursor-pointer">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-9 h-9 rounded-full ${client.couleur} flex items-center justify-center text-white font-bold font-display text-sm shrink-0`}>
-                        {client.initiales}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="row-title text-sm font-semibold text-[var(--color-dark-1)] leading-tight font-body truncate">{client.nom_complet}</p>
-                        <p className="row-desc text-xs text-gray-500 font-body truncate">{client.nom_entreprise}</p>
-                      </div>
-                    </div>
-                    <span aria-hidden="true" className="row-chevron material-symbols-outlined text-gray-300 text-[16px] shrink-0 transition-[color,transform] duration-150">chevron_right</span>
-                  </div>
-                </Link>
-              ))}
+              <p className="text-xs font-body" style={{ color: 'var(--color-light-text-3)' }}>— Aucune donnée disponible</p>
+            </div>
+            <div className="flex items-center justify-between mt-4 pt-3" style={{ borderTop: '1px solid var(--color-light-border)' }}>
+              <span className="text-[10px] font-bold uppercase tracking-widest font-body" style={{ color: 'var(--color-light-text-3)' }}>Total à recevoir</span>
+              <span className="font-display font-extrabold text-[var(--color-dark-1)]">— $</span>
             </div>
           </div>
 
-          {/* Liens rapides */}
-          <div className="grid grid-cols-3 gap-2">
-            <Link href="/admin/marketing"
-              className="group relative bg-white rounded-xl p-3.5 flex flex-col items-center gap-1.5 hover:bg-[#fff8f6] transition-all text-center" style={{ border: '1px solid var(--color-light-border)' }}>
-              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] group-hover:text-[var(--color-brand-hover)] group-hover:scale-110 text-[22px] transition-all duration-150">campaign</span>
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-1)] font-body group-hover:text-[var(--color-dark-1)]">Marketing</span>
-              <span aria-hidden="true" className="absolute bottom-2 right-2 text-gray-300 text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:text-[var(--color-brand)] transition-all duration-150">→</span>
-            </Link>
-            <Link href="/admin/factures"
-              className="group relative bg-white rounded-xl p-3.5 flex flex-col items-center gap-1.5 hover:bg-[#fff8f6] transition-all text-center" style={{ border: '1px solid var(--color-light-border)' }}>
-              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] group-hover:text-[var(--color-brand-hover)] group-hover:scale-110 text-[22px] transition-all duration-150">receipt_long</span>
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-1)] font-body group-hover:text-[var(--color-dark-1)]">Facturation</span>
-              <span aria-hidden="true" className="absolute bottom-2 right-2 text-gray-300 text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:text-[var(--color-brand)] transition-all duration-150">→</span>
-            </Link>
-            <Link href="/admin/soumissions"
-              className="group relative bg-white rounded-xl p-3.5 flex flex-col items-center gap-1.5 hover:bg-[#fff8f6] transition-all text-center" style={{ border: '1px solid var(--color-light-border)' }}>
-              <span aria-hidden="true" className="material-symbols-outlined text-[var(--color-brand)] group-hover:text-[var(--color-brand-hover)] group-hover:scale-110 text-[22px] transition-all duration-150">description</span>
-              <span className="text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-1)] font-body group-hover:text-[var(--color-dark-1)]">Soumissions</span>
-              <span aria-hidden="true" className="absolute bottom-2 right-2 text-gray-300 text-xs opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:text-[var(--color-brand)] transition-all duration-150">→</span>
-            </Link>
+          {/* Widget 3 — Top clients */}
+          <div>
+            <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)] mb-3">Top clients</h3>
+            <div className="flex flex-col gap-2">
+              {data.top_clients.map((client, index) => (
+                <Link key={client.id} href={`/admin/client/${client.id}`}>
+                  <div className="rowh rounded-[14px] py-3 px-4 flex items-center justify-between gap-3"
+                    style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)' }}>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold font-display text-sm shrink-0"
+                        style={{ background: AVATAR_COLORS[index % AVATAR_COLORS.length] }}>
+                        {client.initiales}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-[var(--color-dark-1)] leading-tight font-body truncate">{client.nom_complet}</p>
+                        <p className="text-xs font-body truncate" style={{ color: 'var(--color-light-text-3)' }}>{client.nom_entreprise}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {client.nb_projets != null && (
+                        <span className="font-body tabular-nums" style={{ fontSize: '12px', color: 'var(--color-light-text-3)' }}>{client.nb_projets} proj.</span>
+                      )}
+                      <span aria-hidden="true" className="material-symbols-outlined text-[16px]" style={{ color: 'var(--color-light-text-3)' }}>chevron_right</span>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+              {data.top_clients.length === 0 && (
+                <p className="text-xs font-body italic" style={{ color: 'var(--color-light-text-3)' }}>Aucun client.</p>
+              )}
+            </div>
           </div>
 
         </div>

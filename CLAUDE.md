@@ -1,5 +1,9 @@
 @AGENTS.md
 
+## Vue d'ensemble du projet
+
+Consulte **PROJECT_OVERVIEW.md** à la racine pour la structure complète du projet (stack, architecture, design system, carte des routes par domaine, conventions établies).
+
 ## Migration Flask → Next.js
 
 Avant toute session de travail sur ce projet, consulte **MIGRATION_STATUS.md** à la racine de ce dossier.

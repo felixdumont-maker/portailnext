@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { statutMeta } from '@/lib/statuts'
 
 interface Projet {
   id: number
@@ -10,6 +11,8 @@ interface Projet {
   date_livraison_estimee: string
   created_at: string
   is_archived: number
+  service_icon: string | null
+  service_nom: string | null
   checklist: { ready: number; done: number; total: number }
 }
 
@@ -46,24 +49,22 @@ interface DashboardData {
   user: { id: number; nom: string; is_admin: boolean; drive_folder_id?: string | null }
 }
 
-const STATUT_STYLES: Record<string, { bg: string; text: string }> = {
-  'Documents à donner': { bg: 'var(--color-fire-bg)',    text: 'var(--color-fire-text)'  },
-  'Documents reçus':    { bg: 'var(--color-info-bg-2)',   text: 'var(--color-info-text)' },
-  'Travaux en cours':   { bg: 'var(--color-brand-muted)', text: 'var(--color-brand-hover)' },
-  'En révision':        { bg: 'var(--color-warning-bg-2)',    text: 'var(--color-warning-mid-2)'  },
-  'Travaux terminés':   { bg: 'var(--color-success-bg-2)',   text: 'var(--color-success-text-2)' },
-  'Complété':           { bg: 'var(--color-success-bg-2)',   text: 'var(--color-success-text-2)' },
-  'Annulé':             { bg: 'var(--color-light-0)',   text: 'var(--color-light-text-3)' },
+const TYPE_ICON: Record<string, { icon: string; color: string }> = {
+  web:       { icon: 'language',     color: 'var(--color-success)' },
+  photo:     { icon: 'photo_camera', color: 'var(--color-info)' },
+  video:     { icon: 'videocam',     color: 'var(--color-brand)' },
+  graphisme: { icon: 'palette',      color: 'var(--color-warning-mid)' },
+  default:   { icon: 'folder',       color: 'var(--color-light-text-3)' },
 }
 
 const MOCK: DashboardData = {
   projets_actifs: [
-    { id: 1, nom_projet: 'Refonte de Logo', statut: 'En révision', date_livraison_estimee: '2026-04-27', created_at: '2026-04-10', is_archived: 0, checklist: { ready: 3, done: 3, total: 5 } },
-    { id: 2, nom_projet: 'Vidéo Corporative', statut: 'Documents reçus', date_livraison_estimee: '2026-04-15', created_at: '2026-04-05', is_archived: 0, checklist: { ready: 5, done: 5, total: 5 } },
-    { id: 3, nom_projet: 'Plan de Communication', statut: 'Documents à donner', date_livraison_estimee: '2026-05-30', created_at: '2026-04-12', is_archived: 0, checklist: { ready: 1, done: 1, total: 10 } },
+    { id: 1, nom_projet: 'Refonte de Logo', statut: 'En révision', date_livraison_estimee: '2026-04-27', created_at: '2026-04-10', is_archived: 0, service_icon: 'graphisme', service_nom: 'Logo', checklist: { ready: 3, done: 3, total: 5 } },
+    { id: 2, nom_projet: 'Vidéo Corporative', statut: 'Documents reçus', date_livraison_estimee: '2026-04-15', created_at: '2026-04-05', is_archived: 0, service_icon: 'video', service_nom: 'Vidéo', checklist: { ready: 5, done: 5, total: 5 } },
+    { id: 3, nom_projet: 'Plan de Communication', statut: 'Documents à donner', date_livraison_estimee: '2026-05-30', created_at: '2026-04-12', is_archived: 0, service_icon: 'default', service_nom: null, checklist: { ready: 1, done: 1, total: 10 } },
   ],
   projets_archives: [
-    { id: 4, nom_projet: 'Campagne Réseaux Sociaux 2025', statut: 'Complété', date_livraison_estimee: '', created_at: '2025-01-01', is_archived: 1, checklist: { ready: 0, done: 0, total: 0 } },
+    { id: 4, nom_projet: 'Campagne Réseaux Sociaux 2025', statut: 'Complété', date_livraison_estimee: '', created_at: '2025-01-01', is_archived: 1, service_icon: 'photo', service_nom: 'Réseaux sociaux', checklist: { ready: 0, done: 0, total: 0 } },
   ],
   user: { id: 1, nom: 'Félix', is_admin: false }
 }
@@ -351,7 +352,7 @@ const STATUT_BASE_PCT: Record<string, number> = {
 
 function ProjetCard({ projet }: { projet: Projet }) {
   const [hovered, setHovered] = useState(false)
-  const badge = STATUT_STYLES[projet.statut] || STATUT_STYLES['Annulé']
+  const badge = statutMeta(projet.statut)
   const statut = projet.statut
   const basePct = STATUT_BASE_PCT[statut] ?? 0
   const { done, total } = projet.checklist
@@ -361,6 +362,7 @@ function ProjetCard({ projet }: { projet: Projet }) {
     : statut === 'Documents à donner'
       ? Math.max(Math.round(checklistPct * 0.35), total > 0 ? 5 : 0)
       : Math.min(basePct + (total > 0 ? Math.round(checklistPct * 0.15) : 0), 99)
+  const type = TYPE_ICON[projet.service_icon || 'default'] || TYPE_ICON.default
 
   return (
     <Link href={`/projet/${projet.id}`} style={{ textDecoration: 'none', display: 'block' }}>
@@ -370,136 +372,106 @@ function ProjetCard({ projet }: { projet: Projet }) {
         style={{
           background: 'var(--color-light-2)',
           borderRadius: 'var(--radius-lg)',
-          padding: 'var(--space-6)',
+          padding: 'var(--space-5) var(--space-6)',
           border: '1px solid',
           borderColor: hovered ? 'var(--color-brand-25pct)' : 'var(--color-light-border)',
           boxShadow: hovered ? '0 4px 20px var(--color-brand-6pct)' : 'none',
-          transition: `border-color var(--duration-base), box-shadow var(--duration-base)`,
+          transform: hovered ? 'translateY(-3px)' : 'none',
+          transition: `border-color var(--duration-base), box-shadow var(--duration-base), transform var(--duration-base)`,
           cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 'var(--space-4)',
         }}
       >
-        {/* Top row — creation date + status badge */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
-          marginBottom: 'var(--space-3)',
-        }}>
-          <span style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 600,
-            color: 'var(--color-light-text-3)',
-          }}>
-            {new Date(projet.created_at).toLocaleDateString('fr-CA')}
-          </span>
-          <span style={{
-            background: badge.bg,
-            color: badge.text,
-            padding: '3px 10px',
-            borderRadius: 'var(--radius-full)',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 700,
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.05em',
-            fontFamily: 'var(--font-body)',
-            whiteSpace: 'nowrap' as const,
-          }}>
-            {projet.statut}
-          </span>
-        </div>
+        <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px', color: type.color, flexShrink: 0 }}>
+          {type.icon}
+        </span>
 
-        {/* Project name */}
-        <h3 style={{
-          fontFamily: 'var(--font-display)',
-          fontWeight: 800,
-          fontSize: 'var(--text-xl)',
-          lineHeight: 'var(--leading-snug)',
-          letterSpacing: '-0.01em',
-          textTransform: 'uppercase' as const,
-          color: 'var(--color-light-text)',
-          margin: '0 0 var(--space-6)',
-        }}>
-          {projet.nom_projet.split(' — ')[1] || projet.nom_projet}
-        </h3>
-
-        {/* Progress */}
-        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-3)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', marginBottom: 'var(--space-2)' }}>
             <span style={{
-              fontFamily: 'var(--font-body)',
-              fontSize: 'var(--text-xs)',
-              fontWeight: 700,
-              textTransform: 'uppercase' as const,
-              letterSpacing: '0.08em',
-              color: 'var(--color-light-text-3)',
+              fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-sm)',
+              color: 'var(--color-light-text)', whiteSpace: 'nowrap' as const,
+              overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '260px',
             }}>
-              Progression
+              {projet.nom_projet.split(' — ')[1] || projet.nom_projet}
             </span>
             <span style={{
-              fontFamily: 'var(--font-body)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 700,
-              color: pct === 100 ? 'var(--color-success)' : 'var(--color-light-text)',
-              fontVariantNumeric: 'tabular-nums',
+              background: badge.bg, color: badge.text, padding: '3px 10px',
+              borderRadius: 'var(--radius-full)', fontSize: '10px', fontWeight: 700,
+              textTransform: 'uppercase' as const, letterSpacing: '0.05em',
+              fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' as const, flexShrink: 0,
+            }}>
+              {projet.statut}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+            <div style={{
+              flex: 1, maxWidth: '220px', height: '6px', borderRadius: 'var(--radius-full)',
+              background: 'var(--color-light-0)', overflow: 'hidden', flexShrink: 0,
+            }}>
+              <div style={{
+                height: '100%', width: `${pct}%`,
+                background: pct === 100 ? 'var(--color-success)' : 'var(--color-brand)',
+                borderRadius: 'var(--radius-full)',
+                transition: `width var(--duration-slow) var(--ease-out-quart)`,
+              }} />
+            </div>
+            <span style={{
+              fontSize: '11px', color: 'var(--color-light-text-3)', fontWeight: 700,
+              flexShrink: 0, fontVariantNumeric: 'tabular-nums',
             }}>
               {pct}%
             </span>
           </div>
-
-          <div style={{
-            height: '3px',
-            background: 'var(--color-light-0)',
-            borderRadius: 'var(--radius-full)',
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              height: '100%',
-              width: '100%',
-              background: pct === 100 ? 'var(--color-success)' : 'var(--color-brand)',
-              borderRadius: 'var(--radius-full)',
-              transform: `scaleX(${pct / 100})`,
-              transformOrigin: 'left',
-              transition: `transform var(--duration-slow) var(--ease-out-quart)`,
-            }} />
-          </div>
-
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingTop: 'var(--space-1)',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-              <span
-                className="material-symbols-outlined"
-                style={{ fontSize: '14px', color: 'var(--color-brand)', lineHeight: 1 }}
-              >
-                description
-              </span>
-              <span style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-light-text-3)',
-                fontWeight: 500,
-              }}>
-                {projet.checklist.done}/{projet.checklist.total} documents
-              </span>
-            </div>
-            {projet.date_livraison_estimee && (
-              <span style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: 'var(--text-xs)',
-                color: 'var(--color-light-text-3)',
-              }}>
-                Livraison{' '}
-                <span style={{ color: 'var(--color-light-text)', fontWeight: 600 }}>
-                  {new Date(projet.date_livraison_estimee).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })}
-                </span>
-              </span>
-            )}
-          </div>
         </div>
+
+        {projet.date_livraison_estimee && (
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
+            Échéance {new Date(projet.date_livraison_estimee).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })}
+          </span>
+        )}
+      </div>
+    </Link>
+  )
+}
+
+function HistoriqueCard({ projet }: { projet: Projet }) {
+  const badge = statutMeta(projet.statut)
+  const type = TYPE_ICON[projet.service_icon || 'default'] || TYPE_ICON.default
+  const dateRef = projet.date_livraison_estimee || projet.created_at
+  const verbe = projet.statut === 'Complété' ? 'Complété le' : 'Archivé le'
+
+  return (
+    <Link href={`/projet/${projet.id}`} style={{ textDecoration: 'none', display: 'block' }}>
+      <div className="rowh" style={{
+        background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+        borderRadius: 'var(--radius-lg)', padding: 'var(--space-4) var(--space-6)',
+        display: 'flex', alignItems: 'center', gap: 'var(--space-4)', cursor: 'pointer',
+      }}>
+        <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '20px', color: type.color, flexShrink: 0 }}>
+          {type.icon}
+        </span>
+        <span style={{
+          flex: 1, minWidth: 0, fontFamily: 'var(--font-display)', fontWeight: 800,
+          fontSize: 'var(--text-sm)', color: 'var(--color-light-text)',
+          whiteSpace: 'nowrap' as const, overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>
+          {projet.nom_projet.split(' — ')[1] || projet.nom_projet}
+        </span>
+        {dateRef && (
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', whiteSpace: 'nowrap' as const, flexShrink: 0 }}>
+            {verbe} {new Date(dateRef).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })}
+          </span>
+        )}
+        <span style={{
+          background: badge.bg, color: badge.text, padding: '3px 10px',
+          borderRadius: 'var(--radius-full)', fontSize: '10px', fontWeight: 700,
+          textTransform: 'uppercase' as const, letterSpacing: '0.05em',
+          fontFamily: 'var(--font-body)', whiteSpace: 'nowrap' as const, flexShrink: 0,
+        }}>
+          {projet.statut}
+        </span>
       </div>
     </Link>
   )
@@ -509,10 +481,11 @@ const EMPTY: DashboardData = { projets_actifs: [], projets_archives: [], user: {
 
 export default function DashboardPage() {
   const [data, setData]               = useState<DashboardData | null>(null)
-  const [showArchives, setShowArchives] = useState(false)
   const [soumissions, setSoumissions] = useState<SoumissionResume[]>([])
   const [rdvs, setRdvs]               = useState<RendezVous[]>([])
   const [ressources, setRessources]   = useState<Ressource[]>([])
+  const [guideSearch, setGuideSearch] = useState('')
+  const [soldeAPayer, setSoldeAPayer] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('/api/v1/dashboard', { credentials: 'include' })
@@ -528,6 +501,9 @@ export default function DashboardPage() {
     fetch('/api/v1/client/ressources', { credentials: 'include' })
       .then(r => r.json()).then(d => setRessources(Array.isArray(d) ? d : []))
       .catch(() => {})
+    fetch('/api/v1/client/factures', { credentials: 'include' })
+      .then(r => r.json()).then(d => setSoldeAPayer(typeof d.total_attente === 'number' ? d.total_attente : 0))
+      .catch(() => setSoldeAPayer(0))
   }, [])
 
   if (!data) return (
@@ -542,6 +518,15 @@ export default function DashboardPage() {
   const driveUrl = data.user.drive_folder_id
     ? `https://drive.google.com/drive/folders/${data.user.drive_folder_id}`
     : null
+
+  const prochainRdvLabel = rdvs.length > 0
+    ? new Date(rdvs[0].start_utc).toLocaleDateString('fr-CA', { day: 'numeric', month: 'long' })
+    : 'Aucun planifié'
+
+  const guideQuery = guideSearch.trim().toLowerCase()
+  const filteredRessources = ressources.filter(r =>
+    !guideQuery || r.titre.toLowerCase().includes(guideQuery) || (r.description || '').toLowerCase().includes(guideQuery)
+  )
 
   return (
     <div style={{
@@ -626,6 +611,47 @@ export default function DashboardPage() {
           )}
         </div>
       </header>
+
+      {/* KPI strip */}
+      <section style={{
+        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+        gap: 'var(--space-4)', marginBottom: 'var(--space-10)',
+      }}>
+        <div style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)' }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--color-light-text-3)', fontWeight: 800, marginBottom: 'var(--space-2)' }}>
+            Projets actifs
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-xl)', color: 'var(--color-light-text)' }}>
+            {data.projets_actifs.length}
+          </div>
+        </div>
+        <div style={{ background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)' }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--color-light-text-3)', fontWeight: 800, marginBottom: 'var(--space-2)' }}>
+            Prochain rendez-vous
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-lg)', color: 'var(--color-light-text)', textTransform: 'capitalize' as const }}>
+            {prochainRdvLabel}
+          </div>
+        </div>
+        <Link href="/facturation" style={{
+          background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+          borderRadius: 'var(--radius-lg)', padding: 'var(--space-5)', textDecoration: 'none',
+          display: 'block', transition: `border-color var(--duration-base), box-shadow var(--duration-base)`,
+        }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-brand-25pct)'; e.currentTarget.style.boxShadow = '0 4px 20px var(--color-brand-6pct)' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-light-border)'; e.currentTarget.style.boxShadow = 'none' }}
+        >
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--color-light-text-3)', fontWeight: 800, marginBottom: 'var(--space-2)' }}>
+            Solde à payer
+          </div>
+          <div style={{
+            fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-xl)',
+            color: soldeAPayer === null ? 'var(--color-light-text-3)' : soldeAPayer > 0 ? 'var(--color-error)' : 'var(--color-success)',
+          }}>
+            {soldeAPayer === null ? '…' : soldeAPayer.toLocaleString('fr-CA', { minimumFractionDigits: 2 }) + ' $'}
+          </div>
+        </Link>
+      </section>
 
       {/* Card soumissions en attente */}
       {soumissionsEnAttente.length > 0 && (
@@ -769,23 +795,81 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* Historique des projets */}
+      <section style={{ marginTop: 'var(--space-10)' }}>
+        <h2 style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: 'var(--text-xs)',
+          fontWeight: 700,
+          textTransform: 'uppercase' as const,
+          letterSpacing: '0.12em',
+          color: 'var(--color-light-text-3)',
+          margin: '0 0 var(--space-4)',
+        }}>
+          Historique des projets
+        </h2>
+
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-3)' }}>
+          {data.projets_archives.map(p => (
+            <HistoriqueCard key={p.id} projet={p} />
+          ))}
+          {data.projets_archives.length === 0 && (
+            <div style={{
+              background: 'var(--color-light-2)', borderRadius: 'var(--radius-lg)',
+              padding: 'var(--space-6)', border: '1px solid var(--color-light-border)',
+              display: 'flex', alignItems: 'center', gap: 'var(--space-4)',
+            }}>
+              <span className="material-symbols-outlined" style={{ fontSize: '20px', color: 'var(--color-light-border-2)', flexShrink: 0 }}>history</span>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text-3)', margin: 0 }}>
+                Aucun projet complété pour le moment.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Ressources et guides */}
       {ressources.length > 0 && (
         <section style={{ marginTop: 'var(--space-10)' }}>
-          <h2 style={{
-            fontFamily: 'var(--font-body)',
-            fontSize: 'var(--text-xs)',
-            fontWeight: 700,
-            textTransform: 'uppercase' as const,
-            letterSpacing: '0.12em',
-            color: 'var(--color-light-text-3)',
-            margin: '0 0 var(--space-4)',
-          }}>
-            Guides et documents
-          </h2>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)', flexWrap: 'wrap' as const, marginBottom: 'var(--space-4)' }}>
+            <h2 style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 'var(--text-xs)',
+              fontWeight: 700,
+              textTransform: 'uppercase' as const,
+              letterSpacing: '0.12em',
+              color: 'var(--color-light-text-3)',
+              margin: 0,
+            }}>
+              Guides et documents
+            </h2>
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+              background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+              borderRadius: 'var(--radius-full)', padding: '0 var(--space-4)',
+            }}>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px', color: 'var(--color-light-text-3)' }}>search</span>
+              <input
+                value={guideSearch}
+                onChange={e => setGuideSearch(e.target.value)}
+                placeholder="Rechercher un guide…"
+                aria-label="Rechercher un guide"
+                style={{
+                  border: 'none', background: 'none', outline: 'none', color: 'var(--color-light-text)',
+                  fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', padding: 'var(--space-3) 0', width: '190px',
+                }}
+              />
+            </div>
+          </div>
+
+          {filteredRessources.length === 0 && (
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text-3)' }}>
+              Aucun guide ne correspond à votre recherche.
+            </p>
+          )}
 
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-3)' }}>
-            {ressources.map(r => (
+            {filteredRessources.map(r => (
               <a
                 key={r.id}
                 href={r.url}
@@ -841,59 +925,6 @@ export default function DashboardPage() {
               </a>
             ))}
           </div>
-        </section>
-      )}
-
-      {/* Archives */}
-      {data.projets_archives.length > 0 && (
-        <section style={{ marginTop: 'var(--space-16)' }}>
-          <button
-            onClick={() => setShowArchives(!showArchives)}
-            style={{
-              fontFamily: 'var(--font-body)',
-              fontSize: 'var(--text-sm)',
-              color: 'var(--color-light-text-3)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-2)',
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: 'var(--space-2) 0',
-              minHeight: '44px',
-              transition: `color var(--duration-fast)`,
-            }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-light-text)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-light-text-3)')}
-          >
-            <span
-              className="material-symbols-outlined"
-              style={{
-                fontSize: '18px',
-                transform: showArchives ? 'rotate(180deg)' : 'none',
-                transition: `transform var(--duration-base) var(--ease-out-quart)`,
-              }}
-            >
-              expand_more
-            </span>
-            {showArchives
-              ? 'Masquer les archives'
-              : `Voir les archives (${data.projets_archives.length})`}
-          </button>
-
-          {showArchives && (
-            <div style={{
-              marginTop: 'var(--space-6)',
-              display: 'flex',
-              flexDirection: 'column' as const,
-              gap: 'var(--space-4)',
-              opacity: 0.65,
-            }}>
-              {data.projets_archives.map(p => (
-                <ProjetCard key={p.id} projet={p} />
-              ))}
-            </div>
-          )}
         </section>
       )}
 

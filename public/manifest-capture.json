@@ -1,0 +1,17 @@
+{
+  "name": "Reçu — CocktailOS",
+  "short_name": "Reçu",
+  "description": "Photographier un reçu et l'ajouter à la comptabilité",
+  "start_url": "/capture",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#c0321a",
+  "icons": [
+    {
+      "src": "/cos-icone-noir.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

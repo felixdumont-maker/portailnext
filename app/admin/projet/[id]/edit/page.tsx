@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { STATUTS_CANONIQUES } from '@/lib/statuts'
 
 interface Client {
   id: number
@@ -27,16 +28,7 @@ interface Projet {
 
 type FacturationMode = 'deja_paye' | 'quickbooks' | 'forfait'
 
-const STATUTS = [
-  'Documents à donner',
-  'En attente de rendez-vous',
-  'Documents reçus',
-  'Travaux en cours',
-  'En révision',
-  'Finalisation',
-  'Travaux terminés',
-  'Annulé',
-]
+const STATUTS = STATUTS_CANONIQUES
 
 export default function EditProjetPage() {
   const params = useParams()

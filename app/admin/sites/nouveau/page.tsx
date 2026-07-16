@@ -11,6 +11,7 @@ type Template = 'reservation' | 'vitrine'
 interface FormData {
   // Étape 1 — Base
   template: Template
+  id_projet: string        // projet source (checklist) — vide si site créé sans lien à un projet
   business_name: string
   client_email: string
   resend_api_key: string
@@ -26,9 +27,7 @@ interface FormData {
   description_fr: string
   description_en: string
   hero_style: string
-  theme_font_pair: string
-  theme_accent_color: string
-  theme_bg_color: string
+  direction: string
   // Étape 3 — Coordonnées
   address: string
   city: string
@@ -59,12 +58,13 @@ interface FormData {
 /* ─── Valeurs par défaut ─────────────────────────────────── */
 const INITIAL: FormData = {
   template: 'vitrine',
+  id_projet: '',
   business_name: '', client_email: '', resend_api_key: '',
   owner_name: '', owner_title: '', owner_title_fr: '', owner_title_en: '',
   tagline: '', tagline_fr: '', tagline_en: '',
   description: '', description_fr: '', description_en: '',
   hero_style: 'A',
-  theme_font_pair: 'actuel', theme_accent_color: '#37596e', theme_bg_color: '#ece4d3',
+  direction: 'editorial',
   address: '', city: '', province: 'QC', postal_code: '',
   phone: '', email: '', acuity_url: '',
   instagram: '', facebook: '', linkedin: '',
@@ -152,11 +152,13 @@ function Divider() {
   return <div style={{ height: 1, background: 'var(--color-light-border)', width: '100%' }} />
 }
 
-/* ─── Sélecteur de style Hero ────────────────────────────── */
-function HeroStylePicker({ template, value, onChange }: { template: Template; value: string; onChange: (v: string) => void }) {
-  const options = template === 'reservation'
-    ? [{ id: 'A', label: 'Style A', desc: 'Plein écran' }, { id: 'B', label: 'Style B', desc: 'Avec bande' }, { id: 'C', label: 'Style C', desc: 'Minimaliste' }]
-    : [{ id: 'luxe', label: 'Luxe', desc: 'Photo plein écran' }, { id: 'split', label: 'Split', desc: 'Texte / Photo' }, { id: 'minimal', label: 'Minimal', desc: 'Typographie pure' }]
+/* ─── Sélecteur de style Hero (réservation uniquement) ──── */
+function HeroStylePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const options = [
+    { id: 'A', label: 'Style A', desc: 'Plein écran' },
+    { id: 'B', label: 'Style B', desc: 'Avec bande' },
+    { id: 'C', label: 'Style C', desc: 'Minimaliste' },
+  ]
 
   return (
     <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
@@ -176,6 +178,66 @@ function HeroStylePicker({ template, value, onChange }: { template: Template; va
           <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)', color: value === opt.id ? 'var(--color-brand)' : 'var(--color-light-text)', margin: '0 0 2px', textTransform: 'uppercase' }}>{opt.label}</p>
           <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: 0, fontFamily: 'var(--font-body)' }}>{opt.desc}</p>
         </button>
+      ))}
+    </div>
+  )
+}
+
+/* ─── Sélecteur de direction artistique Baseline (vitrine) ──
+   exampleUrl : site vitrine réel (contenu Cocktail Média, gabarit exact), déployé
+   sur Vercel pour chaque direction — permet de voir le vrai rendu avant de choisir,
+   au lieu de deviner à partir de 3 pastilles de couleur. */
+const DIRECTION_OPTIONS = [
+  { id: 'editorial', label: 'Éditorial', desc: 'Chaleureux · crème & terracotta', swatches: ['#faf8f4', '#c1613f', '#241d17'], exampleUrl: 'https://site-cocktail-media-editorial.vercel.app' },
+  { id: 'manifesto', label: 'Manifesto', desc: 'Audacieux · noir & lime', swatches: ['#121212', '#d8ff5c', '#f4f4f0'], exampleUrl: 'https://site-cocktail-media-manifesto.vercel.app' },
+  { id: 'feutre',    label: 'Feutré',    desc: 'Raffiné · marine & or', swatches: ['#10161d', '#c9a24a', '#f0ece2'], exampleUrl: 'https://site-cocktail-media-feutre.vercel.app' },
+  { id: 'ludique',   label: 'Ludique',   desc: 'Joyeux · pêche & violet', swatches: ['#fdf3ec', '#6b4fa0', '#ff8a65'], exampleUrl: 'https://site-cocktail-media-ludique.vercel.app' },
+  { id: 'clean',     label: 'Clean',     desc: 'Structuré · blanc & bleu roi', swatches: ['#ffffff', '#1d4ed8', '#0b1220'], exampleUrl: 'https://site-cocktail-media-clean.vercel.app' },
+  { id: 'cinematic', label: 'Cinématique', desc: 'Sombre · noir & menthe', swatches: ['#0b0b0b', '#39ffd6', '#f4f4f2'], exampleUrl: 'https://site-cocktail-media-cinematic.vercel.app' },
+  { id: 'bento',     label: 'Bento',     desc: 'Glass · nuit & violet', swatches: ['#0d0b1f', '#c9a6ff', '#f1eeff'], exampleUrl: 'https://site-cocktail-media-bento.vercel.app' },
+  { id: 'organique', label: 'Organique', desc: 'Chaud · sable & rouille', swatches: ['#f7f3ec', '#a8552f', '#2a2119'], exampleUrl: 'https://site-cocktail-media-organique.vercel.app' },
+]
+
+function DirectionPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-3)' }}>
+      {DIRECTION_OPTIONS.map(opt => (
+        <div
+          key={opt.id}
+          style={{
+            padding: 'var(--space-4)', borderRadius: 'var(--radius-md)',
+            border: `2px solid ${value === opt.id ? 'var(--color-brand)' : 'var(--color-light-border)'}`,
+            background: value === opt.id ? 'var(--color-error-bg)' : 'var(--color-light-2)',
+            transition: 'all var(--duration-fast)',
+          }}
+        >
+          <button
+            type="button"
+            onClick={() => onChange(opt.id)}
+            style={{ display: 'block', width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+          >
+            <div style={{ display: 'flex', gap: 4, marginBottom: 'var(--space-2)' }}>
+              {opt.swatches.map((hex, i) => (
+                <span key={i} aria-hidden="true" style={{ width: 16, height: 16, borderRadius: '50%', background: hex, border: '1px solid rgba(0,0,0,0.1)' }} />
+              ))}
+            </div>
+            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)', color: value === opt.id ? 'var(--color-brand)' : 'var(--color-light-text)', margin: '0 0 2px', textTransform: 'uppercase' }}>
+              {opt.label}
+            </p>
+            <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: 0, fontFamily: 'var(--font-body)' }}>
+              {opt.desc}
+            </p>
+          </button>
+          <a
+            href={opt.exampleUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            style={{ display: 'inline-block', marginTop: 'var(--space-2)', fontSize: 'var(--text-xs)', fontWeight: 600, color: 'var(--color-brand)', textDecoration: 'underline' }}
+          >
+            Voir un exemple ↗
+          </a>
+        </div>
       ))}
     </div>
   )
@@ -206,6 +268,7 @@ export default function NouveauSitePage() {
         if (!data) return
         setForm(f => ({
           ...f,
+          id_projet: fromProjet,
           business_name: data.business_name || f.business_name,
           client_email:  data.client_email  || f.client_email,
           email:         data.email         || f.email,
@@ -444,52 +507,21 @@ export default function NouveauSitePage() {
               </>
             )}
 
-            <Divider />
-
-            <Field label="Style du hero">
-              <HeroStylePicker template={form.template} value={form.hero_style} onChange={set('hero_style')} />
-            </Field>
+            {isReservation && (
+              <>
+                <Divider />
+                <Field label="Style du hero">
+                  <HeroStylePicker value={form.hero_style} onChange={set('hero_style')} />
+                </Field>
+              </>
+            )}
 
             {!isReservation && (
               <>
                 <Divider />
-
-                <Field label="Police">
-                  <select
-                    value={form.theme_font_pair}
-                    onChange={e => set('theme_font_pair')(e.target.value)}
-                    className="w-full bg-[var(--color-light-0)] border-none rounded-lg px-5 py-4 text-[var(--color-dark-0)] focus:ring-2 focus:ring-[var(--color-brand)]/40 outline-none"
-                    style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)' }}
-                  >
-                    <option value="actuel">Actuel (Spectral / Jost)</option>
-                    <option value="classique">Classique (Lora / Source Sans 3)</option>
-                    <option value="elegant">Élégant (Playfair Display / Inter)</option>
-                    <option value="moderne">Moderne (Poppins / Inter)</option>
-                    <option value="chaleureux">Chaleureux (Fraunces / Karla)</option>
-                    <option value="minimal">Minimal (Space Grotesk / Work Sans)</option>
-                    <option value="corporatif">Corporatif (Montserrat / Open Sans)</option>
-                    <option value="doux">Doux (Cormorant Garamond / Nunito)</option>
-                  </select>
+                <Field label="Direction artistique">
+                  <DirectionPicker value={form.direction} onChange={set('direction')} />
                 </Field>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-                  <Field label="Couleur d'accent">
-                    <input
-                      type="color"
-                      value={form.theme_accent_color}
-                      onChange={e => set('theme_accent_color')(e.target.value)}
-                      className="w-full h-14 bg-[var(--color-light-0)] border-none rounded-lg cursor-pointer"
-                    />
-                  </Field>
-                  <Field label="Couleur de fond">
-                    <input
-                      type="color"
-                      value={form.theme_bg_color}
-                      onChange={e => set('theme_bg_color')(e.target.value)}
-                      className="w-full h-14 bg-[var(--color-light-0)] border-none rounded-lg cursor-pointer"
-                    />
-                  </Field>
-                </div>
               </>
             )}
           </div>

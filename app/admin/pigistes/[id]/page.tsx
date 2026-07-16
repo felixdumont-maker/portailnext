@@ -12,11 +12,12 @@ const STATUT_MANDAT: Record<string, { bg: string; text: string; label: string }>
   'annulé':     { bg: 'var(--color-error-bg)', text: 'var(--color-error-text)', label: 'Annulé' },
 }
 
+// Cohérent avec le token spec du handoff : Approuvée = vert, Payée = bleu (info), Soumise = ambre
 const STATUT_FACTURE: Record<string, { bg: string; text: string; label: string }> = {
   'brouillon': { bg: 'var(--color-light-border)', text: 'var(--color-dark-text-2)', label: 'Brouillon' },
   'soumise':   { bg: 'var(--color-warning-bg)', text: 'var(--color-warning-text)', label: 'Soumise' },
-  'approuvée': { bg: 'var(--color-info-bg)', text: 'var(--color-info-text)', label: 'Approuvée' },
-  'payée':     { bg: 'var(--color-success-bg)', text: 'var(--color-success-text)', label: 'Payée' },
+  'approuvée': { bg: 'var(--color-success-bg)', text: 'var(--color-success-text)', label: 'Approuvée' },
+  'payée':     { bg: 'var(--color-info-bg)', text: 'var(--color-info-text)', label: 'Payée' },
 }
 
 const SOCIAL_GROUPS = [
@@ -31,6 +32,16 @@ const PDF_TEMPLATES = [
   { id: 'business', label: 'Plan d\'affaires' },
   { id: 'pigiste',  label: 'Programme pigiste' },
 ]
+
+const inputCls = "w-full bg-[var(--color-light-0)] border-none rounded-xl px-3 py-2.5 outline-none font-body text-sm focus:ring-2 focus:ring-[var(--color-brand)]/40"
+
+// Chip d'outil : actif = contour + fond brand-soft + texte brand ; inactif = neutre
+const chipCls = (on: boolean) =>
+  `px-3 py-1.5 rounded-full text-xs font-bold font-body transition-colors border ${
+    on
+      ? 'border-[var(--color-brand)] bg-[var(--color-brand-muted)] text-[var(--color-brand)]'
+      : 'border-[var(--color-light-border)] bg-[var(--color-light-0)] text-[var(--color-dark-text-2)] hover:border-[var(--color-brand)]'
+  }`
 
 interface Mandat { id: number; titre: string; statut: string; date_echeance: string; montant_convenu: number; nom_projet: string }
 interface Facture { id: number; numero: string; statut: string; montant_total: number; date_emission: string }
@@ -203,26 +214,30 @@ export default function AdminPigisteDetail() {
         </div>
       )}
 
-      <Link href="/admin/pigistes" className="flex items-center gap-2 text-[var(--color-dark-text-2)] mb-6 hover:text-[var(--color-dark-1)] transition-colors font-body text-sm">
-        <span aria-hidden="true" className="material-symbols-outlined text-sm">arrow_back</span>
-        Retour aux pigistes
-      </Link>
+      {/* Fil d'Ariane */}
+      <nav className="flex items-center gap-1.5 text-xs font-body text-[var(--color-dark-text-2)] mb-5">
+        <span className="font-bold uppercase tracking-wide text-[var(--color-brand)]">Équipe</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_right</span>
+        <Link href="/admin/pigistes" className="hover:text-[var(--color-brand)] transition-colors">Pigistes</Link>
+        <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_right</span>
+        <span className="text-[var(--color-dark-1)] font-semibold truncate">{pigiste.nom_complet}</span>
+      </nav>
 
-      {/* Header pigiste */}
-      <div className="bg-white rounded-3xl p-8 shadow-sm mb-4 flex items-center gap-6">
-        <div className="w-16 h-16 rounded-full bg-[var(--color-dark-1)] flex items-center justify-center text-white font-display text-[var(--text-xl)] flex-shrink-0">{initiales}</div>
-        <div className="flex-1">
-          <h1 className="font-display text-[var(--text-2xl)] text-[var(--color-dark-1)]">{pigiste.nom_complet}</h1>
-          <p className="font-body text-sm text-[var(--color-dark-text-2)]">{pigiste.email} {pigiste.telephone ? `· ${pigiste.telephone}` : ''}</p>
+      {/* Header pigiste — un seul bloc : avatar, coordonnées, statut, modifier */}
+      <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] p-6 mb-4 flex items-center gap-5">
+        <div className="w-14 h-14 rounded-full bg-[var(--color-brand)] flex items-center justify-center text-white font-display font-extrabold text-lg flex-shrink-0">{initiales}</div>
+        <div className="flex-1 min-w-0">
+          <h1 className="font-display text-xl text-[var(--color-dark-1)] truncate">{pigiste.nom_complet}</h1>
+          <p className="font-body text-sm text-[var(--color-dark-text-2)] truncate">{pigiste.email} {pigiste.telephone ? `· ${pigiste.telephone}` : ''}</p>
           {(pigiste.numero_tps || pigiste.numero_tvq) && (
             <p className="font-body text-xs text-[var(--color-dark-text-2)] mt-1">
               {pigiste.numero_tps ? `TPS: ${pigiste.numero_tps}` : ''}{pigiste.numero_tps && pigiste.numero_tvq ? ' · ' : ''}{pigiste.numero_tvq ? `TVQ: ${pigiste.numero_tvq}` : ''}
             </p>
           )}
         </div>
-        <div className="flex items-center gap-3 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Link href={`/admin/pigistes/${id}/edit`}
-            className="flex items-center gap-1.5 bg-[var(--color-light-1)] text-[var(--color-dark-1)] px-4 py-2 rounded-full font-body font-bold text-xs uppercase tracking-wide hover:bg-[var(--color-light-0)] transition-colors border border-[var(--color-light-border)]">
+            className="inline-flex items-center gap-1.5 bg-[var(--color-light-0)] border border-[var(--color-light-border)] text-[var(--color-dark-1)] px-4 py-2 rounded-full font-body font-bold text-xs uppercase tracking-wide hover:border-[var(--color-brand)] transition-colors">
             <span aria-hidden="true" className="material-symbols-outlined text-sm">edit</span>
             Modifier
           </Link>
@@ -240,14 +255,14 @@ export default function AdminPigisteDetail() {
       </div>
 
       {/* ── Outils assignés ─────────────────────────────────── */}
-      <div className="bg-white rounded-3xl p-6 shadow-sm mb-4">
-        <div className="flex justify-between items-center mb-5">
+      <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] p-6 mb-4">
+        <div className="flex justify-between items-start gap-4 mb-5">
           <div>
-            <h2 className="font-display text-[var(--text-xl)] text-[var(--color-dark-1)]">OUTILS ASSIGNÉS</h2>
+            <h2 className="font-display text-base uppercase tracking-wide text-[var(--color-dark-1)]">Outils assignés</h2>
             <p className="font-body text-xs text-[var(--color-dark-text-2)] mt-0.5">Définit ce que ce pigiste voit dans le Social Kit et le Générateur PDF. Vide = accès complet.</p>
           </div>
           <button onClick={saveTools} disabled={toolsSaving}
-            className="flex items-center gap-2 bg-[var(--color-dark-1)] text-white px-5 py-2 rounded-full font-body font-bold text-xs uppercase tracking-wide hover:bg-black transition-colors disabled:opacity-50">
+            className="inline-flex items-center gap-2 bg-[var(--color-brand)] text-white px-5 py-2.5 rounded-full font-body font-bold text-xs uppercase tracking-wide hover:bg-[var(--color-brand-hover)] transition-colors disabled:opacity-50 flex-shrink-0">
             <span aria-hidden="true" className="material-symbols-outlined text-sm">save</span>
             {toolsSaving ? 'Sauvegarde…' : 'Sauvegarder'}
           </button>
@@ -256,28 +271,27 @@ export default function AdminPigisteDetail() {
         <div className="space-y-5">
           <div>
             <div className="flex items-center gap-3 mb-3">
-              <span className="font-display text-sm tracking-widest text-[var(--color-brand)] uppercase">Social Kit</span>
+              <span className="font-display text-sm tracking-wide text-[var(--color-brand)]">Social Kit</span>
               <button onClick={() => setTools(p => ({ ...p, social: null }))}
-                className="text-[10px] font-bold font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)] underline">Accès complet</button>
+                className="text-[10px] font-bold font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] underline">Accès complet</button>
             </div>
             {SOCIAL_GROUPS.map(group => {
               const activeSocial = tools.social ?? SOCIAL_GROUPS.flatMap(g => g.ids)
               return (
-                <div key={group.label} className="mb-3">
+                <div key={group.label} className="mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <span className="font-body font-bold text-xs text-[var(--color-dark-1)] uppercase tracking-wide">{group.label}</span>
                     <button onClick={() => setGroupAll(group.ids, 'social', true)}
-                      className="text-[10px] font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)]">Tout</button>
+                      className="text-[10px] font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)]">Tout</button>
                     <span className="text-[var(--color-dark-text-2)] text-[10px]">/</span>
                     <button onClick={() => setGroupAll(group.ids, 'social', false)}
-                      className="text-[10px] font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)]">Aucun</button>
+                      className="text-[10px] font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)]">Aucun</button>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {group.ids.map((tid, i) => {
                       const on = activeSocial.includes(tid)
                       return (
-                        <button key={tid} onClick={() => toggleId('social', tid)}
-                          className={`px-3 py-1.5 rounded-full text-xs font-bold font-body transition-colors border ${on ? 'bg-[var(--color-dark-1)] text-white border-[var(--color-dark-1)]' : 'bg-white text-[var(--color-dark-text-2)] border-[var(--color-light-border-2)] hover:border-[var(--color-dark-1)]'}`}>
+                        <button key={tid} onClick={() => toggleId('social', tid)} className={chipCls(on)}>
                           {tid} <span className="font-normal opacity-70">— {group.names[i]}</span>
                         </button>
                       )
@@ -288,19 +302,18 @@ export default function AdminPigisteDetail() {
             })}
           </div>
 
-          <div className="border-t border-[var(--color-light-0)] pt-4">
+          <div className="border-t border-[var(--color-light-border)] pt-4">
             <div className="flex items-center gap-3 mb-3">
-              <span className="font-display text-sm tracking-widest text-[var(--color-brand)] uppercase">Générateur PDF</span>
+              <span className="font-display text-sm tracking-wide text-[var(--color-brand)]">Générateur PDF</span>
               <button onClick={() => setTools(p => ({ ...p, pdf: null }))}
-                className="text-[10px] font-bold font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)] underline">Accès complet</button>
+                className="text-[10px] font-bold font-body text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] underline">Accès complet</button>
             </div>
             <div className="flex flex-wrap gap-2">
               {PDF_TEMPLATES.map(t => {
                 const activePdf = tools.pdf ?? PDF_TEMPLATES.map(x => x.id)
                 const on = activePdf.includes(t.id)
                 return (
-                  <button key={t.id} onClick={() => toggleId('pdf', t.id)}
-                    className={`px-4 py-2 rounded-full text-xs font-bold font-body transition-colors border ${on ? 'bg-[var(--color-dark-1)] text-white border-[var(--color-dark-1)]' : 'bg-white text-[var(--color-dark-text-2)] border-[var(--color-light-border-2)] hover:border-[var(--color-dark-1)]'}`}>
+                  <button key={t.id} onClick={() => toggleId('pdf', t.id)} className={chipCls(on)}>
                     {t.label}
                   </button>
                 )
@@ -313,23 +326,23 @@ export default function AdminPigisteDetail() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
         {/* Mandats */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm">
+        <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] p-6">
           <div className="flex justify-between items-center mb-5">
-            <h2 className="font-display text-[var(--text-xl)] text-[var(--color-dark-1)]">MANDATS</h2>
+            <h2 className="font-display text-base uppercase tracking-wide text-[var(--color-dark-1)]">Mandats</h2>
             <button onClick={() => setShowMandat(v => !v)}
-              className="flex items-center gap-1 bg-[var(--color-brand)] text-white px-4 py-2 rounded-full font-body font-bold text-xs uppercase tracking-wide hover:bg-[var(--color-brand-hover)] transition-colors">
+              className="inline-flex items-center gap-1 bg-[var(--color-brand)] text-white px-4 py-2 rounded-full font-body font-bold text-xs uppercase tracking-wide hover:bg-[var(--color-brand-hover)] transition-colors">
               <span aria-hidden="true" className="material-symbols-outlined text-sm">add</span>
               Nouveau
             </button>
           </div>
 
           {showMandat && (
-            <form onSubmit={handleCreateMandat} className="mb-5 p-4 bg-[var(--color-light-1)] rounded-2xl space-y-3">
+            <form onSubmit={handleCreateMandat} className="mb-5 p-4 bg-[var(--color-light-0)] rounded-xl space-y-3">
               <input required value={mandatForm.titre} onChange={e => setMandatForm(p => ({ ...p, titre: e.target.value }))} placeholder="Titre du mandat *" aria-label="Titre du mandat"
-                className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]" />
+                className={inputCls} />
 
               <select value={mandatForm.type_prestation} onChange={e => setMandatForm(p => ({ ...p, type_prestation: e.target.value }))}
-                aria-label="Type de prestation" className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]">
+                aria-label="Type de prestation" className={inputCls}>
                 <option value="">Type de prestation…</option>
                 {Object.entries(tarifCatMap).map(([cat, items]) => (
                   <optgroup key={cat} label={cat}>
@@ -344,7 +357,7 @@ export default function AdminPigisteDetail() {
                     <label className="text-[10px] font-bold uppercase text-[var(--color-dark-text-2)] font-body ml-1">Quantité ({tarifChoisi.unite})</label>
                     <input type="number" value={mandatForm.quantite} onChange={e => setMandatForm(p => ({ ...p, quantite: e.target.value }))}
                       min="1" step="1" aria-label="Quantité"
-                      className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)] mt-1" />
+                      className={`${inputCls} mt-1`} />
                   </div>
                   <div className="flex-1 bg-[var(--color-success-bg)] rounded-xl px-3 py-2 mt-5">
                     <p className="text-[10px] font-bold uppercase text-[var(--color-success-text)] font-body">Montant auto</p>
@@ -355,25 +368,24 @@ export default function AdminPigisteDetail() {
                 </div>
               )}
 
-              <select value={mandatForm.id_projet} onChange={e => setMandatForm(p => ({ ...p, id_projet: e.target.value }))}
-                className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]">
+              <select value={mandatForm.id_projet} onChange={e => setMandatForm(p => ({ ...p, id_projet: e.target.value }))} className={inputCls}>
                 <option value="">Lier à un projet (optionnel)</option>
                 {projets.map(p => <option key={p.id} value={p.id}>{p.nom_projet}</option>)}
               </select>
               <div className="grid grid-cols-2 gap-3">
                 <input type="date" value={mandatForm.date_debut} onChange={e => setMandatForm(p => ({ ...p, date_debut: e.target.value }))} aria-label="Date de début"
-                  className="bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]" />
+                  className={inputCls} />
                 <input type="date" value={mandatForm.date_echeance} onChange={e => setMandatForm(p => ({ ...p, date_echeance: e.target.value }))} aria-label="Date d'échéance"
-                  className="bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)]" />
+                  className={inputCls} />
               </div>
               <textarea value={mandatForm.notes_admin} onChange={e => setMandatForm(p => ({ ...p, notes_admin: e.target.value }))} placeholder="Notes pour le pigiste" rows={2}
-                className="w-full bg-white rounded-xl px-3 py-2 font-body text-sm outline-none border border-[var(--color-light-border-2)] resize-none" />
+                className={`${inputCls} resize-none`} />
               <div className="flex gap-2">
                 <button type="submit" disabled={savingMandat}
-                  className="bg-[var(--color-brand)] text-white font-display text-lg px-6 py-2 rounded-full tracking-widest hover:bg-[var(--color-brand-hover)] transition-all disabled:opacity-60">
+                  className="bg-[var(--color-brand)] text-white font-body font-bold text-sm px-6 py-2.5 rounded-full uppercase tracking-wide hover:bg-[var(--color-brand-hover)] transition-all disabled:opacity-60">
                   {savingMandat ? 'Création...' : 'Créer'}
                 </button>
-                <button type="button" onClick={() => setShowMandat(false)} className="text-[var(--color-dark-text-2)] font-body text-sm px-4 py-2 rounded-full hover:bg-[var(--color-light-0)]">Annuler</button>
+                <button type="button" onClick={() => setShowMandat(false)} className="text-[var(--color-dark-text-2)] font-body text-sm px-4 py-2.5 rounded-full hover:bg-[var(--color-light-2)]">Annuler</button>
               </div>
             </form>
           )}
@@ -385,7 +397,7 @@ export default function AdminPigisteDetail() {
               {pigiste.mandats.map(m => {
                 const s = STATUT_MANDAT[m.statut] ?? { bg: 'var(--color-light-border)', text: 'var(--color-dark-text-2)', label: m.statut }
                 return (
-                  <div key={m.id} className="p-3 bg-[var(--color-light-1)] rounded-xl">
+                  <div key={m.id} className="p-3 bg-[var(--color-light-0)] rounded-xl">
                     <div className="flex justify-between items-start gap-2 mb-1">
                       <p className="font-body font-bold text-sm text-[var(--color-dark-1)] flex-1 min-w-0 truncate">{m.titre}</p>
                       <span style={{ background: s.bg, color: s.text }} className="px-2 py-0.5 rounded-full text-[10px] font-bold font-body whitespace-nowrap">{s.label}</span>
@@ -395,7 +407,7 @@ export default function AdminPigisteDetail() {
                       <span className="font-display text-base text-[var(--color-dark-1)]">{m.montant_convenu.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}</span>
                       {m.statut === 'remis' && (
                         <button onClick={() => handleApprouverMandat(m.id)} disabled={approvingId === m.id}
-                          className="text-xs font-bold font-body bg-[var(--color-success-bg)] text-[var(--color-success-text)] px-3 py-1 rounded-full hover:bg-[var(--color-success-bg)] transition-colors disabled:opacity-50">
+                          className="text-xs font-bold font-body bg-[var(--color-success-bg)] text-[var(--color-success-text)] px-3 py-1 rounded-full hover:opacity-80 transition-opacity disabled:opacity-50">
                           {approvingId === m.id ? '...' : 'Approuver'}
                         </button>
                       )}
@@ -408,8 +420,8 @@ export default function AdminPigisteDetail() {
         </div>
 
         {/* Factures */}
-        <div className="bg-white rounded-3xl p-6 shadow-sm">
-          <h2 className="font-display text-[var(--text-xl)] text-[var(--color-dark-1)] mb-5">FACTURES</h2>
+        <div className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] p-6">
+          <h2 className="font-display text-base uppercase tracking-wide text-[var(--color-dark-1)] mb-5">Factures</h2>
           {pigiste.factures.length === 0 ? (
             <p className="text-[var(--color-dark-text-2)] font-body text-sm">Aucune facture.</p>
           ) : (
@@ -417,7 +429,7 @@ export default function AdminPigisteDetail() {
               {pigiste.factures.map(f => {
                 const s = STATUT_FACTURE[f.statut] ?? { bg: 'var(--color-light-border)', text: 'var(--color-dark-text-2)', label: f.statut }
                 return (
-                  <div key={f.id} className="p-3 bg-[var(--color-light-1)] rounded-xl flex items-center justify-between gap-3">
+                  <div key={f.id} className="p-3 bg-[var(--color-light-0)] rounded-xl flex items-center justify-between gap-3">
                     <div>
                       <p className="font-body font-bold text-sm text-[var(--color-dark-1)]">{f.numero}</p>
                       <span style={{ background: s.bg, color: s.text }} className="px-2 py-0.5 rounded-full text-[10px] font-bold font-body">{s.label}</span>
@@ -426,7 +438,7 @@ export default function AdminPigisteDetail() {
                       <span className="font-display text-lg text-[var(--color-dark-1)]">{f.montant_total.toLocaleString('fr-CA', { style: 'currency', currency: 'CAD' })}</span>
                       {f.statut === 'soumise' && (
                         <button onClick={() => handlePayerFacture(f.id)} disabled={payingId === f.id}
-                          className="text-xs font-bold font-body bg-[var(--color-dark-1)] text-white px-3 py-1.5 rounded-full hover:bg-black transition-colors disabled:opacity-50">
+                          className="text-xs font-bold font-body bg-[var(--color-brand)] text-white px-3 py-1.5 rounded-full hover:bg-[var(--color-brand-hover)] transition-colors disabled:opacity-50">
                           {payingId === f.id ? '...' : 'Marquer payée'}
                         </button>
                       )}

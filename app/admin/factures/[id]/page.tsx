@@ -77,8 +77,19 @@ export default function FactureDetailPage() {
   // Édition en ligne
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editDesc, setEditDesc] = useState('')
+  const [editLoc, setEditLoc] = useState('')
   const [editPrix, setEditPrix] = useState('')
   const [editQte, setEditQte] = useState('')
+
+  // Édition nom + courriel + adresse de facturation — permise quel que soit le statut de la facture
+  const [editingAdresse, setEditingAdresse] = useState(false)
+  const [adrNom, setAdrNom] = useState('')
+  const [adrEmail, setAdrEmail] = useState('')
+  const [adrRue, setAdrRue] = useState('')
+  const [adrVille, setAdrVille] = useState('')
+  const [adrProvince, setAdrProvince] = useState('')
+  const [adrCodePostal, setAdrCodePostal] = useState('')
+  const [adrError, setAdrError] = useState('')
 
   const loadFacture = useCallback(async () => {
     try {
@@ -141,8 +152,50 @@ export default function FactureDetailPage() {
   function startEdit(l: Ligne) {
     setEditingId(l.id)
     setEditDesc(l.description)
+    setEditLoc(l.localisation || '')
     setEditPrix(String(l.prix_unitaire))
     setEditQte(String(l.quantite))
+  }
+
+  function startEditAdresse() {
+    setAdrNom(facture?.client?.nom_complet || '')
+    setAdrEmail(facture?.client?.email || '')
+    setAdrRue(facture?.client?.adresse_facturation || '')
+    setAdrVille(facture?.client?.ville_facturation || '')
+    setAdrProvince(facture?.client?.province_facturation || 'Québec')
+    setAdrCodePostal(facture?.client?.code_postal_facturation || '')
+    setAdrError('')
+    setEditingAdresse(true)
+  }
+
+  async function handleSaveAdresse() {
+    if (!facture?.client) return
+    if (!adrNom.trim()) { setAdrError('Le nom est obligatoire.'); return }
+    if (!adrEmail.trim()) { setAdrError('Le courriel est obligatoire.'); return }
+    setActionLoading('adresse')
+    setAdrError('')
+    try {
+      const res = await fetch(`/api/v1/admin/client/${facture.client.id}/adresse-facturation`, {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nom_complet: adrNom,
+          email: adrEmail,
+          adresse_facturation: adrRue,
+          ville_facturation: adrVille,
+          province_facturation: adrProvince,
+          code_postal_facturation: adrCodePostal,
+        }),
+      })
+      const data = await res.json()
+      if (!data.success) { setAdrError(data.error || 'Erreur.'); return }
+      setEditingAdresse(false)
+      await loadFacture()
+    } catch {
+      setAdrError('Erreur réseau.')
+    } finally {
+      setActionLoading(null)
+    }
   }
 
   async function handleSaveLigne(ligneId: number) {
@@ -151,7 +204,7 @@ export default function FactureDetailPage() {
       const res = await fetch(`/api/v1/admin/ligne/${ligneId}/modifier`, {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: editDesc, prix_unitaire: parseFloat(editPrix) || 0, quantite: parseInt(editQte) || 1 }),
+        body: JSON.stringify({ description: editDesc, localisation: editLoc, prix_unitaire: parseFloat(editPrix) || 0, quantite: parseInt(editQte) || 1 }),
       })
       const data = await res.json()
       if (!data.success) { setError(data.error || 'Erreur.'); return }
@@ -210,15 +263,54 @@ export default function FactureDetailPage() {
             </h1>
             {facture.client && (
               <div className="mt-2">
-                <p className="font-body font-semibold text-[var(--color-dark-1)]">{facture.client.nom_complet}</p>
-                {facture.client.nom_entreprise && (
-                  <p className="text-[var(--color-dark-text-2)] text-sm font-body">{facture.client.nom_entreprise}</p>
-                )}
-                {facture.client.adresse_facturation && (
-                  <p className="text-[var(--color-dark-text-2)] text-sm font-body mt-1">
-                    {facture.client.adresse_facturation}<br />
-                    {[facture.client.ville_facturation, facture.client.province_facturation, facture.client.code_postal_facturation].filter(Boolean).join(', ')}
-                  </p>
+                {editingAdresse ? (
+                  <div className="space-y-2 max-w-xs">
+                    {adrError && <p className="text-[var(--color-error-text)] text-xs font-body">{adrError}</p>}
+                    <input aria-label="Nom complet" value={adrNom} onChange={e => setAdrNom(e.target.value)} placeholder="Nom complet" className={inputCls + ' w-full font-semibold'} />
+                    <input aria-label="Courriel" type="email" value={adrEmail} onChange={e => setAdrEmail(e.target.value)} placeholder="Courriel" className={inputCls + ' w-full'} />
+                    <input aria-label="Adresse" value={adrRue} onChange={e => setAdrRue(e.target.value)} placeholder="Adresse" className={inputCls + ' w-full'} />
+                    <input aria-label="Ville" value={adrVille} onChange={e => setAdrVille(e.target.value)} placeholder="Ville" className={inputCls + ' w-full'} />
+                    <div className="flex gap-2">
+                      <input aria-label="Province" value={adrProvince} onChange={e => setAdrProvince(e.target.value)} placeholder="Province" className={inputCls + ' w-full'} />
+                      <input aria-label="Code postal" value={adrCodePostal} onChange={e => setAdrCodePostal(e.target.value)} placeholder="Code postal" className={inputCls + ' w-full'} />
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button onClick={handleSaveAdresse} disabled={actionLoading === 'adresse'}
+                        className="bg-[var(--color-brand)] text-white rounded-lg px-4 py-1.5 text-xs font-bold hover:bg-[var(--color-brand-hover)] transition-colors disabled:opacity-50">
+                        {actionLoading === 'adresse' ? '...' : 'Enregistrer'}
+                      </button>
+                      <button onClick={() => setEditingAdresse(false)}
+                        className="bg-[var(--color-light-0)] text-[var(--color-dark-3)] rounded-lg px-4 py-1.5 text-xs font-bold hover:bg-[var(--color-light-border)] transition-colors">
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-start gap-2">
+                      <p className="font-body font-semibold text-[var(--color-dark-1)]">{facture.client.nom_complet}</p>
+                      <button onClick={startEditAdresse} aria-label="Modifier le nom et l'adresse de facturation"
+                        className="text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] transition-colors">
+                        <span aria-hidden="true" className="material-symbols-outlined text-base">edit</span>
+                      </button>
+                    </div>
+                    {facture.client.nom_entreprise && (
+                      <p className="text-[var(--color-dark-text-2)] text-sm font-body">{facture.client.nom_entreprise}</p>
+                    )}
+                    <p className="text-[var(--color-dark-text-2)] text-sm font-body">{facture.client.email}</p>
+                    {facture.client.adresse_facturation ? (
+                      <p className="text-[var(--color-dark-text-2)] text-sm font-body mt-1">
+                        {facture.client.adresse_facturation}<br />
+                        {[facture.client.ville_facturation, facture.client.province_facturation, facture.client.code_postal_facturation].filter(Boolean).join(', ')}
+                      </p>
+                    ) : (
+                      <button onClick={startEditAdresse}
+                        className="mt-1 text-xs font-bold font-body text-[var(--color-brand)] hover:underline inline-flex items-center gap-1">
+                        <span aria-hidden="true" className="material-symbols-outlined text-sm">add</span>
+                        Ajouter une adresse de facturation
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             )}
@@ -267,7 +359,9 @@ export default function FactureDetailPage() {
                           <input aria-label="Description de la ligne" value={editDesc} onChange={e => setEditDesc(e.target.value)} className={inputCls + ' w-full'} />
                         </td>
                         <td className="py-3 hidden md:table-cell text-[var(--color-dark-text-2)]">{l.date_service || '—'}</td>
-                        <td className="py-3 hidden md:table-cell text-[var(--color-dark-text-2)]">{l.localisation || '—'}</td>
+                        <td className="py-3 pr-2 hidden md:table-cell">
+                          <input aria-label="Localisation" value={editLoc} onChange={e => setEditLoc(e.target.value)} placeholder="Localisation" className={inputCls + ' w-full'} />
+                        </td>
                         <td className="py-3 pr-2 text-right">
                           <input aria-label="Quantité" type="number" min="1" value={editQte} onChange={e => setEditQte(e.target.value)} className={inputCls + ' w-16 text-right'} />
                         </td>
@@ -405,7 +499,10 @@ export default function FactureDetailPage() {
 
           {facture.pdf_path && (
             <a
-              href={`/admin/facture/${id}/download`}
+              // Cache-busting : un onglet PDF déjà ouvert (ou le viewer PDF du navigateur) peut
+              // réutiliser une version en cache pour une URL identique — le paramètre unique force
+              // un fetch neuf à chaque clic, même juste après une régénération du PDF.
+              href={`/api/v1/admin/facture/${id}/download?t=${Date.now()}`}
               target="_blank"
               rel="noopener noreferrer"
               className="bg-[var(--color-light-0)] text-[var(--color-dark-3)] px-6 py-3 rounded-full font-bold text-sm uppercase tracking-widest hover:bg-[var(--color-light-border)] transition-colors font-body flex items-center gap-2">

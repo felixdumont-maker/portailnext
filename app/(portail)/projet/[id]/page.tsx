@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { IdentiteVisuelleContent } from './identite-visuelle/IdentiteVisuelleContent';
+import { statutMeta, pipelineStepIndex } from '@/lib/statuts';
 
 const API = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -15,6 +17,7 @@ interface ChecklistItem {
   file_path: string | null;
   video_url: string | null;
   is_required: boolean;
+  is_revision: boolean;
   item_type: string;
   field_type: string;
   text_value: string | null;
@@ -32,8 +35,11 @@ interface Projet {
   id: number;
   nom_projet: string;
   statut: string;
+  pipeline_steps: string[];
+  progress_pct: number;
   is_archived: boolean;
   lien_gdrive: string | null;
+  lien_site_test: string | null;
   date_livraison_estimee: string | null;
   has_identite_visuelle: boolean;
   has_decision_board: boolean;
@@ -44,22 +50,13 @@ interface Projet {
 
 // ─── Helpers ─────────────────────────────────────────────────
 
-const STATUT_STYLES: Record<string, { bg: string; text: string }> = {
-  'Documents à donner': { bg: 'var(--color-fire-bg)',    text: 'var(--color-fire-text)'  },
-  'Documents reçus':    { bg: 'var(--color-info-bg-2)',   text: 'var(--color-info-text)' },
-  'Travaux en cours':   { bg: 'var(--color-brand-muted)', text: 'var(--color-brand-hover)' },
-  'En révision':        { bg: 'var(--color-warning-bg-2)',    text: 'var(--color-warning-mid-2)'  },
-  'Finalisation':       { bg: 'var(--color-teal-bg)',   text: 'var(--color-teal-text)' },
-  'Travaux terminés':   { bg: 'var(--color-success-bg-2)',   text: 'var(--color-success-text-2)' },
-  'Complété':           { bg: 'var(--color-success-bg-2)',   text: 'var(--color-success-text-2)' },
-  'Annulé':             { bg: 'var(--color-light-0)',   text: 'var(--color-light-text-3)' },
-};
-
 const READ_ONLY_STATUTS = new Set(['Complété', 'Annulé', 'Travaux terminés']);
 
 function isReadOnly(projet: Projet) {
   return projet.is_archived || READ_ONLY_STATUTS.has(projet.statut);
 }
+
+const DEFAULT_PIPELINE = ['Documents à donner', 'Documents reçus', 'Travaux en cours', 'En révision', 'Complété'];
 
 function nomCourt(nom: string) {
   const parts = nom.split(' — ');
@@ -91,10 +88,14 @@ function hasColorPaletteData(item: ChecklistItem): boolean {
   } catch { return !!item.text_value.trim(); }
 }
 
-function getVariant(item: ChecklistItem): ItemVariant {
-  if (item.field_type === 'color-palette') return hasColorPaletteData(item) ? 'done' : 'color-palette';
-  if (item.field_type === 'members') return hasAnyMember(item.text_value) ? 'done' : 'members';
-  if (item.est_coche || item.file_path || item.text_value) return 'done';
+// `keepEditing` : tant que l'utilisateur a le focus dans la carte, on ne la
+// bascule pas en "done" — sinon une sauvegarde auto en cours de frappe (ex.
+// nom d'un membre d'équipe rempli avant le rôle) éjecte la carte de la vue
+// active et fait perdre ce qui n'est pas encore tapé.
+function getVariant(item: ChecklistItem, keepEditing = false): ItemVariant {
+  if (item.field_type === 'color-palette') return (!keepEditing && hasColorPaletteData(item)) ? 'done' : 'color-palette';
+  if (item.field_type === 'members') return (!keepEditing && hasAnyMember(item.text_value)) ? 'done' : 'members';
+  if (!keepEditing && (item.est_coche || item.file_path || item.text_value)) return 'done';
   if (item.item_type === 'video' && item.video_url) return 'video';
   if (item.field_type === 'review') return 'review';
   if (item.requires_file) return 'upload-pending';
@@ -226,30 +227,75 @@ function VideoItem({ item }: { item: ChecklistItem }) {
   );
 }
 
+// Garde une carte "active" tant que le focus reste dedans, pour éviter
+// qu'elle ne soit éjectée vers "Complété" pendant que l'utilisateur y tape.
+function activityHandlers(onActiveChange?: (active: boolean) => void) {
+  return {
+    onFocus: () => onActiveChange?.(true),
+    onBlur: (e: React.FocusEvent<HTMLDivElement>) => {
+      if (!e.currentTarget.contains(e.relatedTarget as Node)) onActiveChange?.(false);
+    },
+  };
+}
+
+// Envoi manuel plutôt qu'auto-save : l'utilisateur tape à son rythme, rien n'est
+// transmis tant qu'il n'a pas cliqué la flèche — plus rien ne se sauvegarde (et donc
+// ne peut faire disparaître la carte) pendant qu'il est encore en train d'écrire.
+function useSendable(serialized: string, initial: string, onSave: (value: string) => Promise<void>) {
+  const [savedSnapshot, setSavedSnapshot] = useState(initial);
+  const [saving, setSaving] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+  const dirty = serialized !== savedSnapshot;
+
+  const send = async () => {
+    if (!dirty || saving) return;
+    setSaving(true);
+    await onSave(serialized);
+    setSaving(false);
+    setSavedSnapshot(serialized);
+    setJustSaved(true);
+    setTimeout(() => setJustSaved(false), 1500);
+  };
+
+  return { dirty, saving, justSaved, send };
+}
+
+function SendButton({ dirty, saving, justSaved, onSend }: { dirty: boolean; saving: boolean; justSaved: boolean; onSend: () => void }) {
+  const disabled = saving || !dirty;
+  return (
+    <button
+      type="button"
+      onClick={onSend}
+      disabled={disabled}
+      title={dirty ? 'Envoyer' : justSaved ? 'Envoyé' : 'Rien à envoyer'}
+      style={{
+        flexShrink: 0, width: '32px', height: '32px', borderRadius: '50%', border: 'none',
+        cursor: disabled ? 'default' : 'pointer',
+        background: justSaved ? 'var(--color-success)' : dirty && !saving ? 'var(--color-brand)' : 'var(--color-light-border)',
+        color: justSaved || (dirty && !saving) ? 'white' : 'var(--color-light-text-3)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'background var(--duration-fast)',
+      }}
+    >
+      <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px', animation: saving ? 'spin 1s linear infinite' : 'none' }}>
+        {saving ? 'progress_activity' : justSaved ? 'check' : 'arrow_upward'}
+      </span>
+    </button>
+  );
+}
+
 function TextInputItem({
   item,
   onSave,
+  onActiveChange,
 }: {
   item: ChecklistItem;
   onSave: (value: string) => Promise<void>;
+  onActiveChange?: (active: boolean) => void;
 }) {
   const [value, setValue] = useState(item.text_value || '');
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isTextarea = item.field_type === 'textarea';
-
-  const handleChange = (v: string) => {
-    setValue(v);
-    setSaved(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      setSaving(true);
-      await onSave(v);
-      setSaving(false);
-      setSaved(true);
-    }, 900);
-  };
+  const { dirty, saving, justSaved, send } = useSendable(value, item.text_value || '', onSave);
 
   const inputStyle: React.CSSProperties = {
     flex: 1,
@@ -265,7 +311,7 @@ function TextInputItem({
   };
 
   return (
-    <div style={{
+    <div {...activityHandlers(onActiveChange)} style={{
       display: 'flex',
       flexDirection: 'column',
       gap: 'var(--space-2)',
@@ -286,20 +332,10 @@ function TextInputItem({
             <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)' }}>optionnel</span>
           )}
         </div>
-        {saving && (
-          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-light-text-3)', animation: 'spin 1s linear infinite' }}>
-            progress_activity
-          </span>
-        )}
-        {saved && !saving && (
-          <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-success)' }}>
-            check_circle
-          </span>
-        )}
       </div>
       <div style={{
         display: 'flex',
-        alignItems: isTextarea ? 'flex-start' : 'center',
+        alignItems: isTextarea ? 'flex-end' : 'center',
         gap: 'var(--space-2)',
         padding: 'var(--space-2) var(--space-3)',
         background: 'var(--color-light-0)',
@@ -310,7 +346,7 @@ function TextInputItem({
         {isTextarea ? (
           <textarea
             value={value}
-            onChange={e => handleChange(e.target.value)}
+            onChange={e => setValue(e.target.value)}
             placeholder="Entrez votre réponse…"
             rows={3}
             style={{ ...inputStyle, paddingTop: 'var(--space-1)' }}
@@ -319,11 +355,12 @@ function TextInputItem({
           <input
             type={item.field_type === 'url' ? 'url' : 'text'}
             value={value}
-            onChange={e => handleChange(e.target.value)}
+            onChange={e => setValue(e.target.value)}
             placeholder={item.field_type === 'url' ? 'https://…' : 'Entrez votre réponse…'}
             style={inputStyle}
           />
         )}
+        <SendButton dirty={dirty} saving={saving} justSaved={justSaved} onSend={send} />
       </div>
     </div>
   );
@@ -334,31 +371,19 @@ function FileOrTextareaItem({
   uploading,
   onUpload,
   onSave,
+  onActiveChange,
 }: {
   item: ChecklistItem;
   uploading: boolean;
   onUpload: (file: File) => void;
   onSave: (value: string) => Promise<void>;
+  onActiveChange?: (active: boolean) => void;
 }) {
   const [value, setValue] = useState(item.text_value || '');
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleChange = (v: string) => {
-    setValue(v);
-    setSaved(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      setSaving(true);
-      await onSave(v);
-      setSaving(false);
-      setSaved(true);
-    }, 900);
-  };
+  const { dirty, saving, justSaved, send } = useSendable(value, item.text_value || '', onSave);
 
   return (
-    <div style={{
+    <div {...activityHandlers(onActiveChange)} style={{
       display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
       padding: 'var(--space-4) var(--space-6)',
       background: 'var(--color-light-2)', borderRadius: 'var(--radius-md)',
@@ -375,8 +400,6 @@ function FileOrTextareaItem({
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
-          {saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-light-text-3)', animation: 'spin 1s linear infinite' }}>progress_activity</span>}
-          {saved && !saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-success)' }}>check_circle</span>}
           <label style={{
             display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)',
             padding: 'var(--space-1) var(--space-3)',
@@ -396,14 +419,15 @@ function FileOrTextareaItem({
           </label>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-light-0)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-light-border)', minHeight: '72px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-light-0)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-light-border)', minHeight: '72px' }}>
         <textarea
           value={value}
-          onChange={e => handleChange(e.target.value)}
+          onChange={e => setValue(e.target.value)}
           placeholder="Ou saisissez le texte directement…"
           rows={3}
           style={{ flex: 1, fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text)', background: 'transparent', border: 'none', outline: 'none', resize: 'none', padding: 0, paddingTop: 'var(--space-1)', minWidth: 0 }}
         />
+        <SendButton dirty={dirty} saving={saving} justSaved={justSaved} onSend={send} />
       </div>
     </div>
   );
@@ -415,32 +439,20 @@ function ReviewItem({
   onUpload,
   onSave,
   onToggle,
+  onActiveChange,
 }: {
   item: ChecklistItem;
   uploading: boolean;
   onUpload: (file: File) => void;
   onSave: (value: string) => Promise<void>;
   onToggle: () => void;
+  onActiveChange?: (active: boolean) => void;
 }) {
   const [value, setValue] = useState(item.text_value || '');
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleChange = (v: string) => {
-    setValue(v);
-    setSaved(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      setSaving(true);
-      await onSave(v);
-      setSaving(false);
-      setSaved(true);
-    }, 900);
-  };
+  const { dirty, saving, justSaved, send } = useSendable(value, item.text_value || '', onSave);
 
   return (
-    <div style={{
+    <div {...activityHandlers(onActiveChange)} style={{
       display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
       padding: 'var(--space-4) var(--space-6)',
       background: 'var(--color-light-2)', borderRadius: 'var(--radius-md)',
@@ -455,8 +467,6 @@ function ReviewItem({
           </span>
         </label>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
-          {saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-light-text-3)', animation: 'spin 1s linear infinite' }}>progress_activity</span>}
-          {saved && !saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-success)' }}>check_circle</span>}
           <label style={{
             display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)',
             padding: 'var(--space-1) var(--space-3)',
@@ -476,14 +486,15 @@ function ReviewItem({
           </label>
         </div>
       </div>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-light-0)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-light-border)', minHeight: '56px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-light-0)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-light-border)', minHeight: '56px' }}>
         <textarea
           value={value}
-          onChange={e => handleChange(e.target.value)}
+          onChange={e => setValue(e.target.value)}
           placeholder="Rien à signaler ? Cochez la case. Sinon, décrivez ici ce qui doit changer (ou joignez une image)…"
           rows={2}
           style={{ flex: 1, fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text)', background: 'transparent', border: 'none', outline: 'none', resize: 'none', padding: 0, paddingTop: 'var(--space-1)', minWidth: 0 }}
         />
+        <SendButton dirty={dirty} saving={saving} justSaved={justSaved} onSend={send} />
       </div>
     </div>
   );
@@ -492,9 +503,11 @@ function ReviewItem({
 function MembersItem({
   item,
   onSave,
+  onActiveChange,
 }: {
   item: ChecklistItem;
   onSave: (value: string) => Promise<void>;
+  onActiveChange?: (active: boolean) => void;
 }) {
   const blank: Member = { name: '', title: '', desc: '' };
 
@@ -508,38 +521,19 @@ function MembersItem({
   }
 
   const [members, setMembers] = useState<Member[]>(() => parse(item.text_value));
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function schedSave(updated: Member[]) {
-    setSaved(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      setSaving(true);
-      await onSave(JSON.stringify(updated));
-      setSaving(false);
-      setSaved(true);
-    }, 900);
-  }
+  const { dirty, saving, justSaved, send } = useSendable(JSON.stringify(members), JSON.stringify(parse(item.text_value)), onSave);
 
   function update(idx: number, field: keyof Member, val: string) {
-    const next = members.map((m, i) => i === idx ? { ...m, [field]: val } : m);
-    setMembers(next);
-    schedSave(next);
+    setMembers(prev => prev.map((m, i) => i === idx ? { ...m, [field]: val } : m));
   }
 
   function addMember() {
-    const next = [...members, { ...blank }];
-    setMembers(next);
-    schedSave(next);
+    setMembers(prev => [...prev, { ...blank }]);
   }
 
   function removeMember(idx: number) {
     if (members.length <= 1) return;
-    const next = members.filter((_, i) => i !== idx);
-    setMembers(next);
-    schedSave(next);
+    setMembers(prev => prev.filter((_, i) => i !== idx));
   }
 
   const fieldStyle: React.CSSProperties = {
@@ -557,7 +551,7 @@ function MembersItem({
   };
 
   return (
-    <div style={{
+    <div {...activityHandlers(onActiveChange)} style={{
       display: 'flex', flexDirection: 'column', gap: 'var(--space-3)',
       padding: 'var(--space-4) var(--space-6)',
       background: 'var(--color-light-2)', borderRadius: 'var(--radius-md)',
@@ -573,8 +567,7 @@ function MembersItem({
             <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)' }}>optionnel</span>
           )}
         </div>
-        {saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-light-text-3)', animation: 'spin 1s linear infinite' }}>progress_activity</span>}
-        {saved && !saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-success)' }}>check_circle</span>}
+        <SendButton dirty={dirty} saving={saving} justSaved={justSaved} onSend={send} />
       </div>
 
       {members.map((member, idx) => (
@@ -623,11 +616,13 @@ function ColorPaletteItem({
   uploading,
   onUpload,
   onSave,
+  onActiveChange,
 }: {
   item: ChecklistItem;
   uploading: boolean;
   onUpload: (file: File) => void;
   onSave: (value: string) => Promise<void>;
+  onActiveChange?: (active: boolean) => void;
 }) {
   function parse(tv: string | null): { colors: string[]; notes: string } {
     if (!tv) return { colors: ['var(--color-dark-0)'], notes: '' };
@@ -640,47 +635,27 @@ function ColorPaletteItem({
   const init = parse(item.text_value);
   const [colors, setColors] = useState<string[]>(init.colors);
   const [notes, setNotes] = useState(init.notes);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  function schedSave(c: string[], n: string) {
-    setSaved(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(async () => {
-      setSaving(true);
-      await onSave(JSON.stringify({ colors: c, notes: n }));
-      setSaving(false);
-      setSaved(true);
-    }, 800);
-  }
+  const { dirty, saving, justSaved, send } = useSendable(
+    JSON.stringify({ colors, notes }),
+    JSON.stringify(parse(item.text_value)),
+    onSave
+  );
 
   function updateColor(idx: number, val: string) {
-    const next = colors.map((c, i) => i === idx ? val : c);
-    setColors(next);
-    schedSave(next, notes);
+    setColors(prev => prev.map((c, i) => i === idx ? val : c));
   }
 
   function addColor() {
-    const next = [...colors, '#ffffff'];
-    setColors(next);
-    schedSave(next, notes);
+    setColors(prev => [...prev, '#ffffff']);
   }
 
   function removeColor(idx: number) {
     if (colors.length <= 1) return;
-    const next = colors.filter((_, i) => i !== idx);
-    setColors(next);
-    schedSave(next, notes);
-  }
-
-  function handleNotes(v: string) {
-    setNotes(v);
-    schedSave(colors, v);
+    setColors(prev => prev.filter((_, i) => i !== idx));
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', padding: 'var(--space-4) var(--space-6)', background: 'var(--color-light-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-light-border)' }}>
+    <div {...activityHandlers(onActiveChange)} style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)', padding: 'var(--space-4) var(--space-6)', background: 'var(--color-light-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--color-light-border)' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 'var(--space-3)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', flex: 1, minWidth: 0 }}>
@@ -689,8 +664,6 @@ function ColorPaletteItem({
           {!item.is_required && <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)' }}>optionnel</span>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)', flexShrink: 0 }}>
-          {saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-light-text-3)', animation: 'spin 1s linear infinite' }}>progress_activity</span>}
-          {saved && !saving && <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-success)' }}>check_circle</span>}
           <label style={{ display: 'inline-flex', alignItems: 'center', gap: 'var(--space-1)', padding: 'var(--space-1) var(--space-3)', background: uploading ? 'var(--color-light-text-3)' : 'var(--color-light-0)', border: '1px solid var(--color-light-border-2)', color: 'var(--color-light-text-2)', borderRadius: 'var(--radius-full)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.06em', cursor: uploading ? 'default' : 'pointer', minHeight: '36px', whiteSpace: 'nowrap' as const }}>
             {uploading
               ? <><span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '12px', animation: 'spin 1s linear infinite' }}>progress_activity</span>Envoi…</>
@@ -698,6 +671,7 @@ function ColorPaletteItem({
             }
             <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} disabled={uploading} onChange={e => { if (e.target.files?.[0]) onUpload(e.target.files[0]); }} />
           </label>
+          <SendButton dirty={dirty} saving={saving} justSaved={justSaved} onSend={send} />
         </div>
       </div>
 
@@ -731,7 +705,7 @@ function ColorPaletteItem({
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--space-2)', padding: 'var(--space-2) var(--space-3)', background: 'var(--color-light-0)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-light-border)', minHeight: '56px' }}>
         <textarea
           value={notes}
-          onChange={e => handleNotes(e.target.value)}
+          onChange={e => setNotes(e.target.value)}
           placeholder="Décrivez vos couleurs ou nommez-les (ex : rouge pour les boutons, beige pour le fond…). Si vous ne savez pas, utilisez le bouton Référence pour envoyer une image ou un post."
           rows={2}
           style={{ flex: 1, fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text)', background: 'transparent', border: 'none', outline: 'none', resize: 'none', padding: 0, paddingTop: 'var(--space-1)', minWidth: 0 }}
@@ -853,6 +827,172 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+function Stepper({ currentStep, steps }: { currentStep: number; steps: string[] }) {
+  return (
+    <div style={{
+      background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+      borderRadius: 'var(--radius-lg)', padding: 'var(--space-6) var(--space-8)', marginBottom: 'var(--space-6)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start' }}>
+        {steps.map((label, i) => {
+          const num = i + 1;
+          const done = num < currentStep;
+          const active = num === currentStep;
+          return (
+            <Fragment key={label}>
+              <div style={{ display: 'flex', flexDirection: 'column' as const, alignItems: 'center', gap: 'var(--space-2)', flex: 1, minWidth: 0 }}>
+                <div style={{
+                  width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
+                  background: done ? 'var(--color-success)' : active ? 'var(--color-brand)' : 'var(--color-light-1)',
+                  color: done || active ? 'white' : 'var(--color-light-text-3)',
+                  border: done || active ? 'none' : '1px solid var(--color-light-border-2)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-sm)',
+                }}>
+                  {done
+                    ? <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '18px' }}>check</span>
+                    : num}
+                </div>
+                <span style={{
+                  fontFamily: 'var(--font-body)', fontSize: '10.5px', fontWeight: 800, letterSpacing: '0.04em',
+                  textTransform: 'uppercase' as const, textAlign: 'center' as const,
+                  color: active ? 'var(--color-light-text)' : 'var(--color-light-text-3)',
+                }}>
+                  {label}
+                </span>
+              </div>
+              {num < steps.length && (
+                <div style={{ flex: 1, height: '2px', minWidth: '12px', margin: '17px 6px 0', background: done ? 'var(--color-success)' : 'var(--color-light-border)' }} />
+              )}
+            </Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function FichierDropzone({ uploading, sent, onUpload }: { uploading: boolean; sent: boolean; onUpload: (file: File) => void }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [dragOver, setDragOver] = useState(false);
+  return (
+    <div>
+      <div
+        onClick={() => inputRef.current?.click()}
+        onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={e => { e.preventDefault(); setDragOver(false); const f = e.dataTransfer.files?.[0]; if (f) onUpload(f); }}
+        style={{
+          border: `1.5px dashed ${dragOver ? 'var(--color-brand)' : 'var(--color-light-border-2)'}`,
+          borderRadius: 'var(--radius-md)', padding: 'var(--space-6)', textAlign: 'center' as const,
+          color: 'var(--color-light-text-3)', cursor: 'pointer',
+          background: dragOver ? 'var(--color-brand-6pct)' : 'transparent',
+          transition: `border-color var(--duration-fast), background var(--duration-fast)`,
+        }}
+      >
+        <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '26px', display: 'block', marginBottom: 'var(--space-1)' }}>
+          {uploading ? 'progress_activity' : 'upload_file'}
+        </span>
+        <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700 }}>
+          {uploading ? 'Envoi…' : 'Déposer un ou plusieurs fichiers'}
+        </span>
+        <input ref={inputRef} type="file" hidden disabled={uploading}
+          onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f); }} />
+      </div>
+      {sent && (
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-success)', margin: 'var(--space-2) 0 0' }}>
+          Fichier envoyé ✓
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ContactModal({ projetId, nomProjet, onClose, onSent }: { projetId: string | string[] | undefined; nomProjet: string; onClose: () => void; onSent: () => void }) {
+  const [message, setMessage] = useState('');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+
+  async function envoyer() {
+    if (!message.trim()) return;
+    setSending(true);
+    setError('');
+    try {
+      const res = await fetch(`${API}/api/v1/projet/${projetId}/contact`, {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message.trim() }),
+      });
+      if (!res.ok) throw new Error();
+      onSent();
+      onClose();
+    } catch {
+      setError("Erreur lors de l'envoi. Réessayez.");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  return (
+    <div onClick={onClose} style={{
+      position: 'fixed', inset: 0, background: 'oklch(15% 0.01 40 / 0.55)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      zIndex: 'var(--z-modal)' as never, padding: 'var(--space-6)',
+    }}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--color-light-2)', borderRadius: 'var(--radius-lg)',
+        width: '100%', maxWidth: '460px', boxShadow: 'var(--shadow-lg)',
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: 'var(--space-5) var(--space-6)', borderBottom: '1px solid var(--color-light-border)',
+        }}>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-lg)', letterSpacing: '-0.01em', color: 'var(--color-light-text)' }}>
+            Contacter mon équipe
+          </span>
+          <button onClick={onClose} aria-label="Fermer" style={{ background: 'none', border: 'none', color: 'var(--color-light-text-3)', cursor: 'pointer', display: 'flex', padding: 'var(--space-1)' }}>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px' }}>close</span>
+          </button>
+        </div>
+        <div style={{ padding: 'var(--space-6)', display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-4)' }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)' }}>
+            Projet <strong style={{ color: 'var(--color-light-text)' }}>{nomProjet}</strong>
+          </div>
+          <textarea
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            rows={4}
+            placeholder="Votre question ou commentaire…"
+            style={{
+              width: '100%', border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-md)',
+              padding: 'var(--space-3) var(--space-4)', fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)',
+              background: 'var(--color-light-0)', color: 'var(--color-light-text)', resize: 'vertical' as const,
+            }}
+          />
+          {error && <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-error)' }}>{error}</span>}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-3)', padding: 'var(--space-5) var(--space-6)', borderTop: '1px solid var(--color-light-border)' }}>
+          <button onClick={onClose} style={{
+            background: 'var(--color-light-1)', color: 'var(--color-light-text-2)', border: '1px solid var(--color-light-border)',
+            borderRadius: 'var(--radius-md)', padding: 'var(--space-3) var(--space-5)',
+            fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)', cursor: 'pointer',
+          }}>
+            Annuler
+          </button>
+          <button onClick={envoyer} disabled={sending || !message.trim()} style={{
+            background: 'var(--color-brand)', color: 'white', border: 'none',
+            borderRadius: 'var(--radius-md)', padding: 'var(--space-3) var(--space-6)',
+            fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)',
+            cursor: sending || !message.trim() ? 'default' : 'pointer', opacity: sending || !message.trim() ? 0.7 : 1,
+          }}>
+            {sending ? 'Envoi…' : 'Envoyer'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────
 
 export default function ProjetDetail() {
@@ -863,11 +1003,28 @@ export default function ProjetDetail() {
   const [uploading, setUploading] = useState<number | null>(null);
   const [addingUpload, setAddingUpload] = useState<string | null>(null);
   const [editingIds, setEditingIds] = useState<Set<number>>(new Set());
+  const [activeIds, setActiveIds] = useState<Set<number>>(new Set());
+  const [uploadingFichier, setUploadingFichier] = useState(false);
+  const [fichierSent, setFichierSent] = useState(false);
+  const [showContact, setShowContact] = useState(false);
+  const [contactSent, setContactSent] = useState(false);
+  const [showIV, setShowIV] = useState(false);
+  const [showComplete, setShowComplete] = useState(false);
+  const [showRevisionDone, setShowRevisionDone] = useState(false);
 
   function toggleEditing(itemId: number) {
     setEditingIds(prev => {
       const next = new Set(prev);
       if (next.has(itemId)) next.delete(itemId); else next.add(itemId);
+      return next;
+    });
+  }
+
+  function setItemActive(itemId: number, active: boolean) {
+    setActiveIds(prev => {
+      if (active === prev.has(itemId)) return prev;
+      const next = new Set(prev);
+      if (active) next.add(itemId); else next.delete(itemId);
       return next;
     });
   }
@@ -945,6 +1102,18 @@ export default function ProjetDetail() {
     }
   }
 
+  async function uploadFichierGeneral(file: File) {
+    setUploadingFichier(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const r = await fetch(`${API}/api/v1/projet/${id}/upload-fichier`, { method: 'POST', credentials: 'include', body: form });
+      if (r.ok) { setFichierSent(true); setTimeout(() => setFichierSent(false), 2500); }
+    } finally {
+      setUploadingFichier(false);
+    }
+  }
+
   // ── Render states ──────────────────────────────────────────
 
   if (loading) return <LoadingSkeleton />;
@@ -966,11 +1135,20 @@ export default function ProjetDetail() {
   // ── Derived state ──────────────────────────────────────────
 
   const readOnly = isReadOnly(projet);
-  const badge = STATUT_STYLES[projet.statut] || STATUT_STYLES['Annulé'];
-  const pendingItems = projet.items.filter(i => getVariant(i) !== 'done');
-  const doneItems = projet.items.filter(i => getVariant(i) === 'done');
+  const badge = statutMeta(projet.statut);
+  const pipelineSteps = projet.pipeline_steps && projet.pipeline_steps.length > 0 ? projet.pipeline_steps : DEFAULT_PIPELINE;
+  const isItemDone = (i: ChecklistItem) => getVariant(i, activeIds.has(i.id)) === 'done';
   const total = projet.items.length;
-  const done = doneItems.length;
+  const done = projet.items.filter(isItemDone).length;
+
+  // Items de révision : sortis de la checklist générique pour vivre dans leur
+  // propre section dédiée (voir plus bas), plus visible et moins facile à manquer.
+  const revisionItems = projet.items.filter(i => i.is_revision);
+  const revisionPending = revisionItems.filter(i => !isItemDone(i));
+  const revisionDone = revisionItems.filter(isItemDone);
+  const nonRevisionItems = readOnly ? projet.items : projet.items.filter(i => !i.is_revision);
+  const pendingItems = nonRevisionItems.filter(i => !isItemDone(i));
+  const doneItems = nonRevisionItems.filter(isItemDone);
 
   // Progression combinée : pipeline (étape) + checklist
   const STATUT_BASE: Record<string, number> = {
@@ -998,7 +1176,7 @@ export default function ProjetDetail() {
   // ── Page ───────────────────────────────────────────────────
 
   return (
-    <div style={{ maxWidth: '840px', margin: '0 auto', padding: '0 var(--space-6)', paddingTop: 'var(--space-10)' }}>
+    <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '0 var(--space-6)', paddingTop: 'var(--space-10)' }}>
 
       {/* Breadcrumb */}
       <button onClick={() => router.push('/dashboard')} style={{
@@ -1006,7 +1184,7 @@ export default function ProjetDetail() {
         letterSpacing: '0.1em', textTransform: 'uppercase' as const,
         color: 'var(--color-light-text-3)', background: 'none', border: 'none',
         cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center',
-        gap: 'var(--space-2)', marginBottom: 'var(--space-8)', minHeight: '44px',
+        gap: 'var(--space-2)', marginBottom: 'var(--space-4)', minHeight: '44px',
         transition: `color var(--duration-fast)`,
       }}
         onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-light-text)')}
@@ -1046,25 +1224,90 @@ export default function ProjetDetail() {
         </div>
       </header>
 
-      {/* Sub-page navigation */}
-      {(projet.has_identite_visuelle || projet.has_decision_board) && (
-        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 'var(--space-2)', marginBottom: 'var(--space-8)' }}>
-          {projet.has_identite_visuelle && (
-            <a href={`/projet/${projet.id}/identite-visuelle`} style={{
+      {projet.statut !== 'Annulé' && <Stepper currentStep={pipelineStepIndex(pipelineSteps, projet.statut) || 1} steps={pipelineSteps} />}
+
+      {/* Révision — section dédiée, visible avant tout le reste tant qu'il reste des
+          points à réviser, pour qu'elle ne se perde pas dans la checklist générale. */}
+      {!readOnly && revisionItems.length > 0 && (
+        <section style={{
+          marginBottom: 'var(--space-8)', background: 'var(--color-brand-muted)',
+          border: '1px solid var(--color-brand)', borderRadius: 'var(--radius-lg)',
+          padding: 'var(--space-6) var(--space-8)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)', marginBottom: 'var(--space-2)' }}>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px', color: 'var(--color-brand)' }}>rate_review</span>
+            <h2 style={{
+              fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-lg)',
+              textTransform: 'uppercase' as const, letterSpacing: '-0.01em', color: 'var(--color-light-text)', margin: 0,
+            }}>
+              {revisionPending.length > 0 ? 'Révision de votre site' : 'Révision complétée'}
+            </h2>
+          </div>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-sm)', color: 'var(--color-light-text-2)', margin: '0 0 var(--space-5)', maxWidth: '560px' }}>
+            {revisionPending.length > 0
+              ? 'Vérifiez chaque point ci-dessous. Cochez « rien à signaler » si c’est bon, ou décrivez ce qui doit changer.'
+              : 'Merci ! Vos réponses ont été transmises à notre équipe, qui s’occupe des corrections demandées.'}
+          </p>
+          {projet.lien_site_test && (
+            <a href={projet.lien_site_test} target="_blank" rel="noreferrer" style={{
               display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)',
-              padding: 'var(--space-2) var(--space-4)', background: 'var(--color-light-2)',
-              border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-full)',
-              fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 600,
-              color: 'var(--color-light-text)', textDecoration: 'none', minHeight: '36px',
-              transition: `border-color var(--duration-fast), background var(--duration-fast)`,
-            }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--color-light-border-2)'; e.currentTarget.style.background = 'var(--color-light-0)'; }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--color-light-border)'; e.currentTarget.style.background = 'var(--color-light-2)'; }}
-            >
-              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '14px', color: 'var(--color-brand)' }}>palette</span>
-              Identité visuelle
+              padding: 'var(--space-3) var(--space-6)', background: 'var(--color-brand)',
+              color: 'white', borderRadius: 'var(--radius-full)',
+              fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
+              textTransform: 'uppercase' as const, letterSpacing: '0.06em', textDecoration: 'none',
+              marginBottom: 'var(--space-5)', minHeight: '44px',
+            }}>
+              <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '16px' }}>open_in_new</span>
+              Voir mon site
             </a>
           )}
+
+          {revisionPending.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-2)' }}>
+              {revisionPending.map(item => (
+                <ReviewItem key={item.id} item={item} uploading={uploading === item.id}
+                  onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)}
+                  onToggle={() => toggleItem(item.id)}
+                  onActiveChange={active => setItemActive(item.id, active)} />
+              ))}
+            </div>
+          )}
+
+          {revisionDone.length > 0 && (
+            <div style={{ marginTop: revisionPending.length > 0 ? 'var(--space-4)' : 0 }}>
+              <button
+                onClick={() => setShowRevisionDone(v => !v)}
+                aria-expanded={showRevisionDone}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+                  background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px',
+                  marginBottom: 'var(--space-3)', minHeight: '32px',
+                  color: 'var(--color-light-text-3)', transition: 'color var(--duration-fast)',
+                }}
+              >
+                <span aria-hidden="true" className="material-symbols-outlined" style={{
+                  fontSize: '18px', transform: showRevisionDone ? 'rotate(180deg)' : 'none',
+                  transition: `transform var(--duration-base) var(--ease-out-quart)`,
+                }}>
+                  expand_more
+                </span>
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, textTransform: 'uppercase' as const, letterSpacing: '0.12em' }}>
+                  {showRevisionDone ? 'Masquer' : 'Voir'} vérifié ({revisionDone.length})
+                </span>
+              </button>
+              {showRevisionDone && (
+                <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-1)' }}>
+                  {revisionDone.map(item => <DoneItem key={item.id} item={item} />)}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {/* Sub-page navigation */}
+      {projet.has_decision_board && (
+        <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 'var(--space-2)', marginBottom: 'var(--space-8)' }}>
           {projet.has_decision_board && (
             <a href={`/projet/${projet.id}/decision-board`} style={{
               display: 'inline-flex', alignItems: 'center', gap: 'var(--space-2)',
@@ -1084,13 +1327,16 @@ export default function ProjetDetail() {
         </div>
       )}
 
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.5fr) minmax(0, 1fr)', gap: 'var(--space-6)', alignItems: 'start' }}>
+      <div style={{ minWidth: 0 }}>
+
       {/* À FAIRE — pending items */}
       {!readOnly && pendingItems.length > 0 && (
         <section style={{ marginBottom: 'var(--space-8)' }}>
           <SectionLabel>À remplir</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-2)' }}>
             {pendingItems.map(item => {
-              const variant = getVariant(item);
+              const variant = getVariant(item, activeIds.has(item.id));
               if (variant === 'upload-pending') return (
                 <div key={item.id} style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-1)' }}>
                   <UploadPendingItem item={item} uploading={uploading === item.id}
@@ -1117,23 +1363,28 @@ export default function ProjetDetail() {
               );
               if (variant === 'video') return <VideoItem key={item.id} item={item} />;
               if (variant === 'text-input') return (
-                <TextInputItem key={item.id} item={item} onSave={v => saveText(item.id, v)} />
+                <TextInputItem key={item.id} item={item} onSave={v => saveText(item.id, v)}
+                  onActiveChange={active => setItemActive(item.id, active)} />
               );
               if (variant === 'file-or-textarea') return (
                 <FileOrTextareaItem key={item.id} item={item} uploading={uploading === item.id}
-                  onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)} />
+                  onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)}
+                  onActiveChange={active => setItemActive(item.id, active)} />
               );
               if (variant === 'review') return (
                 <ReviewItem key={item.id} item={item} uploading={uploading === item.id}
                   onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)}
-                  onToggle={() => toggleItem(item.id)} />
+                  onToggle={() => toggleItem(item.id)}
+                  onActiveChange={active => setItemActive(item.id, active)} />
               );
               if (variant === 'members') return (
-                <MembersItem key={item.id} item={item} onSave={v => saveText(item.id, v)} />
+                <MembersItem key={item.id} item={item} onSave={v => saveText(item.id, v)}
+                  onActiveChange={active => setItemActive(item.id, active)} />
               );
               if (variant === 'color-palette') return (
                 <ColorPaletteItem key={item.id} item={item} uploading={uploading === item.id}
-                  onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)} />
+                  onUpload={file => uploadFile(item.id, file)} onSave={v => saveText(item.id, v)}
+                  onActiveChange={active => setItemActive(item.id, active)} />
               );
               return <TaskItem key={item.id} item={item} readOnly={false} onToggle={() => toggleItem(item.id)} />;
             })}
@@ -1164,10 +1415,35 @@ export default function ProjetDetail() {
         </div>
       )}
 
-      {/* COMPLÉTÉ — done items */}
+      {/* COMPLÉTÉ — done items (rétractable) */}
       {doneItems.length > 0 && (
         <section style={{ marginBottom: 'var(--space-8)' }}>
-          {pendingItems.length > 0 && <SectionLabel>Complété</SectionLabel>}
+          <button
+            onClick={() => setShowComplete(v => !v)}
+            aria-expanded={showComplete}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 'var(--space-2)',
+              background: 'none', border: 'none', cursor: 'pointer', padding: '4px 2px',
+              marginBottom: 'var(--space-3)', minHeight: '32px',
+              color: 'var(--color-light-text-3)', transition: 'color var(--duration-fast)',
+            }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'var(--color-light-text)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'var(--color-light-text-3)')}
+          >
+            <span aria-hidden="true" className="material-symbols-outlined" style={{
+              fontSize: '18px', transform: showComplete ? 'rotate(180deg)' : 'none',
+              transition: `transform var(--duration-base) var(--ease-out-quart)`,
+            }}>
+              expand_more
+            </span>
+            <span style={{
+              fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700,
+              textTransform: 'uppercase' as const, letterSpacing: '0.12em',
+            }}>
+              {showComplete ? 'Masquer' : 'Voir'} complété ({doneItems.length})
+            </span>
+          </button>
+          {showComplete && (
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-1)' }}>
             {doneItems.map(item => {
               const isEditing = !readOnly && editingIds.has(item.id);
@@ -1251,23 +1527,36 @@ export default function ProjetDetail() {
               );
             })}
           </div>
+          )}
         </section>
       )}
 
-      {/* Read-only checklist */}
-      {readOnly && projet.items.length > 0 && (
+      {/* Read-only checklist — items non complétés seulement (les complétés sont dans la section COMPLÉTÉ ci-dessus, déjà rétractable) */}
+      {readOnly && pendingItems.length > 0 && (
         <section style={{ marginBottom: 'var(--space-8)' }}>
           <SectionLabel>Documents</SectionLabel>
           <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-2)' }}>
-            {projet.items.map(item => {
+            {pendingItems.map(item => {
               const variant = getVariant(item);
               if (variant === 'video') return <VideoItem key={item.id} item={item} />;
-              if (variant === 'done') return <DoneItem key={item.id} item={item} />;
               return <TaskItem key={item.id} item={item} readOnly={true} onToggle={() => {}} />;
             })}
           </div>
         </section>
       )}
+
+      {/* Fichiers du projet */}
+      <section style={{
+        marginBottom: 'var(--space-8)', background: 'var(--color-light-2)',
+        border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-lg)',
+        padding: 'var(--space-6)', display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-4)',
+      }}>
+        <div style={{
+          fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-sm)',
+          letterSpacing: '0.04em', textTransform: 'uppercase' as const, color: 'var(--color-light-text)',
+        }}>
+          Fichiers du projet
+        </div>
 
       {/* Dossiers Drive */}
       {projet.dossiers_drive && projet.dossiers_drive.filter(f =>
@@ -1340,6 +1629,123 @@ export default function ProjetDetail() {
             </a>
           ))}
         </div>
+      )}
+
+        {!readOnly && (
+          <div style={{ paddingTop: 'var(--space-2)' }}>
+            <div style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', marginBottom: 'var(--space-3)' }}>
+              Déposez vos fichiers de référence (logo, textes, photos…) — ils seront ajoutés au dossier du projet.
+            </div>
+            <FichierDropzone uploading={uploadingFichier} sent={fichierSent} onUpload={uploadFichierGeneral} />
+          </div>
+        )}
+      </section>
+
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 'var(--space-5)' }}>
+        <div style={{
+          background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+          borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)',
+        }}>
+          <div style={{ fontFamily: 'var(--font-body)', fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--color-light-text-3)', fontWeight: 800, marginBottom: 'var(--space-2)' }}>
+            Échéance livrable
+          </div>
+          <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-lg)', color: 'var(--color-light-text)', marginBottom: 'var(--space-5)' }}>
+            {projet.date_livraison_estimee ? formatDate(projet.date_livraison_estimee) : '—'}
+          </div>
+          {total > 0 && (
+            <>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: '10.5px', letterSpacing: '0.1em', textTransform: 'uppercase' as const, color: 'var(--color-light-text-3)', fontWeight: 800, marginBottom: 'var(--space-2)' }}>
+                Progression checklist
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-base)', color: 'var(--color-light-text)' }}>
+                  {done}/{total}
+                </span>
+                <div style={{ flex: 1, height: '6px', borderRadius: 'var(--radius-full)', background: 'var(--color-light-0)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${total > 0 ? Math.round((done / total) * 100) : 0}%`, background: 'var(--color-success)', borderRadius: 'var(--radius-full)', transition: `width var(--duration-slow) var(--ease-out-quart)` }} />
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{
+          background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+          borderRadius: 'var(--radius-lg)', padding: 'var(--space-6)',
+        }}>
+          <div style={{
+            fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-sm)',
+            letterSpacing: '0.04em', textTransform: 'uppercase' as const, color: 'var(--color-light-text)', marginBottom: 'var(--space-4)',
+          }}>
+            Une question sur ce projet?
+          </div>
+          <button onClick={() => setShowContact(true)} style={{
+            display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'center', gap: 'var(--space-2)',
+            background: 'var(--color-brand)', color: 'white', border: 'none', borderRadius: 'var(--radius-md)',
+            padding: 'var(--space-3) var(--space-5)', fontFamily: 'var(--font-display)', fontWeight: 700,
+            fontSize: 'var(--text-sm)', cursor: 'pointer', minHeight: '44px',
+          }}>
+            Contacter mon équipe
+          </button>
+          {contactSent && (
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-success)', margin: 'var(--space-3) 0 0', textAlign: 'center' as const }}>
+              Message envoyé ✓
+            </p>
+          )}
+        </div>
+      </div>
+
+      </div>
+
+      {projet.has_identite_visuelle && (
+        <div style={{ marginTop: 'var(--space-8)' }}>
+          <button
+            onClick={() => setShowIV(v => !v)}
+            aria-expanded={showIV}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 'var(--space-4)', width: '100%',
+              background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+              borderRadius: showIV ? 'var(--radius-lg) var(--radius-lg) 0 0' : 'var(--radius-lg)',
+              padding: 'var(--space-5) var(--space-6)', cursor: 'pointer', textAlign: 'left' as const,
+              transition: `border-color var(--duration-fast)`,
+            }}
+          >
+            <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: '22px', color: 'var(--color-brand)', flexShrink: 0 }}>palette</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-sm)', letterSpacing: '0.02em', color: 'var(--color-light-text)' }}>
+                Identité visuelle
+              </div>
+              <div style={{ fontFamily: 'var(--font-body)', fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', marginTop: '2px' }}>
+                Palette, logos, typographie et assets de votre marque
+              </div>
+            </div>
+            <span aria-hidden="true" className="material-symbols-outlined" style={{
+              fontSize: '22px', color: 'var(--color-light-text-3)', flexShrink: 0,
+              transform: showIV ? 'rotate(180deg)' : 'none', transition: `transform var(--duration-fast)`,
+            }}>
+              expand_more
+            </span>
+          </button>
+          {showIV && (
+            <div style={{
+              background: 'var(--color-light-1)', border: '1px solid var(--color-light-border)', borderTop: 'none',
+              borderRadius: '0 0 var(--radius-lg) var(--radius-lg)', padding: 'var(--space-8)',
+            }}>
+              <IdentiteVisuelleContent projetId={id} />
+            </div>
+          )}
+        </div>
+      )}
+
+      {showContact && (
+        <ContactModal
+          projetId={id}
+          nomProjet={nomCourt(projet.nom_projet)}
+          onClose={() => setShowContact(false)}
+          onSent={() => { setContactSent(true); setTimeout(() => setContactSent(false), 2500); }}
+        />
       )}
 
     </div>

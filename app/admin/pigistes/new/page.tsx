@@ -4,6 +4,9 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
+const inputCls = "w-full bg-[var(--color-light-0)] border-none rounded-xl px-4 py-3 outline-none font-body text-sm focus:ring-2 focus:ring-[var(--color-brand)]/40"
+const labelCls = "block text-[10px] font-bold uppercase tracking-wide text-[var(--color-dark-text-2)] font-body mb-1.5"
+
 export default function NouveauPigistePage() {
   const router = useRouter()
   const [form, setForm] = useState({
@@ -42,8 +45,8 @@ export default function NouveauPigistePage() {
   }: {
     label: string; name: keyof typeof form; type?: string; placeholder?: string; required?: boolean
   }) => (
-    <div className="flex flex-col gap-2">
-      <label className="text-xs font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] font-body">
+    <div>
+      <label className={labelCls}>
         {label}{required && <span className="text-[var(--color-brand)] ml-1">*</span>}
       </label>
       <input
@@ -53,7 +56,7 @@ export default function NouveauPigistePage() {
         placeholder={placeholder}
         aria-label={label}
         required={required}
-        className="bg-[var(--color-light-0)] border-none rounded-xl px-4 py-3 outline-none font-body text-sm focus:ring-2 focus:ring-[var(--color-brand)]/40"
+        className={inputCls}
       />
     </div>
   )
@@ -61,20 +64,24 @@ export default function NouveauPigistePage() {
   return (
     <div className="max-w-2xl mx-auto">
 
-      <Link
-        href="/admin/pigistes"
-        className="inline-flex items-center gap-2 text-[var(--color-dark-text-2)] mb-6 hover:text-[var(--color-dark-1)] transition-colors font-body text-sm"
-      >
-        <span aria-hidden="true" className="material-symbols-outlined text-sm">arrow_back</span>
-        Retour aux pigistes
-      </Link>
+      {/* Fil d'Ariane */}
+      <nav className="flex items-center gap-1.5 text-xs font-body text-[var(--color-dark-text-2)] mb-5">
+        <span className="font-bold uppercase tracking-wide text-[var(--color-brand)]">Équipe</span>
+        <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_right</span>
+        <Link href="/admin/pigistes" className="hover:text-[var(--color-brand)] transition-colors">Pigistes</Link>
+        <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_right</span>
+        <span className="text-[var(--color-dark-1)] font-semibold">Nouveau</span>
+      </nav>
 
-      <h1 className="font-display text-[var(--text-3xl)] text-[var(--color-dark-1)] mb-10 tracking-tight leading-none uppercase">
-        NOUVEAU PIGISTE
-      </h1>
+      <header className="mb-6">
+        <h1 className="font-display text-[var(--color-dark-0)] leading-tight" style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.03em' }}>
+          Nouveau pigiste
+        </h1>
+        <p className="font-body text-[13px] text-[var(--color-dark-text-2)] mt-1">Ajoutez un collaborateur externe à votre équipe.</p>
+      </header>
 
       {error && (
-        <div role="alert" className="mb-6 px-5 py-4 bg-[var(--color-error-bg)] border border-[var(--color-error-light)] rounded-2xl text-[var(--color-error-text)] font-body text-sm">
+        <div role="alert" className="mb-6 px-5 py-4 bg-[var(--color-error-bg)] rounded-xl text-[var(--color-error-text)] font-body text-sm">
           {error}
         </div>
       )}
@@ -82,11 +89,9 @@ export default function NouveauPigistePage() {
       <form onSubmit={handleSubmit} noValidate className="space-y-6">
 
         {/* Informations principales */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm space-y-5">
-          <h2 className="font-display text-[var(--text-lg)] text-[var(--color-dark-text-2)] tracking-wide">
-            INFORMATIONS
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <section className="bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] p-6 space-y-4">
+          <h2 className="font-display text-sm uppercase tracking-wide text-[var(--color-dark-1)]">Informations</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Field label="Nom légal"          name="nom_complet" placeholder="Jean Tremblay"           required />
             <Field label="Courriel"           name="email"       type="email" placeholder="jean@email.com"  required />
             <Field label="Mot de passe temp." name="password"    type="password" placeholder="••••••••"     required />
@@ -95,21 +100,21 @@ export default function NouveauPigistePage() {
           <p className="font-body text-xs text-[var(--color-dark-text-2)]">
             Le pigiste pourra changer son mot de passe depuis son espace après la première connexion.
           </p>
-        </div>
+        </section>
 
         {/* Actions */}
-        <div className="flex flex-col md:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-3">
           <button
             type="submit"
             disabled={saving}
-            className="flex-1 order-1 md:order-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-display text-base py-4 rounded-full tracking-widest uppercase transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+            className="flex-1 order-1 md:order-2 bg-[var(--color-brand)] hover:bg-[var(--color-brand-hover)] text-white font-body font-bold text-sm py-3.5 rounded-full uppercase tracking-wide transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {saving ? 'Création…' : 'Créer le pigiste'}
             {!saving && <span aria-hidden="true" className="material-symbols-outlined text-lg">arrow_forward</span>}
           </button>
           <Link
             href="/admin/pigistes"
-            className="flex-1 order-2 md:order-1 bg-[var(--color-light-0)] text-[var(--color-dark-3)] py-4 px-8 rounded-full font-bold text-sm uppercase tracking-widest hover:bg-[var(--color-light-border)] transition-colors text-center"
+            className="flex-1 order-2 md:order-1 bg-[var(--color-light-0)] text-[var(--color-dark-1)] py-3.5 px-8 rounded-full font-body font-bold text-sm uppercase tracking-wide hover:bg-[var(--color-light-border)] transition-colors text-center"
           >
             Annuler
           </Link>

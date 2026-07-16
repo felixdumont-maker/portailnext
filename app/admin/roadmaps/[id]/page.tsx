@@ -3,7 +3,11 @@
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
-interface Todo { id: number; texte: string; est_coche: number; }
+interface Todo {
+  id: number; texte: string; est_coche: number;
+  assignees?: { id: number; nom_complet: string }[];
+  linked_marketing_post_id?: number | null;
+}
 interface Note { id: number; texte: string; created_at: string; }
 interface Phase {
   id: number; titre: string; description: string; notes: string;
@@ -11,6 +15,13 @@ interface Phase {
   todos: Todo[]; journal: Note[];
 }
 interface Roadmap { id: number; titre: string; description: string; notes: string; }
+interface TeamMember { id: number; nom_complet: string; role: string | null }
+
+const PLATEFORMES_MARKETING: { id: string; label: string }[] = [
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'facebook', label: 'Facebook' },
+  { id: 'linkedin', label: 'LinkedIn' },
+];
 
 const BADGE_STYLES: Record<string, string> = {
   'Planifiee': 'bg-[var(--color-info-bg)] text-[var(--color-info-text)]',
@@ -35,9 +46,21 @@ export default function RoadmapDetailPage() {
   const [editingProject, setEditingProject] = useState(false);
   const [editForm, setEditForm] = useState({ titre: '', description: '', notes: '' });
   const [newTodos, setNewTodos] = useState<Record<number, string>>({});
+  const [newTodoAssignees, setNewTodoAssignees] = useState<Record<number, number[]>>({});
+  const [newTodoMktOpen, setNewTodoMktOpen] = useState<Record<number, boolean>>({});
+  const [newTodoMktDate, setNewTodoMktDate] = useState<Record<number, string>>({});
+  const [newTodoMktPlats, setNewTodoMktPlats] = useState<Record<number, string[]>>({});
+  const [team, setTeam] = useState<TeamMember[]>([]);
   const [newNotes, setNewNotes] = useState<Record<number, string>>({});
   const [showAddPhase, setShowAddPhase] = useState(false);
   const [phaseForm, setPhaseForm] = useState({ titre: '', description: '', date_debut: '', date_fin: '', badge: 'Planifiee', couleur: 'var(--color-info)' });
+
+  useEffect(() => {
+    fetch('/api/v1/admin/team', { credentials: 'include' })
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d)) setTeam(d) })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetch(`/api/v1/admin/roadmaps/${id}`, { credentials: 'include' })
@@ -83,14 +106,25 @@ export default function RoadmapDetailPage() {
   async function addTodo(phaseId: number) {
     const texte = newTodos[phaseId]?.trim();
     if (!texte) return;
+    const assigneeIds = newTodoAssignees[phaseId] || [];
+    const mktOpen = newTodoMktOpen[phaseId];
+    const mktDate = newTodoMktDate[phaseId];
+    const body: Record<string, unknown> = { texte, assigne_admin_ids: assigneeIds };
+    if (mktOpen && mktDate) {
+      body.marketing = { date_publication: mktDate, plateformes: newTodoMktPlats[phaseId] || [] };
+    }
     const res = await fetch(`/api/v1/admin/roadmaps/phase/${phaseId}/add_todo`, {
       method: 'POST', credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ texte }),
+      body: JSON.stringify(body),
     });
     const data = await res.json();
     setPhases(prev => prev.map(p => p.id !== phaseId ? p : { ...p, todos: [...p.todos, data.todo] }));
     setNewTodos(prev => ({ ...prev, [phaseId]: '' }));
+    setNewTodoAssignees(prev => ({ ...prev, [phaseId]: [] }));
+    setNewTodoMktOpen(prev => ({ ...prev, [phaseId]: false }));
+    setNewTodoMktDate(prev => ({ ...prev, [phaseId]: '' }));
+    setNewTodoMktPlats(prev => ({ ...prev, [phaseId]: [] }));
   }
 
   async function addNote(phaseId: number) {
@@ -258,6 +292,14 @@ export default function RoadmapDetailPage() {
                       <div key={todo.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg ${todo.est_coche ? 'bg-[var(--color-success-bg)]' : 'bg-[var(--color-light-0)]'}`}>
                         <input type="checkbox" checked={!!todo.est_coche} onChange={() => toggleTodo(phase.id, todo.id)} className="accent-['var(--color-brand)'] cursor-pointer" />
                         <span className={`text-sm flex-1 ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-0)]'}`}>{todo.texte}</span>
+                        {(todo.assignees || []).map(a => (
+                          <span key={a.id} className="text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full bg-[var(--color-brand-muted)] text-[var(--color-brand)]">
+                            {a.nom_complet.split(' ')[0]}
+                          </span>
+                        ))}
+                        {todo.linked_marketing_post_id && (
+                          <span aria-hidden="true" title="Post marketing lié" className="material-symbols-outlined text-[14px] text-[var(--color-dark-text-2)]">campaign</span>
+                        )}
                         <button onClick={() => deleteTodo(phase.id, todo.id)} className="text-[#ccc] hover:text-red-400 text-xs transition-colors">✕</button>
                       </div>
                     ))}
@@ -265,16 +307,57 @@ export default function RoadmapDetailPage() {
                   </div>
 
                   {/* Add todo */}
-                  <div className="flex gap-2 mb-6">
-                    <input
-                      type="text"
-                      value={newTodos[phase.id] || ''}
-                      onChange={e => setNewTodos(p => ({ ...p, [phase.id]: e.target.value }))}
-                      onKeyDown={e => e.key === 'Enter' && addTodo(phase.id)}
-                      placeholder="Ajouter une tâche..."
-                      className="flex-1 bg-[var(--color-light-0)] rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-[var(--color-brand)]/40"
-                    />
-                    <button onClick={() => addTodo(phase.id)} className="bg-[var(--color-dark-1)] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[var(--color-brand)] transition-colors">+ Ajouter</button>
+                  <div className="mb-6 space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
+                        type="text"
+                        value={newTodos[phase.id] || ''}
+                        onChange={e => setNewTodos(p => ({ ...p, [phase.id]: e.target.value }))}
+                        onKeyDown={e => e.key === 'Enter' && !newTodoMktOpen[phase.id] && addTodo(phase.id)}
+                        placeholder="Ajouter une tâche..."
+                        className="flex-1 bg-[var(--color-light-0)] rounded-lg px-4 py-2 text-sm outline-none focus:ring-1 focus:ring-[var(--color-brand)]/40"
+                      />
+                      {team.map(m => {
+                        const active = (newTodoAssignees[phase.id] || []).includes(m.id)
+                        return (
+                          <button key={m.id} type="button"
+                            onClick={() => setNewTodoAssignees(prev => {
+                              const cur = prev[phase.id] || []
+                              return { ...prev, [phase.id]: cur.includes(m.id) ? cur.filter(x => x !== m.id) : [...cur, m.id] }
+                            })}
+                            className={`text-xs px-2.5 py-1.5 rounded-full font-bold transition-colors ${active ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-light-0)] text-[var(--color-dark-text-2)]'}`}>
+                            {m.nom_complet.split(' ')[0]}
+                          </button>
+                        );
+                      })}
+                      <button onClick={() => addTodo(phase.id)} className="bg-[var(--color-dark-1)] text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-[var(--color-brand)] transition-colors">+ Ajouter</button>
+                    </div>
+                    <label className="flex items-center gap-2 text-xs text-[var(--color-dark-text-2)] cursor-pointer">
+                      <input type="checkbox" checked={!!newTodoMktOpen[phase.id]}
+                        onChange={e => setNewTodoMktOpen(p => ({ ...p, [phase.id]: e.target.checked }))} />
+                      Créer aussi un post marketing programmé
+                    </label>
+                    {newTodoMktOpen[phase.id] && (
+                      <div className="flex flex-wrap items-center gap-2 pl-6">
+                        <input type="date" value={newTodoMktDate[phase.id] || ''}
+                          onChange={e => setNewTodoMktDate(p => ({ ...p, [phase.id]: e.target.value }))}
+                          aria-label="Date de publication"
+                          className="bg-[var(--color-light-0)] rounded-lg px-3 py-1.5 text-sm outline-none focus:ring-1 focus:ring-[var(--color-brand)]/40" />
+                        {PLATEFORMES_MARKETING.map(p => {
+                          const active = (newTodoMktPlats[phase.id] || []).includes(p.id);
+                          return (
+                            <button key={p.id} type="button"
+                              onClick={() => setNewTodoMktPlats(prev => {
+                                const cur = prev[phase.id] || [];
+                                return { ...prev, [phase.id]: cur.includes(p.id) ? cur.filter(x => x !== p.id) : [...cur, p.id] };
+                              })}
+                              className={`text-xs px-2.5 py-1 rounded-full font-bold transition-colors ${active ? 'bg-[var(--color-brand)] text-white' : 'bg-[var(--color-light-0)] text-[var(--color-dark-text-2)]'}`}>
+                              {p.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Journal notes */}

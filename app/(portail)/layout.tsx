@@ -4,15 +4,167 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Bell, FileText, Hammer, Eye, CheckCircle2, Archive, Vote, Palette, type LucideIcon } from 'lucide-react';
 
 const navLinks = [
-  { label: 'Accueil',         icon: 'grid_view',   href: '/dashboard'    },
-  { label: 'Soumissions',     icon: 'description', href: '/soumissions'  },
-  { label: 'Profil',          icon: 'person',      href: '/profile'      },
+  { label: 'Accueil',         icon: 'grid_view',    href: '/dashboard'    },
+  { label: 'Mon site',        icon: 'web',          href: '/mon-site'     },
+  { label: 'Facturation',     icon: 'receipt_long', href: '/facturation'  },
+  { label: 'Profil',          icon: 'person',       href: '/profile'      },
 ];
 
 function isLinkActive(href: string, pathname: string) {
   return href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(href);
+}
+
+interface ClientNotif {
+  id: number;
+  message: string;
+  id_projet: number;
+  type: string;
+  is_read: boolean;
+  created_at: string;
+}
+
+const NOTIF_ICON: Record<string, LucideIcon> = {
+  documents_requis:  FileText,
+  travaux_en_cours:  Hammer,
+  revision:          Eye,
+  termine:           CheckCircle2,
+  archive:           Archive,
+  decision_board:    Vote,
+  identite_visuelle: Palette,
+  info:              Bell,
+};
+
+function tempsRelatif(iso: string): string {
+  const d = new Date(iso.replace(' ', 'T') + 'Z');
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (isNaN(diff)) return '';
+  if (diff < 60) return "à l'instant";
+  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)} h`;
+  return `il y a ${Math.floor(diff / 86400)} j`;
+}
+
+function NotifBell() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<ClientNotif[]>([]);
+  const [unread, setUnread] = useState(0);
+
+  async function charger() {
+    try {
+      const res = await fetch('/api/v1/notifications', { credentials: 'include' });
+      if (!res.ok) return;
+      const data = await res.json();
+      setItems(data.notifications || []);
+      setUnread(data.unread || 0);
+    } catch { /* silencieux */ }
+  }
+
+  useEffect(() => {
+    charger();
+    const t = setInterval(charger, 45000);
+    return () => clearInterval(t);
+  }, []);
+
+  async function ouvrir(n: ClientNotif) {
+    if (!n.is_read) {
+      fetch(`/api/v1/notifications/${n.id}/read`, { method: 'POST', credentials: 'include' }).catch(() => {});
+      setItems(prev => prev.map(i => i.id === n.id ? { ...i, is_read: true } : i));
+      setUnread(u => Math.max(0, u - 1));
+    }
+    setOpen(false);
+    if (n.id_projet) router.push(`/projet/${n.id_projet}`);
+  }
+
+  async function toutLire() {
+    await fetch('/api/v1/notifications/read-all', { method: 'POST', credentials: 'include' }).catch(() => {});
+    setItems(prev => prev.map(i => ({ ...i, is_read: true })));
+    setUnread(0);
+  }
+
+  return (
+    <div style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        aria-label={`Notifications${unread ? ` (${unread} non lues)` : ''}`}
+        aria-expanded={open}
+        style={{
+          width: '34px', height: '34px', borderRadius: '50%',
+          background: 'transparent', border: 'none', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'white', position: 'relative',
+        }}
+      >
+        <Bell aria-hidden="true" size={20} />
+        {unread > 0 && (
+          <span style={{
+            position: 'absolute', top: '2px', right: '2px', minWidth: '16px', height: '16px',
+            padding: '0 4px', borderRadius: '999px', background: 'var(--color-brand)',
+            color: 'white', fontSize: '10px', fontWeight: 800, lineHeight: '16px',
+            fontFamily: 'var(--font-display)', textAlign: 'center' as const,
+          }}>{unread > 9 ? '9+' : unread}</span>
+        )}
+      </button>
+
+      {open && (
+        <>
+          <div onClick={() => setOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 'var(--z-dropdown)' as never }} />
+          <div style={{
+            position: 'absolute', right: 0, top: 'calc(100% + 10px)',
+            background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+            borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-md)',
+            overflow: 'hidden', width: '320px', maxHeight: '420px',
+            display: 'flex', flexDirection: 'column' as const,
+            zIndex: 'calc(var(--z-dropdown) + 1)' as never,
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: 'var(--space-3) var(--space-4)', borderBottom: '1px solid var(--color-light-border)',
+            }}>
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: 'var(--text-sm)', color: 'var(--color-light-text)' }}>Notifications</span>
+              {unread > 0 && (
+                <button onClick={toutLire} style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: 'var(--color-brand)', fontSize: 'var(--text-xs)', fontFamily: 'var(--font-body)', fontWeight: 600,
+                }}>Tout marquer lu</button>
+              )}
+            </div>
+            <div style={{ overflowY: 'auto' as const }}>
+              {items.length === 0 && (
+                <p style={{ padding: 'var(--space-5) var(--space-4)', textAlign: 'center' as const, color: 'var(--color-light-text-3)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-body)', margin: 0 }}>
+                  Aucune notification
+                </p>
+              )}
+              {items.map(n => {
+                const Icon = NOTIF_ICON[n.type] || Bell;
+                return (
+                <button
+                  key={n.id}
+                  onClick={() => ouvrir(n)}
+                  style={{
+                    display: 'flex', gap: 'var(--space-3)', width: '100%', textAlign: 'left' as const,
+                    padding: 'var(--space-3) var(--space-4)', border: 'none', cursor: 'pointer',
+                    borderBottom: '1px solid var(--color-light-border)',
+                    background: n.is_read ? 'transparent' : 'var(--color-light-1)',
+                  }}
+                >
+                  <Icon aria-hidden="true" size={20} color="var(--color-brand)" style={{ flexShrink: 0, marginTop: '2px' }} />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontFamily: 'var(--font-body)', fontWeight: n.is_read ? 500 : 700, fontSize: 'var(--text-sm)', color: 'var(--color-light-text)' }}>{n.message}</span>
+                    <span style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: '11px', color: 'var(--color-light-text-3)', marginTop: '2px' }}>{tempsRelatif(n.created_at)}</span>
+                  </span>
+                </button>
+                );
+              })}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
 export default function PortailLayout({ children }: { children: React.ReactNode }) {
@@ -54,6 +206,23 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
         ...(hasOutils ? [{ label: 'Outils', icon: 'construction', href: '/outils' }] : []),
       ];
   const homeHref = entrainementOnly ? '/entrainement' : '/dashboard';
+
+  const navItemStyle = (active: boolean): React.CSSProperties => ({
+    fontFamily: 'var(--font-display)',
+    fontWeight: 700,
+    fontSize: '0.78rem',
+    letterSpacing: '0.07em',
+    textTransform: 'uppercase',
+    color: active ? 'white' : 'var(--color-dark-text-2)',
+    textDecoration: 'none',
+    padding: '6px 14px',
+    borderRadius: 'var(--radius-md)',
+    background: active ? 'var(--color-brand)' : 'transparent',
+    transition: `color var(--duration-fast), background var(--duration-fast)`,
+    minHeight: '36px',
+    display: 'inline-flex',
+    alignItems: 'center',
+  });
 
   return (
     <div style={{ minHeight: '100dvh', background: 'var(--color-light-1)' }}>
@@ -100,37 +269,38 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
 
         {/* Links */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-          {links.map(link => {
-            const active = isLinkActive(link.href, pathname);
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 700,
-                  fontSize: '0.78rem',
-                  letterSpacing: '0.07em',
-                  textTransform: 'uppercase',
-                  color: active ? 'white' : 'var(--color-dark-text-2)',
-                  textDecoration: 'none',
-                  padding: '6px 14px',
-                  borderRadius: 'var(--radius-full)',
-                  background: active ? 'var(--color-brand)' : 'transparent',
-                  transition: `color var(--duration-fast), background var(--duration-fast)`,
-                  minHeight: '36px',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                }}
-              >
-                {link.label}
-              </Link>
-            );
-          })}
+          <Link
+            href={homeHref}
+            style={navItemStyle(isLinkActive(homeHref, pathname))}
+          >
+            {entrainementOnly ? 'Ma séance' : 'Accueil'}
+          </Link>
+
+          {!entrainementOnly && (
+            <Link
+              href="/projets"
+              style={navItemStyle(pathname.startsWith('/projets'))}
+            >
+              Projets
+            </Link>
+          )}
+
+          {links.filter(l => l.href !== homeHref).map(link => (
+            <Link
+              key={link.href}
+              href={link.href}
+              style={navItemStyle(isLinkActive(link.href, pathname))}
+            >
+              {link.label}
+            </Link>
+          ))}
         </div>
 
-        {/* Avatar + dropdown */}
-        <div style={{ position: 'relative' }}>
+        {/* Notifications + Avatar */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+          <NotifBell />
+
+          <div style={{ position: 'relative' }}>
           <button
             onClick={() => setDropdown(d => !d)}
             aria-label="Menu compte"
@@ -207,6 +377,7 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
               </div>
             </>
           )}
+          </div>
         </div>
       </nav>
 
@@ -293,8 +464,7 @@ export default function PortailLayout({ children }: { children: React.ReactNode 
       )}
 
       {/* Page content */}
-      <main id="main-content" style={{
-        paddingTop: '80px',
+      <main id="main-content" className="pt-4 md:pt-20" style={{
         paddingBottom: '72px',
       }}>
         {children}

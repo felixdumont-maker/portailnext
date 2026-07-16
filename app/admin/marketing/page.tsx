@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 
 const API = process.env.NEXT_PUBLIC_API_URL || ''
@@ -39,6 +39,8 @@ function nbJoursDansMois(mois: string): number {
   return new Date(y, m, 0).getDate()
 }
 
+interface FichierVisuel { id: number; filename: string; created_at: string }
+
 interface Post {
   id: number
   titre: string
@@ -49,6 +51,78 @@ interface Post {
   todo_felix_done: boolean
   todo_marie_done: boolean
   demande_envoyee: boolean
+  fichiers: FichierVisuel[]
+}
+
+function PostPanel({ post, uploading, dragOver, onDragOver, onDragLeave, onDrop, onUpload, onDeleteFichier, onClose }: {
+  post: Post
+  uploading: boolean
+  dragOver: boolean
+  onDragOver: (e: React.DragEvent) => void
+  onDragLeave: () => void
+  onDrop: (e: React.DragEvent) => void
+  onUpload: (file: File) => void
+  onDeleteFichier: (fichierId: number) => void
+  onClose: () => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(20,15,10,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '24px' }}>
+      <div onClick={e => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-y-auto">
+        <div className="flex items-center justify-between p-6 border-b border-[var(--color-light-border)]">
+          <div>
+            <p className="font-display text-lg uppercase tracking-wide text-[var(--color-dark-1)]">{post.titre}</p>
+            <p className="text-xs text-[var(--color-dark-text-2)] font-body mt-1">
+              {new Date(post.date_publication + 'T12:00:00').toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })}
+            </p>
+          </div>
+          <button onClick={onClose} aria-label="Fermer" className="text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)]">
+            <span aria-hidden="true" className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          {post.description && <p className="text-sm text-[var(--color-dark-text-2)] font-body">{post.description}</p>}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[var(--color-dark-text-2)] mb-2 font-body">Visuels</p>
+            <div
+              onClick={() => inputRef.current?.click()}
+              onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop}
+              className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors ${dragOver ? 'border-[var(--color-brand)] bg-[var(--color-brand-muted)]' : 'border-[var(--color-light-border-2)]'}`}>
+              <span aria-hidden="true" className="material-symbols-outlined text-2xl text-[var(--color-dark-text-2)]" style={{ animation: uploading ? 'spin 1s linear infinite' : 'none' }}>
+                {uploading ? 'progress_activity' : 'upload_file'}
+              </span>
+              <p className="text-xs font-body font-bold text-[var(--color-dark-text-2)] mt-1">
+                {uploading ? 'Envoi…' : 'Déposer un visuel ou cliquer pour choisir'}
+              </p>
+              <input ref={inputRef} type="file" accept="image/*,video/*,.pdf" hidden disabled={uploading}
+                onChange={e => { const f = e.target.files?.[0]; if (f) onUpload(f) }} />
+            </div>
+            {post.fichiers.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {post.fichiers.map(f => (
+                  <div key={f.id} className="flex items-center justify-between gap-2 bg-[var(--color-light-0)] rounded-lg px-3 py-2">
+                    <a href={`${API}/api/v1/admin/marketing/${post.id}/fichier/${f.id}`} target="_blank" rel="noreferrer"
+                      className="text-xs font-body text-[var(--color-brand)] hover:underline truncate">
+                      {f.filename}
+                    </a>
+                    <button onClick={() => onDeleteFichier(f.id)} title="Supprimer" className="text-[var(--color-dark-text-2)] hover:text-red-600 flex-shrink-0">
+                      <span aria-hidden="true" className="material-symbols-outlined text-sm">delete</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {post.todo_felix_done && (
+            <p className="flex items-center gap-2 text-xs font-body font-bold text-[var(--color-success-text)]">
+              <span aria-hidden="true" className="material-symbols-outlined text-sm">check_circle</span>
+              Visuel prêt
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 const STATUT_STYLES: Record<string, { bg: string; text: string; label: string }> = {
@@ -79,6 +153,9 @@ export default function MarketingPage() {
   const [notifLoading, setNotifLoading] = useState('')
   const [deletingId, setDeletingId] = useState<number | null>(null)
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null)
+  const [openPostId, setOpenPostId] = useState<number | null>(null)
+  const [uploading, setUploading] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
 
   const showToast = (msg: string, ok = true) => {
     setToast({ msg, ok })
@@ -135,6 +212,48 @@ export default function MarketingPage() {
       setDeletingId(null)
     }
   }
+
+  const uploadVisuel = async (postId: number, file: File) => {
+    setUploading(true)
+    try {
+      const form = new FormData()
+      form.append('file', file)
+      const res = await fetch(`${API}/api/v1/admin/marketing/${postId}/upload`, {
+        method: 'POST', credentials: 'include', body: form,
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { showToast(data.error || 'Erreur envoi', false); return }
+      setPosts(prev => prev.map(p => p.id !== postId ? p : { ...p, fichiers: data.fichiers, todo_felix_done: true }))
+      showToast('Visuel envoyé.')
+    } catch {
+      showToast('Erreur de connexion', false)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const deleteVisuel = async (postId: number, fichierId: number) => {
+    try {
+      const res = await fetch(`${API}/api/v1/admin/marketing/${postId}/fichier/${fichierId}`, {
+        method: 'DELETE', credentials: 'include',
+      })
+      if (!res.ok) { showToast('Erreur suppression', false); return }
+      setPosts(prev => prev.map(p => p.id !== postId ? p : { ...p, fichiers: p.fichiers.filter(f => f.id !== fichierId) }))
+    } catch {
+      showToast('Erreur de connexion', false)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent) => { e.preventDefault(); setDragOver(true) }
+  const handleDragLeave = () => setDragOver(false)
+  const handleDrop = (postId: number) => (e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    const f = e.dataTransfer.files?.[0]
+    if (f) uploadVisuel(postId, f)
+  }
+
+  const openPost = posts.find(p => p.id === openPostId) || null
 
   const postsFiltres = filtre === 'TOUS'
     ? posts
@@ -265,8 +384,9 @@ export default function MarketingPage() {
                 const style = statutStyle(post.statut)
                 const plates = post.plateformes.join(', ') || '—'
                 return (
-                  <div key={post.id}
-                    className="flex items-center justify-between p-4 rounded-xl hover:bg-[var(--color-light-1)] transition-colors group">
+                  <div key={post.id} onClick={() => setOpenPostId(post.id)} role="button" tabIndex={0}
+                    onKeyDown={e => { if (e.key === 'Enter') setOpenPostId(post.id) }}
+                    className="flex items-center justify-between p-4 rounded-xl hover:bg-[var(--color-light-1)] transition-colors group cursor-pointer">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-full bg-[var(--color-light-0)] flex items-center justify-center text-[var(--color-brand)]">
                         <span aria-hidden="true" className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>
@@ -283,6 +403,12 @@ export default function MarketingPage() {
                           <span className="px-2 py-0.5 rounded-full bg-[var(--color-light-0)] text-[10px] text-[var(--color-dark-text-2)] font-bold uppercase">
                             {plates}
                           </span>
+                          {post.fichiers.length > 0 && (
+                            <span className="flex items-center gap-1 text-[10px] text-[var(--color-brand)] font-body font-bold">
+                              <span aria-hidden="true" className="material-symbols-outlined text-xs">image</span>
+                              {post.fichiers.length}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -292,7 +418,7 @@ export default function MarketingPage() {
                       </span>
                       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button
-                          onClick={() => handleDelete(post.id)}
+                          onClick={e => { e.stopPropagation(); handleDelete(post.id) }}
                           disabled={deletingId === post.id}
                           className="p-2 rounded-full hover:bg-red-50 text-[var(--color-dark-text-2)] hover:text-red-600 transition-colors disabled:opacity-40">
                           <span aria-hidden="true" className="material-symbols-outlined text-sm">delete</span>
@@ -360,6 +486,20 @@ export default function MarketingPage() {
           </div>
         </div>
       </div>
+
+      {openPost && (
+        <PostPanel
+          post={openPost}
+          uploading={uploading}
+          dragOver={dragOver}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop(openPost.id)}
+          onUpload={file => uploadVisuel(openPost.id, file)}
+          onDeleteFichier={fid => deleteVisuel(openPost.id, fid)}
+          onClose={() => setOpenPostId(null)}
+        />
+      )}
     </div>
   )
 }

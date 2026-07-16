@@ -28,7 +28,7 @@ const EMPTY: Form = {
 export default function NouveauMandatPigistePage() {
   const router = useRouter()
   const [form, setForm]         = useState<Form>(EMPTY)
-  const [pigistes, setPigistes] = useState<{ id: number; nom_complet: string }[]>([])
+  const [pigistes, setPigistes] = useState<{ id: number; nom_complet: string; is_producteur_principal: boolean }[]>([])
   const [projets, setProjets]   = useState<{ id: number; nom_projet: string }[]>([])
   const [tarifs, setTarifs]     = useState<Tarif[]>([])
   const [saving, setSaving]     = useState(false)
@@ -126,7 +126,7 @@ export default function NouveauMandatPigistePage() {
               <select value={form.id_pigiste} onChange={e => set('id_pigiste', e.target.value)}
                 aria-label="Sélectionner un pigiste" required className={inputCls}>
                 <option value="">Choisir un pigiste…</option>
-                {pigistes.map(p => <option key={p.id} value={p.id}>{p.nom_complet}</option>)}
+                {pigistes.filter(p => p.is_producteur_principal).map(p => <option key={p.id} value={p.id}>{p.nom_complet}</option>)}
               </select>
             </div>
             <div className="flex flex-col gap-2">
