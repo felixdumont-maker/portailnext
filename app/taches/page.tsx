@@ -546,7 +546,7 @@ export default function TachesPage() {
                 </div>
               </div>
 
-              <div className="mb-4 overflow-hidden rounded-xl">
+              <div className="mb-4">
                 <label className={labelCls}>Échéance</label>
                 <input type="date" className={fieldCls + ' min-w-0 max-w-full box-border'} style={{ width: '100%' }}
                   value={detail.date_echeance && ISO_RE.test(detail.date_echeance) ? detail.date_echeance : ''}
