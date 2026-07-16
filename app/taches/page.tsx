@@ -58,6 +58,10 @@ function formatDate(d: string) {
   return new Date(d + 'T12:00:00').toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })
 }
 
+function formatDateLong(d: string) {
+  return new Date(d + 'T12:00:00').toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
 // Lecture minimale d'une fiche contact .vcf (FN / TEL / EMAIL) — partagée depuis
 // l'app Contacts iOS via "Enregistrer dans Fichiers" puis importée ici.
 function parseVCard(text: string): { nom: string; telephone: string; courriel: string } {
@@ -119,6 +123,7 @@ export default function TachesPage() {
   const [detailId, setDetailId] = useState<number | null>(null)
   const [editTexte, setEditTexte] = useState('')
   const vcardInputRef = useRef<HTMLInputElement>(null)
+  const dateInputRef = useRef<HTMLInputElement>(null)
 
   const [pushOn, setPushOn] = useState(false)
   const [pushBusy, setPushBusy] = useState(false)
@@ -548,11 +553,21 @@ export default function TachesPage() {
 
               <div className="mb-4">
                 <label className={labelCls}>Échéance</label>
-                <div className="overflow-hidden rounded-xl py-1 -my-1">
-                  <input type="date" className={fieldCls + ' min-w-0 max-w-full box-border'} style={{ width: '100%' }}
-                    value={detail.date_echeance && ISO_RE.test(detail.date_echeance) ? detail.date_echeance : ''}
-                    onChange={e => patchTask(detail.id, { date_echeance: e.target.value || null })} />
-                </div>
+                <button type="button" onClick={() => {
+                  const el = dateInputRef.current as (HTMLInputElement & { showPicker?: () => void }) | null
+                  if (!el) return
+                  if (typeof el.showPicker === 'function') { try { el.showPicker() } catch { el.click() } }
+                  else el.click()
+                }}
+                  className={fieldCls + ' text-left'}>
+                  {detail.date_echeance && ISO_RE.test(detail.date_echeance)
+                    ? formatDateLong(detail.date_echeance)
+                    : <span className="text-[color-mix(in_oklab,var(--ink)_35%,transparent)]">Choisir une date</span>}
+                </button>
+                <input ref={dateInputRef} type="date" tabIndex={-1} aria-hidden="true"
+                  className="sr-only"
+                  value={detail.date_echeance && ISO_RE.test(detail.date_echeance) ? detail.date_echeance : ''}
+                  onChange={e => patchTask(detail.id, { date_echeance: e.target.value || null })} />
               </div>
 
               <div className="mb-2 flex items-center justify-between">
