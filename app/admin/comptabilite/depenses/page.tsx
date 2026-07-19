@@ -56,11 +56,26 @@ export default function DepensesPage() {
   const [description, setDescription] = useState('')
   const [categorie, setCategorie] = useState('')
   const [montant, setMontant] = useState('')
+  const [taxable, setTaxable] = useState(true)
+  const [scanOverride, setScanOverride] = useState<{ avant: number; tps: number; tvq: number } | null>(null)
   const [piece, setPiece] = useState<string | null>(null)
   const [scanning, setScanning] = useState(false)
   const [scanned, setScanned] = useState(false)
 
   const showToast = (msg: string, ok = false) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500) }
+
+  // Répartition avant-taxes/TPS/TVQ — le montant tapé est toujours taxes incluses
+  // (c'est ce qu'on lit sur un reçu). TPS 5 % / TVQ 9,975 % appliquées au sous-total
+  // déduit du total, mêmes taux que partout ailleurs dans l'app (factures, etc.).
+  // Écrasée par le scan Gemini quand disponible — plus précis qu'un calcul standard,
+  // et invalidée dès que le montant est retouché à la main.
+  const montantNum = parseFloat(montant.replace(',', '.')) || 0
+  const taxesCalculees = (() => {
+    if (!taxable || montantNum <= 0) return { avant: montantNum, tps: 0, tvq: 0 }
+    const avant = Math.round((montantNum / 1.14975) * 100) / 100
+    return { avant, tps: Math.round(avant * 0.05 * 100) / 100, tvq: Math.round(avant * 0.09975 * 100) / 100 }
+  })()
+  const taxes = scanOverride ?? taxesCalculees
 
   const handleScan = async (file: File) => {
     setScanning(true); setScanned(false)
@@ -74,6 +89,10 @@ export default function DepensesPage() {
       if (d.description) setDescription(d.description)
       if (d.categorie) setCategorie(d.categorie)
       if (d.montant_total) setMontant(String(d.montant_total))
+      if (typeof d.montant_avant_taxes === 'number') {
+        setScanOverride({ avant: d.montant_avant_taxes, tps: d.montant_tps || 0, tvq: d.montant_tvq || 0 })
+        setTaxable((d.montant_tps || 0) > 0 || (d.montant_tvq || 0) > 0)
+      }
       setPiece(d.piece_jointe || null)
       setScanned(true)
       showToast('Reçu analysé — vérifiez et corrigez au besoin', true)
@@ -92,8 +111,7 @@ export default function DepensesPage() {
 
   const handleAdd = async () => {
     if (!date || !description.trim() || !montant) { showToast('Remplissez la date, la description et le montant'); return }
-    const montantNum = parseFloat(montant.replace(',', '.'))
-    if (isNaN(montantNum) || montantNum <= 0) { showToast('Montant invalide'); return }
+    if (montantNum <= 0) { showToast('Montant invalide'); return }
     setSaving(true)
     try {
       const res = await fetch('/api/v1/admin/depenses', {
@@ -103,6 +121,9 @@ export default function DepensesPage() {
           description: description.trim(),
           categorie: categorie || 'Autre',
           montant_total: montantNum,
+          montant_avant_taxes: taxes.avant,
+          montant_tps: taxes.tps,
+          montant_tvq: taxes.tvq,
           piece_jointe: piece,
         }),
       })
@@ -110,7 +131,7 @@ export default function DepensesPage() {
       if (!res.ok) { showToast(data.error || 'Erreur lors de l\'ajout'); return }
       setDepenses(prev => [data, ...prev])
       setDescription(''); setCategorie(''); setMontant(''); setDate(todayISO())
-      setPiece(null); setScanned(false)
+      setPiece(null); setScanned(false); setScanOverride(null); setTaxable(true)
       showToast('Dépense ajoutée', true)
     } catch { showToast('Erreur de connexion') }
     finally { setSaving(false) }
@@ -161,7 +182,10 @@ export default function DepensesPage() {
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Date"><input type="date" className={inputCls} value={date} onChange={e => setDate(e.target.value)} /></Field>
-          <Field label="Montant (taxes incluses)"><input type="text" inputMode="decimal" className={inputCls} value={montant} onChange={e => setMontant(e.target.value)} placeholder="0,00 $" /></Field>
+          <Field label="Montant (taxes incluses)">
+            <input type="text" inputMode="decimal" className={inputCls} value={montant}
+              onChange={e => { setMontant(e.target.value); setScanOverride(null) }} placeholder="0,00 $" />
+          </Field>
           <div className="md:col-span-2">
             <Field label="Description"><input type="text" className={inputCls} value={description} onChange={e => setDescription(e.target.value)} placeholder="Ex : Achat de laine, essence, timbres…" /></Field>
           </div>
@@ -178,6 +202,21 @@ export default function DepensesPage() {
             </Field>
           </div>
         </div>
+
+        <div className="mt-4 flex items-center justify-between gap-4 flex-wrap px-1">
+          <label className="inline-flex items-center gap-2 font-body text-[13px] text-[var(--color-dark-1)] cursor-pointer">
+            <input type="checkbox" checked={taxable}
+              onChange={e => { setTaxable(e.target.checked); setScanOverride(null) }} />
+            Ce montant inclut la TPS (5 %) et la TVQ (9,975 %)
+          </label>
+          {montantNum > 0 && (
+            <p className="font-body text-[12px] text-[var(--color-dark-text-2)] tabular-nums">
+              Avant taxes : <strong className="text-[var(--color-dark-1)]">{money(taxes.avant)}</strong>
+              {taxable && <> · TPS {money(taxes.tps)} · TVQ {money(taxes.tvq)}</>}
+            </p>
+          )}
+        </div>
+
         <div className="mt-6">
           <button onClick={handleAdd} disabled={saving}
             className="w-full bg-[var(--color-brand)] text-white font-body font-bold py-3 rounded-full hover:bg-[var(--color-brand-hover)] transition-colors text-sm disabled:opacity-60">

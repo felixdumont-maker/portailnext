@@ -6,8 +6,8 @@ import { useSearchParams } from 'next/navigation'
 interface CategorieLigne { categorie: string; ligne_t2125: string; ligne_tp80: string; total: number; nb: number }
 interface Bilan {
   periode: string
-  revenus: { total: number; nb: number }
-  depenses: { total: number; nb: number }
+  revenus: { total: number; avant_taxes: number; nb: number }
+  depenses: { total: number; avant_taxes: number; nb: number }
   profit_net: number
   revenus_par_categorie: CategorieLigne[]
   depenses_par_categorie: CategorieLigne[]
@@ -105,12 +105,12 @@ export default function BilanPage() {
       <nav className="flex items-center gap-1.5 text-xs font-body text-[var(--color-dark-text-2)] mb-5">
         <span className="font-bold uppercase tracking-wide text-[var(--color-brand)]">Comptabilité</span>
         <span aria-hidden="true" className="material-symbols-outlined text-sm">chevron_right</span>
-        <span className="text-[var(--color-dark-1)] font-semibold">Bilan</span>
+        <span className="text-[var(--color-dark-1)] font-semibold">État des résultats</span>
       </nav>
 
       <header className="mb-6">
         <h1 className="font-display text-[var(--color-dark-0)] leading-tight" style={{ fontSize: '28px', fontWeight: 800, letterSpacing: '-0.03em' }}>
-          Bilan
+          État des résultats
         </h1>
         <p className="font-body text-[13px] text-[var(--color-dark-text-2)] mt-1">Comment va votre année, en un coup d&apos;œil.</p>
       </header>
@@ -150,7 +150,7 @@ export default function BilanPage() {
         {menuOuvert && (
           <div className="absolute z-20 mt-2 w-[380px] bg-[var(--color-light-2)] border border-[var(--color-light-border)] rounded-[18px] shadow-2xl p-2">
             {[
-              { rapport: 'bilan' as const, titre: 'Bilan complet' },
+              { rapport: 'bilan' as const, titre: 'État des résultats complet' },
               { rapport: 'revenus' as const, titre: 'Revenus par catégorie' },
               { rapport: 'depenses' as const, titre: 'Dépenses par catégorie' },
             ].map(section => (
@@ -189,12 +189,12 @@ export default function BilanPage() {
           {/* Grands chiffres */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="rounded-[18px] bg-[var(--color-light-2)] border border-[var(--color-light-border)] p-5">
-              <p className="font-display font-extrabold text-3xl leading-none" style={{ color: 'var(--color-success-text)' }}>{money(bilan.revenus.total)}</p>
-              <p className="font-body text-xs uppercase tracking-wide text-[var(--color-dark-text-2)] mt-2">Revenus ({bilan.revenus.nb})</p>
+              <p className="font-display font-extrabold text-3xl leading-none" style={{ color: 'var(--color-success-text)' }}>{money(bilan.revenus.avant_taxes)}</p>
+              <p className="font-body text-xs uppercase tracking-wide text-[var(--color-dark-text-2)] mt-2">Revenus avant taxes ({bilan.revenus.nb})</p>
             </div>
             <div className="rounded-[18px] bg-[var(--color-light-2)] border border-[var(--color-light-border)] p-5">
-              <p className="font-display font-extrabold text-3xl leading-none" style={{ color: 'var(--color-error-text, #c0321a)' }}>{money(bilan.depenses.total)}</p>
-              <p className="font-body text-xs uppercase tracking-wide text-[var(--color-dark-text-2)] mt-2">Dépenses ({bilan.depenses.nb})</p>
+              <p className="font-display font-extrabold text-3xl leading-none" style={{ color: 'var(--color-error-text, #c0321a)' }}>{money(bilan.depenses.avant_taxes)}</p>
+              <p className="font-body text-xs uppercase tracking-wide text-[var(--color-dark-text-2)] mt-2">Dépenses avant taxes ({bilan.depenses.nb})</p>
             </div>
             <div className="rounded-[18px] p-5 text-white" style={{ background: 'linear-gradient(160deg, var(--color-dark-1), var(--color-dark-0))' }}>
               <p className="font-display font-extrabold text-3xl leading-none">{money(bilan.profit_net)}</p>

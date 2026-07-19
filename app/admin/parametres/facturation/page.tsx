@@ -7,6 +7,8 @@ interface Params {
   neq: string
   numero_tps: string
   numero_tvq: string
+  methode_comptable: 'reguliere' | 'rapide' | 'non_inscrit'
+  base_comptable: 'caisse' | 'exercice'
 }
 
 // Label uppercase muted au-dessus d'un champ (même patron que la fiche client)
@@ -22,7 +24,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const inputCls = "w-full bg-[var(--color-light-0)] border-none rounded-xl px-4 py-3 outline-none font-body text-sm focus:ring-2 focus:ring-[var(--color-brand)]/40"
 
 export default function ParametresFacturationPage() {
-  const [params, setParams] = useState<Params>({ charge_taxes: false, neq: '', numero_tps: '', numero_tvq: '' })
+  const [params, setParams] = useState<Params>({ charge_taxes: false, neq: '', numero_tps: '', numero_tvq: '', methode_comptable: 'reguliere', base_comptable: 'caisse' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -34,7 +36,10 @@ export default function ParametresFacturationPage() {
   useEffect(() => {
     fetch('/api/v1/admin/parametres-facturation', { credentials: 'include' })
       .then(r => r.json())
-      .then(d => { setParams({ charge_taxes: !!d.charge_taxes, neq: d.neq || '', numero_tps: d.numero_tps || '', numero_tvq: d.numero_tvq || '' }); setLoading(false) })
+      .then(d => { setParams({
+        charge_taxes: !!d.charge_taxes, neq: d.neq || '', numero_tps: d.numero_tps || '', numero_tvq: d.numero_tvq || '',
+        methode_comptable: d.methode_comptable || 'reguliere', base_comptable: d.base_comptable || 'caisse',
+      }); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
 
@@ -117,6 +122,49 @@ export default function ParametresFacturationPage() {
             </div>
           </div>
         )}
+
+        {/* Méthode comptable TPS/TVQ */}
+        <div className="mt-6 pt-6 border-t border-[var(--color-light-border)]">
+          <p className="font-body text-sm font-bold text-[var(--color-dark-1)] mb-1">Méthode de comptabilisation de la TPS/TVQ</p>
+          <p className="font-body text-xs text-[var(--color-dark-text-2)] mb-4">Détermine comment la taxe payée sur vos dépenses est traitée dans vos rapports.</p>
+          <div className="flex flex-col gap-2">
+            {([
+              { v: 'reguliere', label: 'Méthode régulière', desc: 'Crédits de taxe sur intrants (CTI) réclamés en entier — la taxe payée sur vos dépenses est toujours récupérable.', disabled: false },
+              { v: 'rapide', label: 'Méthode rapide (Quick Method)', desc: "Bientôt disponible — calcul différent (remise d'un pourcentage du revenu taxes incluses).", disabled: true },
+              { v: 'non_inscrit', label: 'Non inscrit', desc: 'Bientôt disponible — pas de TPS/TVQ perçue ni remise.', disabled: true },
+            ] as const).map(opt => (
+              <label key={opt.v} className={`flex items-start gap-3 px-4 py-3 rounded-xl border ${params.methode_comptable === opt.v ? 'border-[var(--color-brand)] bg-[var(--color-brand)]/5' : 'border-[var(--color-light-border)]'} ${opt.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                <input type="radio" name="methode_comptable" className="mt-0.5" checked={params.methode_comptable === opt.v} disabled={opt.disabled}
+                  onChange={() => !opt.disabled && set({ methode_comptable: opt.v })} />
+                <span>
+                  <span className="block font-body text-sm font-bold text-[var(--color-dark-1)]">{opt.label}</span>
+                  <span className="block font-body text-xs text-[var(--color-dark-text-2)] mt-0.5">{opt.desc}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Base de comptabilisation */}
+        <div className="mt-6 pt-6 border-t border-[var(--color-light-border)]">
+          <p className="font-body text-sm font-bold text-[var(--color-dark-1)] mb-1">Comptabilité de caisse ou d&apos;exercice</p>
+          <p className="font-body text-xs text-[var(--color-dark-text-2)] mb-4">Détermine à quel moment un revenu est constaté dans vos rapports.</p>
+          <div className="flex flex-col gap-2">
+            {([
+              { v: 'caisse', label: 'Comptabilité de caisse', desc: 'Un revenu est constaté quand une facture est marquée payée — le comportement actuel de l\'app.', disabled: false },
+              { v: 'exercice', label: "Comptabilité d'exercice", desc: 'Bientôt disponible — un revenu serait constaté dès la facturation, peu importe le paiement.', disabled: true },
+            ] as const).map(opt => (
+              <label key={opt.v} className={`flex items-start gap-3 px-4 py-3 rounded-xl border ${params.base_comptable === opt.v ? 'border-[var(--color-brand)] bg-[var(--color-brand)]/5' : 'border-[var(--color-light-border)]'} ${opt.disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}>
+                <input type="radio" name="base_comptable" className="mt-0.5" checked={params.base_comptable === opt.v} disabled={opt.disabled}
+                  onChange={() => !opt.disabled && set({ base_comptable: opt.v })} />
+                <span>
+                  <span className="block font-body text-sm font-bold text-[var(--color-dark-1)]">{opt.label}</span>
+                  <span className="block font-body text-xs text-[var(--color-dark-text-2)] mt-0.5">{opt.desc}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
 
         {/* Bouton enregistrer */}
         <div className="flex items-center gap-3 mt-6">

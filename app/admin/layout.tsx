@@ -44,7 +44,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'À valider', icon: 'inbox',       href: '/admin/comptabilite/a-valider' },
       { label: 'Revenus',   icon: 'trending_up', href: '/admin/comptabilite/revenus'   },
       { label: 'Dépenses',  icon: 'payments',    href: '/admin/comptabilite/depenses'  },
-      { label: 'Bilan',     icon: 'summarize',   href: '/admin/comptabilite/bilan'     },
+      { label: 'État des résultats', icon: 'summarize', href: '/admin/comptabilite/bilan' },
       { label: 'Taxes',     icon: 'receipt_long', href: '/admin/comptabilite/taxes' },
     ],
   },
