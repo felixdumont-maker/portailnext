@@ -43,7 +43,11 @@ export async function middleware(request: NextRequest) {
       return response
     }
   } catch {
-    // Flask unreachable — degrade gracefully rather than locking everyone out
+    // Flask injoignable (ex. redémarrage du conteneur backend) : décision consciente,
+    // confirmée à l'audit du 19 juillet 2026 — dispo > sécurité pour ce cas précis.
+    // Impact réel limité : ça ne laisse voir que la coquille Next.js de la page, sans
+    // aucune vraie donnée, puisque les appels /api/v1/* vers Flask échoueraient de la
+    // même façon pendant cette même fenêtre d'indisponibilité.
     return NextResponse.next()
   }
 
