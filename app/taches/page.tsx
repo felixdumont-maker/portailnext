@@ -4,8 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import type { Task, Bucket } from '@/lib/tasks'
 import { formatDate as formatDateShared, formatDateLong as formatDateLongShared, parseVCard, BUCKET_LABEL, BUCKET_ORDER, bucketOf } from '@/lib/tasks'
 
-const TOKEN_KEY = 'cos_task_token'
 const API = process.env.NEXT_PUBLIC_API_URL || ''
+
+// Jeton d'appareil transporté par cookie httpOnly (cos_task_token) — jamais lu en JS.
+const apiFetch = (path: string, opts: RequestInit = {}) =>
+  fetch(`${API}${path}`, { ...opts, credentials: 'include' })
 
 interface Personne { id: number; nom_complet: string }
 interface Projet { id: number; nom_projet: string; client_nom: string | null }
@@ -78,14 +81,12 @@ export default function TachesPage() {
   const pushSupported = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window
 
   const showToast = (msg: string, ok = false) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500) }
-  const getToken = () => (typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null)
-  const authHeaders = () => ({ 'X-Task-Token': getToken() || '', 'Content-Type': 'application/json' })
 
   const loadTasks = useCallback(async () => {
     setLoadingTasks(true)
     try {
-      const res = await fetch(`${API}/api/v1/taches/todos`, { headers: { 'X-Task-Token': getToken() || '' } })
-      if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setEtat('login'); return }
+      const res = await apiFetch('/api/v1/taches/todos')
+      if (res.status === 401) { setEtat('login'); return }
       const d = await res.json()
       if (Array.isArray(d)) setTasks(d)
     } catch { showToast('Erreur de connexion') }
@@ -93,12 +94,11 @@ export default function TachesPage() {
   }, [])
 
   const loadPickers = useCallback(async () => {
-    const token = getToken() || ''
     try {
       const [t, c, p] = await Promise.all([
-        fetch(`${API}/api/v1/taches/team`, { headers: { 'X-Task-Token': token } }).then(r => r.json()),
-        fetch(`${API}/api/v1/taches/clients`, { headers: { 'X-Task-Token': token } }).then(r => r.json()),
-        fetch(`${API}/api/v1/taches/projets`, { headers: { 'X-Task-Token': token } }).then(r => r.json()),
+        apiFetch('/api/v1/taches/team').then(r => r.json()),
+        apiFetch('/api/v1/taches/clients').then(r => r.json()),
+        apiFetch('/api/v1/taches/projets').then(r => r.json()),
       ])
       if (Array.isArray(t)) setTeam(t)
       if (Array.isArray(c)) setClients(c)
@@ -110,7 +110,7 @@ export default function TachesPage() {
   // convergence avec /admin/marketing sans dupliquer les items déjà liés à une roadmap.
   const loadMarketing = useCallback(async () => {
     try {
-      const res = await fetch(`${API}/api/v1/taches/marketing`, { headers: { 'X-Task-Token': getToken() || '' } })
+      const res = await apiFetch('/api/v1/taches/marketing')
       const d = await res.json()
       if (Array.isArray(d)) setMarketing(d)
     } catch { /* section marketing simplement absente si ça échoue */ }
@@ -120,20 +120,18 @@ export default function TachesPage() {
     const snapshot = marketing
     setMarketing(prev => prev.filter(m => m.id !== id))
     try {
-      const res = await fetch(`${API}/api/v1/taches/marketing/${id}/toggle`, { method: 'POST', headers: { 'X-Task-Token': getToken() || '' } })
+      const res = await apiFetch(`/api/v1/taches/marketing/${id}/toggle`, { method: 'POST' })
       if (!res.ok) throw new Error()
       showToast('Visuels déposés ✓', true)
     } catch { setMarketing(snapshot); showToast("La mise à jour a échoué") }
   }
 
-  // Jeton d'appareil : jumelage une seule fois, persiste dans ce navigateur.
+  // Jeton d'appareil (cookie httpOnly) : jumelage une seule fois, persiste dans ce navigateur.
   useEffect(() => {
-    const token = getToken()
-    if (!token) { setEtat('login'); return }
-    fetch(`${API}/api/v1/taches/verify`, { method: 'POST', headers: { 'X-Task-Token': token } })
+    apiFetch('/api/v1/taches/verify', { method: 'POST' })
       .then(async r => {
         if (r.ok) { const d = await r.json(); setCompte(d.compte || null); setEtat('list'); loadTasks(); loadPickers(); loadMarketing() }
-        else { localStorage.removeItem(TOKEN_KEY); setEtat('login') }
+        else setEtat('login')
       })
       .catch(() => setEtat('login'))
   }, [loadTasks, loadPickers, loadMarketing])
@@ -154,13 +152,13 @@ export default function TachesPage() {
       if (perm !== 'granted') { setPushBusy(false); return }
       const reg = await navigator.serviceWorker.register('/sw.js')
       await navigator.serviceWorker.ready
-      const keyRes = await fetch(`${API}/api/v1/taches/push/vapid-public-key`, { headers: { 'X-Task-Token': getToken() || '' } })
+      const keyRes = await apiFetch('/api/v1/taches/push/vapid-public-key')
       const { key } = await keyRes.json()
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(key),
       })
-      await fetch(`${API}/api/v1/taches/push/subscribe`, { method: 'POST', headers: authHeaders(), body: JSON.stringify(sub) })
+      await apiFetch('/api/v1/taches/push/subscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sub) })
       setPushOn(true)
       showToast('Notifications activées ✓', true)
     } catch { showToast("L'activation des notifications a échoué") }
@@ -174,7 +172,7 @@ export default function TachesPage() {
       const reg = await navigator.serviceWorker.getRegistration()
       const sub = await reg?.pushManager.getSubscription()
       if (sub) {
-        await fetch(`${API}/api/v1/taches/push/unsubscribe`, { method: 'POST', headers: authHeaders(), body: JSON.stringify({ endpoint: sub.endpoint }) })
+        await apiFetch('/api/v1/taches/push/unsubscribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) })
         await sub.unsubscribe()
       }
       setPushOn(false)
@@ -183,9 +181,7 @@ export default function TachesPage() {
   }
 
   const handleLogout = async () => {
-    const token = getToken()
-    try { if (token) await fetch(`${API}/api/v1/taches/logout`, { method: 'POST', headers: { 'X-Task-Token': token } }) } catch { /* on déconnecte quand même */ }
-    localStorage.removeItem(TOKEN_KEY)
+    try { await apiFetch('/api/v1/taches/logout', { method: 'POST' }) } catch { /* on déconnecte quand même */ }
     setCompte(null); setTasks([]); setEmail(''); setPassword('')
     setEtat('login')
   }
@@ -194,13 +190,12 @@ export default function TachesPage() {
     if (!email.trim() || !password) { showToast('Courriel et mot de passe requis'); return }
     setLoggingIn(true)
     try {
-      const res = await fetch(`${API}/api/v1/taches/login`, {
+      const res = await apiFetch('/api/v1/taches/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       })
       const d = await res.json()
       if (!res.ok) { showToast(d.error || 'Connexion refusée'); return }
-      localStorage.setItem(TOKEN_KEY, d.token)
       setCompte(email.trim())
       setPassword(''); setEmail('')
       setEtat('list')
@@ -214,11 +209,11 @@ export default function TachesPage() {
     if (!clean) return
     setSending(true)
     try {
-      const res = await fetch(`${API}/api/v1/taches/todos`, {
-        method: 'POST', headers: authHeaders(),
+      const res = await apiFetch('/api/v1/taches/todos', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ texte: clean, parse_nl: true }),
       })
-      if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setEtat('login'); return }
+      if (res.status === 401) { setEtat('login'); return }
       const d = await res.json()
       if (!res.ok) { showToast(d.error || "La tâche n'a pas pu être créée"); return }
       setTasks(prev => [d, ...prev])
@@ -248,8 +243,8 @@ export default function TachesPage() {
       setTasks(prev => prev.map(t => t.id === id ? { ...t, est_coche: 0 } : t))
     }
     try {
-      const res = await fetch(`${API}/api/v1/taches/todos/${id}/toggle`, { method: 'POST', headers: { 'X-Task-Token': getToken() || '' } })
-      if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setEtat('login'); return }
+      const res = await apiFetch(`/api/v1/taches/todos/${id}/toggle`, { method: 'POST' })
+      if (res.status === 401) { setEtat('login'); return }
       if (!res.ok) throw new Error()
     } catch {
       if (completeTimers.current[id]) { clearTimeout(completeTimers.current[id]); delete completeTimers.current[id] }
@@ -263,8 +258,8 @@ export default function TachesPage() {
     const snapshot = tasks
     setTasks(prev => prev.map(t => t.id === id ? { ...t, ...payload } as Task : t))
     try {
-      const res = await fetch(`${API}/api/v1/taches/todos/${id}`, { method: 'PATCH', headers: authHeaders(), body: JSON.stringify(payload) })
-      if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setEtat('login'); return }
+      const res = await apiFetch(`/api/v1/taches/todos/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+      if (res.status === 401) { setEtat('login'); return }
       const d = await res.json()
       if (!res.ok) throw new Error()
       setTasks(prev => prev.map(t => t.id === id ? d : t))
@@ -276,7 +271,7 @@ export default function TachesPage() {
     setTasks(prev => prev.filter(t => t.id !== id))
     setDetailId(null)
     try {
-      const res = await fetch(`${API}/api/v1/taches/todos/${id}`, { method: 'DELETE', headers: { 'X-Task-Token': getToken() || '' } })
+      const res = await apiFetch(`/api/v1/taches/todos/${id}`, { method: 'DELETE' })
       if (!res.ok) throw new Error()
     } catch { setTasks(snapshot); showToast('La suppression a échoué') }
   }

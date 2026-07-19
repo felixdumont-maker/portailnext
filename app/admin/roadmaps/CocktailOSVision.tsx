@@ -1,5 +1,7 @@
 
 import { Fragment, useEffect, useState } from 'react'
+import AuditSecurite from './AuditSecurite'
+import PlanMatch from './PlanMatch'
 
 // ───────────────────────────────────────────────────────────
 // Données — Vision produit CocktailOS (Avril 2026)
@@ -526,6 +528,12 @@ export default function CocktailOSVision() {
           <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>58 ans · Travailleuse autonome · Si elle comprend pas en 10 secondes, c&apos;est trop complexe. QuickBooks existe pour le reste.</div>
         </div>
       </div>
+
+      {/* Plan de match pré-lancement — bogue comptable, infra multi-tenant, mobile, affaires */}
+      <PlanMatch />
+
+      {/* Audit technique — sécurité & fiabilité pré-lancement */}
+      <AuditSecurite />
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px', marginBottom: '1.5rem' }}>

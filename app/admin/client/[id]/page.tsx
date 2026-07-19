@@ -23,6 +23,7 @@ interface Client {
   contact_secondaire_nom: string | null
   contact_secondaire_role: string | null
   contact_secondaire_email: string | null
+  mode_facturation: string
 }
 
 interface Projet { id: number; nom_projet: string; statut: string; created_at: string }
@@ -123,6 +124,7 @@ export default function AdminClientDetailPage() {
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [changingStage, setChangingStage] = useState(false)
+  const [changingModeFacturation, setChangingModeFacturation] = useState(false)
   const [nouvelleNote, setNouvelleNote] = useState('')
   const [addingNote, setAddingNote] = useState(false)
   const [resendingInvite, setResendingInvite] = useState(false)
@@ -204,6 +206,22 @@ export default function AdminClientDetailPage() {
       }
     } catch { set({ statut_relation: prev }); showToast('Erreur de connexion') }
     finally { setChangingStage(false) }
+  }
+
+  const handleChangeModeFacturation = async (newMode: string) => {
+    if (!client || client.mode_facturation === newMode) return
+    const prev = client.mode_facturation
+    setChangingModeFacturation(true)
+    set({ mode_facturation: newMode }) // optimiste
+    try {
+      const res = await fetch(`/api/v1/admin/client/${id}/mode-facturation`, {
+        method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode_facturation: newMode }),
+      })
+      if (!res.ok) { set({ mode_facturation: prev }); showToast('Erreur changement du mode de facturation') }
+      else showToast(newMode === 'mensuel' ? 'Client passé en facture ouverte' : 'Client passé en facturation par projet', true)
+    } catch { set({ mode_facturation: prev }); showToast('Erreur de connexion') }
+    finally { setChangingModeFacturation(false) }
   }
 
   const handleAddNote = async () => {
@@ -647,6 +665,33 @@ export default function AdminClientDetailPage() {
       {/* ─────────────── ONGLET FACTURATION ─────────────── */}
       {tab === 'facturation' && (
         <div className="flex flex-col gap-6">
+          <div className="rounded-[18px] bg-[var(--color-light-2)] border border-[var(--color-light-border)] p-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <p className="font-body text-xs uppercase tracking-wide text-[var(--color-dark-text-2)] mb-1">Mode de facturation</p>
+              <p className="font-body text-sm text-[var(--color-dark-text-2)] max-w-md">
+                {client.mode_facturation === 'mensuel'
+                  ? 'Facture ouverte — les projets s’ajoutent à une facture unique, fermée et envoyée automatiquement le dernier jour ouvrable du mois.'
+                  : 'Par projet — une facture est générée dès le démarrage de chaque projet.'}
+              </p>
+            </div>
+            <div className="flex items-center gap-1 bg-[var(--color-light-1)] rounded-full p-1 shrink-0">
+              <button
+                onClick={() => handleChangeModeFacturation('projet')}
+                disabled={changingModeFacturation}
+                className={`px-4 py-2 rounded-full font-body text-xs font-bold uppercase tracking-wide transition-colors ${client.mode_facturation !== 'mensuel' ? 'bg-[var(--color-brand)] text-white' : 'text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)]'}`}
+              >
+                Par projet
+              </button>
+              <button
+                onClick={() => handleChangeModeFacturation('mensuel')}
+                disabled={changingModeFacturation}
+                className={`px-4 py-2 rounded-full font-body text-xs font-bold uppercase tracking-wide transition-colors ${client.mode_facturation === 'mensuel' ? 'bg-[var(--color-brand)] text-white' : 'text-[var(--color-dark-text-2)] hover:text-[var(--color-dark-1)]'}`}
+              >
+                Facture ouverte
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="rounded-[18px] bg-[var(--color-light-2)] border border-[var(--color-light-border)] p-5">
               <p className="font-display font-extrabold text-[var(--text-3xl)] leading-none" style={{ color: 'var(--color-success-text)' }}>{money(facturesData?.total_paye ?? 0)}</p>

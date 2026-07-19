@@ -9,7 +9,10 @@ const CATEGORIES_DEPENSES = [
   'Abonnements et logiciels', 'Loyer et local', 'Assurances', 'Frais bancaires', 'Autre',
 ]
 const CATEGORIES_REVENUS = ['Ventes et honoraires professionnels', 'Autres revenus']
-const TOKEN_KEY = 'cos_capture_token'
+
+// Jeton d'appareil transporté par cookie httpOnly (cos_capture_token) — jamais lu en JS.
+const apiFetch = (path: string, opts: RequestInit = {}) =>
+  fetch(path, { ...opts, credentials: 'include' })
 
 const money = (n: number) => new Intl.NumberFormat('fr-CA', { style: 'currency', currency: 'CAD', minimumFractionDigits: 2 }).format(n || 0)
 const todayISO = () => new Date().toISOString().slice(0, 10)
@@ -36,25 +39,20 @@ export default function CapturePage() {
 
   const cats = type === 'depense' ? CATEGORIES_DEPENSES : CATEGORIES_REVENUS
   const showToast = (msg: string, ok = false) => { setToast({ msg, ok }); setTimeout(() => setToast(null), 3500) }
-  const getToken = () => (typeof window !== 'undefined' ? localStorage.getItem(TOKEN_KEY) : null)
 
-  // Jeton d'appareil : jumelage une seule fois, persiste dans ce navigateur.
+  // Jeton d'appareil (cookie httpOnly) : jumelage une seule fois, persiste dans ce navigateur.
   // AUCUN lien vers le CRM — l'app ne fait que capturer.
   useEffect(() => {
-    const token = getToken()
-    if (!token) { setEtat('login'); return }
-    fetch('/api/v1/capture/verify', { method: 'POST', headers: { 'X-Capture-Token': token } })
+    apiFetch('/api/v1/capture/verify', { method: 'POST' })
       .then(async r => {
         if (r.ok) { const d = await r.json(); setCompte(d.compte || null); setEtat('idle') }
-        else { localStorage.removeItem(TOKEN_KEY); setEtat('login') }
+        else setEtat('login')
       })
       .catch(() => setEtat('login'))
   }, [])
 
   const handleLogout = async () => {
-    const token = getToken()
-    try { if (token) await fetch('/api/v1/capture/logout', { method: 'POST', headers: { 'X-Capture-Token': token } }) } catch { /* on déconnecte quand même */ }
-    localStorage.removeItem(TOKEN_KEY)
+    try { await apiFetch('/api/v1/capture/logout', { method: 'POST' }) } catch { /* on déconnecte quand même */ }
     setCompte(null); setDerniere(null); setEmail(''); setPassword('')
     setEtat('login')
   }
@@ -63,13 +61,12 @@ export default function CapturePage() {
     if (!email.trim() || !password) { showToast('Courriel et mot de passe requis'); return }
     setLoggingIn(true)
     try {
-      const res = await fetch('/api/v1/capture/login', {
+      const res = await apiFetch('/api/v1/capture/login', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password }),
       })
       const d = await res.json()
       if (!res.ok) { showToast(d.error || 'Connexion refusée'); return }
-      localStorage.setItem(TOKEN_KEY, d.token)
       setCompte(email.trim())
       setPassword(''); setEmail('')
       setEtat('idle')
@@ -83,11 +80,9 @@ export default function CapturePage() {
       const fd = new FormData()
       fd.append('image', file)
       fd.append('type', type)
-      const res = await fetch('/api/v1/capture/scan', {
-        method: 'POST', headers: { 'X-Capture-Token': getToken() || '' }, body: fd,
-      })
+      const res = await apiFetch('/api/v1/capture/scan', { method: 'POST', body: fd })
       const d = await res.json()
-      if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setEtat('login'); return }
+      if (res.status === 401) { setEtat('login'); return }
       if (!res.ok) { showToast(d.error || 'Lecture impossible'); setEtat('idle'); return }
       setDate(d.date_transaction || todayISO())
       setDescription(d.description || '')
@@ -103,15 +98,15 @@ export default function CapturePage() {
     if (!date || !description.trim() || isNaN(montantNum) || montantNum <= 0) { showToast('Date, description et montant requis'); return }
     setEtat('saving')
     try {
-      const res = await fetch('/api/v1/capture/transaction', {
-        method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Capture-Token': getToken() || '' },
+      const res = await apiFetch('/api/v1/capture/transaction', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           type, date_transaction: date, description: description.trim(),
           categorie: categorie || cats[0], montant_total: montantNum, piece_jointe: piece,
         }),
       })
       const d = await res.json()
-      if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); setEtat('login'); return }
+      if (res.status === 401) { setEtat('login'); return }
       if (!res.ok) { showToast(d.error || 'Erreur'); setEtat('review'); return }
       setDerniere(`${type === 'depense' ? 'Dépense' : 'Revenu'} de ${money(montantNum)} enregistré`)
       setDate(todayISO()); setDescription(''); setCategorie(''); setMontant(''); setPiece(null)
