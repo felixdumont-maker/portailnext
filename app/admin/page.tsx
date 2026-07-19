@@ -240,108 +240,200 @@ function AssignMenu({ currentProjetId, currentClientId, currentTitreId, currentA
   )
 }
 
-function ScheduleMenu({ todo, isOpen, onToggle, onSchedule, onUnschedule }: {
-  todo: TodoPerso
-  isOpen: boolean
-  onToggle: () => void
-  onSchedule: (payload: { date: string; heure: string; duree: string }) => void
-  onUnschedule: () => void
+// Fiche détail d'une tâche — consolide les 3 popups (Assigner/Planifier/Contact) + l'édition
+// de texte en un seul panneau, pour ne plus avoir à ouvrir 3 menus séparés par tâche.
+function TaskDetailPanel({ todo, clients, projets, titres, team, todoView, onClose, onSaveText, onPriorite, onAssign, onSchedule, onUnschedule, onSaveContact, onImportVCard, onDelete }: {
+  todo: TodoPerso | null
+  clients: { id: number; nom_complet: string }[]
+  projets: { id: number; nom_projet: string; client_nom: string | null }[]
+  titres: { id: number; texte: string }[]
+  team: TeamMember[]
+  todoView: 'mine' | 'all'
+  onClose: () => void
+  onSaveText: (id: number, texte: string) => void
+  onPriorite: (id: number, priorite: string) => void
+  onAssign: (id: number, payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null; assigne_admin_ids?: number[] }) => void
+  onSchedule: (id: number, payload: { date: string; heure: string; duree: string }) => void
+  onUnschedule: (id: number) => void
+  onSaveContact: (id: number, payload: { contact_nom: string | null; contact_telephone: string | null; contact_courriel: string | null }) => void
+  onImportVCard: (id: number, file: File) => void
+  onDelete: (id: number) => void
 }) {
-  const scheduled = !!todo.calendar_event_id
-  const { btnRef, coords } = useAnchoredCoords(isOpen, 210, 256)
   const today = new Date().toISOString().slice(0, 10)
-  const [date, setDate] = useState(todo.date_echeance || today)
+  const [texte, setTexte] = useState(todo?.texte || '')
+  const [contactNom, setContactNom] = useState('')
+  const [contactTel, setContactTel] = useState('')
+  const [contactMail, setContactMail] = useState('')
+  const [date, setDate] = useState(today)
   const [heure, setHeure] = useState('09:00')
   const [duree, setDuree] = useState('60')
-  useEffect(() => { if (isOpen) { setDate(todo.date_echeance || today); setHeure('09:00'); setDuree('60') } }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!todo) return
+    setTexte(todo.texte)
+    setContactNom(todo.contact_nom || '')
+    setContactTel(todo.contact_telephone || '')
+    setContactMail(todo.contact_courriel || '')
+    setDate(todo.date_echeance || today)
+    setHeure('09:00')
+    setDuree('60')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todo?.id])
+
+  if (!todo) return null
+  const clientSeul = !todo.projet_id && todo.client_id_effectif ? String(todo.client_id_effectif) : ''
+  const textDirty = texte.trim() !== '' && texte.trim() !== todo.texte
+  const contactDirty = contactNom.trim() !== (todo.contact_nom || '') || contactTel.trim() !== (todo.contact_telephone || '') || contactMail.trim() !== (todo.contact_courriel || '')
+  const scheduled = !!todo.calendar_event_id
+  const fieldCls = "w-full text-sm border border-[var(--color-light-border)] rounded-lg px-3 py-2 outline-none focus:border-[var(--color-brand)] bg-white"
+  const labelCls = "block text-[10px] font-bold uppercase tracking-wider text-[var(--color-dark-text-2)] mb-1.5"
+
   return (
-    <div className="relative flex-shrink-0">
-      <button ref={btnRef} onClick={onToggle} title={scheduled ? 'Planifié — modifier' : 'Planifier au calendrier'}
-        className={`transition-opacity flex-shrink-0 p-1.5 -m-1 hover:text-[var(--color-brand)] ${scheduled ? 'opacity-100 text-[var(--color-brand)]' : 'text-[var(--color-dark-text-2)] opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100'}`}>
-        <span aria-hidden="true" className="material-symbols-outlined text-[14px]">{scheduled ? 'event_available' : 'calendar_add_on'}</span>
-      </button>
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="fixed z-50 w-64 bg-white border border-[var(--color-light-border)] rounded-md shadow-lg p-3 space-y-2 text-left"
-            style={{ top: coords.top, left: coords.left }}>
-            <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-dark-text-2)]">Planifier au calendrier</label>
+    <>
+      <div className="fixed inset-0 z-40 bg-black/20" onClick={onClose} />
+      <div className="fixed top-0 right-0 z-50 h-full w-full max-w-sm bg-white border-l border-[var(--color-light-border)] shadow-2xl overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--color-light-border)] sticky top-0 bg-white">
+          <h3 className="font-display text-xs font-bold uppercase tracking-widest text-[var(--color-dark-1)]">Détail de la tâche</h3>
+          <button onClick={onClose} title="Fermer" className="text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] p-1">
+            <span aria-hidden="true" className="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {/* Texte */}
+          <div>
+            <label className={labelCls}>Tâche</label>
             <div className="flex gap-2">
-              <input type="date" value={date} aria-label="Date" onChange={e => setDate(e.target.value)}
-                className="flex-1 text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white" />
-              <input type="time" value={heure} aria-label="Heure" onChange={e => setHeure(e.target.value)}
-                className="w-20 text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white" />
+              <input value={texte} onChange={e => setTexte(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && textDirty) onSaveText(todo.id, texte) }}
+                aria-label="Texte de la tâche" className={fieldCls} />
+              {textDirty && (
+                <button onClick={() => onSaveText(todo.id, texte)} title="Enregistrer le texte"
+                  className="flex-shrink-0 bg-[var(--color-brand)] text-white rounded-lg px-3 text-xs font-body font-bold">OK</button>
+              )}
             </div>
-            <select value={duree} aria-label="Durée" onChange={e => setDuree(e.target.value)}
-              className="w-full text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white">
+          </div>
+
+          {/* Priorité */}
+          <div>
+            <label className={labelCls}>Priorité</label>
+            <PrioritePicker value={todo.priorite} onChange={p => onPriorite(todo.id, p)} />
+          </div>
+
+          {/* Assignée à */}
+          {team.length > 0 && (
+            <div>
+              <label className={labelCls}>Assignée à</label>
+              <div className="space-y-1">
+                {team.map(m => {
+                  const checked = (todo.assignees || []).map(a => a.id).includes(m.id)
+                  return (
+                    <label key={m.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                      <input type="checkbox" checked={checked} onChange={e => {
+                        const cur = (todo.assignees || []).map(a => a.id)
+                        const next = e.target.checked ? [...cur, m.id] : cur.filter(id => id !== m.id)
+                        onAssign(todo.id, { assigne_admin_ids: next })
+                      }} />
+                      {m.nom_complet}
+                    </label>
+                  )
+                })}
+                {(todo.assignees || []).length === 0 && (
+                  <p className="text-[10px] text-[var(--color-dark-text-2)] italic">Partagée (toute l&apos;équipe)</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Projet / Client / Section */}
+          <div>
+            <label className={labelCls}>Projet</label>
+            <select value={todo.projet_id ?? ''} aria-label="Assigner à un projet" onChange={e => onAssign(todo.id, { projet_id: e.target.value ? Number(e.target.value) : null })}
+              className={fieldCls}>
+              <option value="">— Aucun —</option>
+              {projets.map(p => <option key={p.id} value={p.id}>{p.nom_projet}{p.client_nom ? ` · ${p.client_nom}` : ''}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>Client (sans projet)</label>
+            <select value={clientSeul} aria-label="Assigner à un client" onChange={e => onAssign(todo.id, { client_id: e.target.value ? Number(e.target.value) : null })}
+              className={fieldCls}>
+              <option value="">— Aucun —</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.nom_complet}</option>)}
+            </select>
+          </div>
+          {titres.length > 0 && (
+            <div>
+              <label className={labelCls}>Déplacer vers une section</label>
+              <select value={todo.parent_titre_id ?? ''} aria-label="Déplacer vers une section" onChange={e => onAssign(todo.id, { parent_titre_id: e.target.value ? Number(e.target.value) : null })}
+                className={fieldCls}>
+                <option value="">— Aucune —</option>
+                {titres.map(t => <option key={t.id} value={t.id}>{t.texte}</option>)}
+              </select>
+            </div>
+          )}
+
+          {/* Échéance / calendrier */}
+          <div>
+            <label className={labelCls}>Planifier au calendrier</label>
+            <div className="flex gap-2 mb-2">
+              <input type="date" value={date} aria-label="Date" onChange={e => setDate(e.target.value)} className={fieldCls + ' flex-1'} />
+              <input type="time" value={heure} aria-label="Heure" onChange={e => setHeure(e.target.value)} className={fieldCls + ' w-24'} />
+            </div>
+            <select value={duree} aria-label="Durée" onChange={e => setDuree(e.target.value)} className={fieldCls + ' mb-2'}>
               <option value="15">15 min</option><option value="30">30 min</option>
               <option value="60">1h</option><option value="90">1h30</option>
               <option value="120">2h</option><option value="180">3h</option>
             </select>
-            <button onClick={() => onSchedule({ date, heure, duree })} disabled={!date}
-              className="w-full text-xs bg-[var(--color-brand)] text-white rounded px-3 py-1.5 font-body font-bold disabled:opacity-40">
-              {scheduled ? 'Replanifier' : 'Planifier'}
-            </button>
-            {scheduled && (
-              <button onClick={onUnschedule}
-                className="w-full text-xs text-[var(--color-error)] hover:opacity-70 font-body">Retirer du calendrier</button>
-            )}
+            <div className="flex gap-2">
+              <button onClick={() => onSchedule(todo.id, { date, heure, duree })} disabled={!date}
+                className="flex-1 text-xs bg-[var(--color-brand)] text-white rounded-lg px-3 py-2 font-body font-bold disabled:opacity-40">
+                {scheduled ? 'Replanifier' : 'Planifier'}
+              </button>
+              {scheduled && (
+                <button onClick={() => onUnschedule(todo.id)}
+                  className="text-xs text-[var(--color-error)] hover:opacity-70 font-body px-2">Retirer</button>
+              )}
+            </div>
           </div>
-        </>
-      )}
-    </div>
-  )
-}
 
-function ContactMenu({ todo, isOpen, onToggle, onSave, onImportVCard }: {
-  todo: TodoPerso
-  isOpen: boolean
-  onToggle: () => void
-  onSave: (payload: { contact_nom: string | null; contact_telephone: string | null; contact_courriel: string | null }) => void
-  onImportVCard: (file: File) => void
-}) {
-  const hasContact = !!(todo.contact_nom || todo.contact_telephone || todo.contact_courriel)
-  const { btnRef, coords } = useAnchoredCoords(isOpen, 230, 256)
-  const fileRef = useRef<HTMLInputElement>(null)
-  const [nom, setNom] = useState(todo.contact_nom || '')
-  const [tel, setTel] = useState(todo.contact_telephone || '')
-  const [mail, setMail] = useState(todo.contact_courriel || '')
-  useEffect(() => { if (isOpen) { setNom(todo.contact_nom || ''); setTel(todo.contact_telephone || ''); setMail(todo.contact_courriel || '') } }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
-  return (
-    <div className="relative flex-shrink-0">
-      <button ref={btnRef} onClick={onToggle} title={hasContact ? 'Contact — modifier' : 'Ajouter un contact'}
-        className={`transition-opacity flex-shrink-0 p-1.5 -m-1 hover:text-[var(--color-brand)] ${hasContact ? 'opacity-100 text-[var(--color-brand)]' : 'text-[var(--color-dark-text-2)] opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100'}`}>
-        <span aria-hidden="true" className="material-symbols-outlined text-[14px]">contact_phone</span>
-      </button>
-      {isOpen && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-          <div className="fixed z-50 w-64 bg-white border border-[var(--color-light-border)] rounded-md shadow-lg p-3 space-y-2 text-left"
-            style={{ top: coords.top, left: coords.left }}>
-            <div className="flex items-center justify-between">
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-[var(--color-dark-text-2)]">Contact</label>
+          {/* Contact */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className={labelCls + ' !mb-0'}>Contact</label>
               <button onClick={() => fileRef.current?.click()} title="Importer depuis une fiche .vcf"
-                className="text-[10px] font-bold text-[var(--color-brand)] flex items-center gap-1">
+                className="text-[11px] font-bold text-[var(--color-brand)] flex items-center gap-1">
                 <span aria-hidden="true" className="material-symbols-outlined text-[13px]">upload_file</span>
                 .vcf
               </button>
               <input ref={fileRef} type="file" accept=".vcf,text/vcard" className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) onImportVCard(f); e.target.value = '' }} />
+                onChange={e => { const f = e.target.files?.[0]; if (f) onImportVCard(todo.id, f); e.target.value = '' }} />
             </div>
-            <input value={nom} onChange={e => setNom(e.target.value)} placeholder="Nom du contact" aria-label="Nom du contact"
-              className="w-full text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white" />
-            <input value={tel} onChange={e => setTel(e.target.value)} placeholder="Téléphone" type="tel" aria-label="Téléphone du contact"
-              className="w-full text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white" />
-            <input value={mail} onChange={e => setMail(e.target.value)} placeholder="Courriel" type="email" aria-label="Courriel du contact"
-              className="w-full text-xs border border-[var(--color-light-border)] rounded px-2 py-1.5 bg-white" />
-            <button onClick={() => onSave({ contact_nom: nom.trim() || null, contact_telephone: tel.trim() || null, contact_courriel: mail.trim() || null })}
-              className="w-full text-xs bg-[var(--color-brand)] text-white rounded px-3 py-1.5 font-body font-bold">
-              Enregistrer
-            </button>
+            <div className="space-y-2">
+              <input value={contactNom} onChange={e => setContactNom(e.target.value)} placeholder="Nom du contact" aria-label="Nom du contact" className={fieldCls} />
+              <input value={contactTel} onChange={e => setContactTel(e.target.value)} placeholder="Téléphone" type="tel" aria-label="Téléphone du contact" className={fieldCls} />
+              <input value={contactMail} onChange={e => setContactMail(e.target.value)} placeholder="Courriel" type="email" aria-label="Courriel du contact" className={fieldCls} />
+              {contactDirty && (
+                <button onClick={() => onSaveContact(todo.id, { contact_nom: contactNom.trim() || null, contact_telephone: contactTel.trim() || null, contact_courriel: contactMail.trim() || null })}
+                  className="w-full text-xs bg-[var(--color-brand)] text-white rounded-lg px-3 py-2 font-body font-bold">
+                  Enregistrer le contact
+                </button>
+              )}
+            </div>
           </div>
-        </>
-      )}
-    </div>
+
+          {todoView === 'all' && (todo.assignees || []).length === 0 && (
+            <p className="text-[10px] text-[var(--color-dark-text-2)] italic">Cette tâche est partagée (visible par toute l&apos;équipe).</p>
+          )}
+
+          <button onClick={() => { onDelete(todo.id); onClose() }}
+            className="w-full text-xs text-[var(--color-error)] hover:opacity-70 font-body py-2 border-t border-[var(--color-light-border)] pt-4">
+            Supprimer la tâche
+          </button>
+        </div>
+      </div>
+    </>
   )
 }
 
@@ -355,10 +447,8 @@ export default function AdminDashboardPage() {
   const [todos, setTodos] = useState<TodoPerso[]>([])
   const [clients, setClients] = useState<{ id: number; nom_complet: string }[]>([])
   const [projets, setProjets] = useState<{ id: number; nom_projet: string; client_nom: string | null; is_archived?: number }[]>([])
-  const [assignOpen, setAssignOpen] = useState<number | null>(null)
   const [groupAssignOpen, setGroupAssignOpen] = useState<string | null>(null)
-  const [scheduleOpen, setScheduleOpen] = useState<number | null>(null)
-  const [contactOpen, setContactOpen] = useState<number | null>(null)
+  const [detailId, setDetailId] = useState<number | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editText, setEditText] = useState('')
   const [toast, setToast] = useState<string | null>(null)
@@ -476,7 +566,6 @@ export default function AdminDashboardPage() {
   }
 
   async function assignTodo(id: number, payload: { client_id?: number | null; projet_id?: number | null; parent_titre_id?: number | null; assigne_admin_ids?: number[] }) {
-    setAssignOpen(null)
     const snapshot = todos
     setTodos(prev => prev.map(t => t.id === id ? applyAssign(t, payload) : t))
     try {
@@ -509,7 +598,6 @@ export default function AdminDashboardPage() {
   }
 
   async function scheduleTodo(id: number, payload: { date: string; heure: string; duree: string }) {
-    setScheduleOpen(null)
     const snapshot = todos
     setTodos(prev => prev.map(t => t.id === id ? { ...t, date_echeance: payload.date, calendar_event_id: t.calendar_event_id || 'pending' } : t))
     try {
@@ -527,7 +615,6 @@ export default function AdminDashboardPage() {
   }
 
   async function unscheduleTodo(id: number) {
-    setScheduleOpen(null)
     const snapshot = todos
     setTodos(prev => prev.map(t => t.id === id ? { ...t, calendar_event_id: null } : t))
     try {
@@ -539,7 +626,6 @@ export default function AdminDashboardPage() {
   }
 
   async function updateContact(id: number, payload: { contact_nom?: string | null; contact_telephone?: string | null; contact_courriel?: string | null }) {
-    setContactOpen(null)
     const snapshot = todos
     setTodos(prev => prev.map(t => t.id === id ? { ...t, ...payload } : t))
     try {
@@ -571,6 +657,25 @@ export default function AdminDashboardPage() {
   async function saveText(id: number) {
     const txt = editText.trim()
     setEditingId(null)
+    if (!txt) return
+    const snapshot = todos
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, texte: txt } : t))
+    try {
+      const res = await fetch(`${API}/api/v1/admin/todos/${id}`, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texte: txt }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      setTodos(snapshot); showError("La modification n'a pas pu être enregistrée.")
+    }
+  }
+
+  // Édition du texte depuis la fiche détail — état local au panneau, indépendant de
+  // editingId/editText (réservés au renommage inline des sections/titres).
+  async function saveTaskText(id: number, texte: string) {
+    const txt = texte.trim()
     if (!txt) return
     const snapshot = todos
     setTodos(prev => prev.map(t => t.id === id ? { ...t, texte: txt } : t))
@@ -739,6 +844,20 @@ export default function AdminDashboardPage() {
           {toast}
         </div>
       )}
+
+      <TaskDetailPanel
+        todo={todos.find(t => t.id === detailId) ?? null}
+        clients={clients} projets={projets} titres={titres} team={team} todoView={todoView}
+        onClose={() => setDetailId(null)}
+        onSaveText={saveTaskText}
+        onPriorite={updatePriorite}
+        onAssign={assignTodo}
+        onSchedule={scheduleTodo}
+        onUnschedule={unscheduleTodo}
+        onSaveContact={updateContact}
+        onImportVCard={importVCardForTodo}
+        onDelete={deleteTodo}
+      />
 
       {/* Welcome */}
       <section className="mb-8 flex items-start justify-between gap-4 flex-wrap">
@@ -1133,48 +1252,21 @@ export default function AdminDashboardPage() {
                                     <input type="checkbox" checked={!!t.est_coche} onChange={() => toggleTodo(t.id)}
                                       aria-label={`Marquer « ${t.texte} » comme ${t.est_coche ? 'à faire' : 'faite'}`}
                                       className="w-3.5 h-3.5 cursor-pointer flex-shrink-0 accent-[var(--color-brand)]" />
-                                    {editingId === t.id ? (
-                                      <input autoFocus value={editText} onChange={e => setEditText(e.target.value)}
-                                        onBlur={() => saveText(t.id)}
-                                        onKeyDown={e => { if (e.key === 'Enter') saveText(t.id); if (e.key === 'Escape') setEditingId(null) }}
-                                        aria-label="Modifier le texte de la tâche"
-                                        className="flex-1 min-w-0 text-xs font-body bg-transparent outline-none border-b border-[var(--color-brand)] pb-0.5" />
-                                    ) : (
-                                      <p onDoubleClick={() => { setEditingId(t.id); setEditText(t.texte) }} title="Double-cliquer pour modifier"
-                                        className={`flex-1 min-w-0 text-xs font-body leading-snug ${t.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
-                                        {t.texte}
-                                        {t.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
-                                        {t.contact_nom && <span aria-hidden="true" title={t.contact_nom} className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-dark-text-2)] align-middle">contact_phone</span>}
-                                        {todoView === 'all' && (t.assignees || []).map(a => (
-                                          <span key={a.id} className="ml-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--color-light-1)] text-[var(--color-dark-text-2)] align-middle">
-                                            {a.nom_complet.split(' ')[0]}
-                                          </span>
-                                        ))}
-                                      </p>
-                                    )}
-                                    <button onClick={() => { setEditingId(t.id); setEditText(t.texte) }} title="Modifier"
+                                    <p onDoubleClick={() => setDetailId(t.id)} title="Double-cliquer pour ouvrir le détail"
+                                      className={`flex-1 min-w-0 text-xs font-body leading-snug cursor-pointer ${t.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
+                                      {t.texte}
+                                      {t.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
+                                      {t.contact_nom && <span aria-hidden="true" title={t.contact_nom} className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-dark-text-2)] align-middle">contact_phone</span>}
+                                      {todoView === 'all' && (t.assignees || []).map(a => (
+                                        <span key={a.id} className="ml-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--color-light-1)] text-[var(--color-dark-text-2)] align-middle">
+                                          {a.nom_complet.split(' ')[0]}
+                                        </span>
+                                      ))}
+                                    </p>
+                                    <button onClick={() => setDetailId(t.id)} title="Détails"
                                       className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
-                                      <span aria-hidden="true" className="material-symbols-outlined text-[13px]">edit</span>
+                                      <span aria-hidden="true" className="material-symbols-outlined text-[14px]">tune</span>
                                     </button>
-                                    <ScheduleMenu todo={t}
-                                      isOpen={scheduleOpen === t.id}
-                                      onToggle={() => setScheduleOpen(scheduleOpen === t.id ? null : t.id)}
-                                      onSchedule={(payload) => scheduleTodo(t.id, payload)}
-                                      onUnschedule={() => unscheduleTodo(t.id)} />
-                                    <AssignMenu
-                                      currentProjetId={t.projet_id ?? null}
-                                      currentClientId={t.client_id_effectif ?? null}
-                                      currentTitreId={t.parent_titre_id ?? null}
-                                      currentAssigneeIds={(t.assignees || []).map(a => a.id)}
-                                      clients={clients} projets={projets} titres={titres} team={team}
-                                      isOpen={assignOpen === t.id}
-                                      onToggle={() => setAssignOpen(assignOpen === t.id ? null : t.id)}
-                                      onAssign={(payload) => assignTodo(t.id, payload)} />
-                                    <ContactMenu todo={t}
-                                      isOpen={contactOpen === t.id}
-                                      onToggle={() => setContactOpen(contactOpen === t.id ? null : t.id)}
-                                      onSave={(payload) => updateContact(t.id, payload)}
-                                      onImportVCard={(file) => importVCardForTodo(t.id, file)} />
                                     <button onClick={() => deleteTodo(t.id)} title="Supprimer"
                                       className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-error)] p-1.5 -m-1 flex-shrink-0">
                                       <span aria-hidden="true" className="material-symbols-outlined text-[13px]">close</span>
@@ -1230,49 +1322,22 @@ export default function AdminDashboardPage() {
                               <input type="checkbox" checked={!!todo.est_coche} onChange={() => toggleTodo(todo.id)}
                                 aria-label={`Marquer « ${todo.texte} » comme ${todo.est_coche ? 'à faire' : 'faite'}`}
                                 className="w-3.5 h-3.5 cursor-pointer flex-shrink-0 accent-[var(--color-brand)]" />
-                              {editingId === todo.id ? (
-                                <input autoFocus value={editText} onChange={e => setEditText(e.target.value)}
-                                  onBlur={() => saveText(todo.id)}
-                                  onKeyDown={e => { if (e.key === 'Enter') saveText(todo.id); if (e.key === 'Escape') setEditingId(null) }}
-                                  aria-label="Modifier le texte de la tâche"
-                                  className="flex-1 min-w-0 text-xs font-body bg-transparent outline-none border-b border-[var(--color-brand)] pb-0.5" />
-                              ) : (
-                                <p onDoubleClick={() => { setEditingId(todo.id); setEditText(todo.texte) }} title="Double-cliquer pour modifier"
-                                  className={`flex-1 min-w-0 text-xs font-body leading-snug ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
-                                  {todo.texte}
-                                  {todo.date_echeance && <span className="ml-2 text-[10px] text-[var(--color-light-text-2)]">{formatDate(todo.date_echeance)}</span>}
-                                  {todo.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
-                                  {todo.contact_nom && <span aria-hidden="true" title={todo.contact_nom} className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-dark-text-2)] align-middle">contact_phone</span>}
-                                  {todoView === 'all' && (todo.assignees || []).map(a => (
-                                    <span key={a.id} className="ml-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--color-light-1)] text-[var(--color-dark-text-2)] align-middle">
-                                      {a.nom_complet.split(' ')[0]}
-                                    </span>
-                                  ))}
-                                </p>
-                              )}
-                              <button onClick={() => { setEditingId(todo.id); setEditText(todo.texte) }} title="Modifier"
+                              <p onDoubleClick={() => setDetailId(todo.id)} title="Double-cliquer pour ouvrir le détail"
+                                className={`flex-1 min-w-0 text-xs font-body leading-snug cursor-pointer ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
+                                {todo.texte}
+                                {todo.date_echeance && <span className="ml-2 text-[10px] text-[var(--color-light-text-2)]">{formatDate(todo.date_echeance)}</span>}
+                                {todo.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
+                                {todo.contact_nom && <span aria-hidden="true" title={todo.contact_nom} className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-dark-text-2)] align-middle">contact_phone</span>}
+                                {todoView === 'all' && (todo.assignees || []).map(a => (
+                                  <span key={a.id} className="ml-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--color-light-1)] text-[var(--color-dark-text-2)] align-middle">
+                                    {a.nom_complet.split(' ')[0]}
+                                  </span>
+                                ))}
+                              </p>
+                              <button onClick={() => setDetailId(todo.id)} title="Détails"
                                 className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
-                                <span aria-hidden="true" className="material-symbols-outlined text-[13px]">edit</span>
+                                <span aria-hidden="true" className="material-symbols-outlined text-[14px]">tune</span>
                               </button>
-                              <ScheduleMenu todo={todo}
-                                isOpen={scheduleOpen === todo.id}
-                                onToggle={() => setScheduleOpen(scheduleOpen === todo.id ? null : todo.id)}
-                                onSchedule={(payload) => scheduleTodo(todo.id, payload)}
-                                onUnschedule={() => unscheduleTodo(todo.id)} />
-                              <AssignMenu
-                                currentProjetId={todo.projet_id ?? null}
-                                currentClientId={todo.client_id_effectif ?? null}
-                                currentTitreId={todo.parent_titre_id ?? null}
-                                currentAssigneeIds={(todo.assignees || []).map(a => a.id)}
-                                clients={clients} projets={projets} titres={titres} team={team}
-                                isOpen={assignOpen === todo.id}
-                                onToggle={() => setAssignOpen(assignOpen === todo.id ? null : todo.id)}
-                                onAssign={(payload) => assignTodo(todo.id, payload)} />
-                              <ContactMenu todo={todo}
-                                isOpen={contactOpen === todo.id}
-                                onToggle={() => setContactOpen(contactOpen === todo.id ? null : todo.id)}
-                                onSave={(payload) => updateContact(todo.id, payload)}
-                                onImportVCard={(file) => importVCardForTodo(todo.id, file)} />
                               <button onClick={() => deleteTodo(todo.id)}
                                 className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-error)] p-1.5 -m-1 flex-shrink-0">
                                 <span aria-hidden="true" className="material-symbols-outlined text-[14px]">close</span>
@@ -1310,52 +1375,25 @@ export default function AdminDashboardPage() {
                           <input type="checkbox" checked={!!todo.est_coche} onChange={() => toggleTodo(todo.id)}
                             aria-label={`Marquer « ${todo.texte} » comme ${todo.est_coche ? 'à faire' : 'faite'}`}
                             className="w-3.5 h-3.5 cursor-pointer flex-shrink-0 accent-[var(--color-brand)]" />
-                          {editingId === todo.id ? (
-                            <input autoFocus value={editText} onChange={e => setEditText(e.target.value)}
-                              onBlur={() => saveText(todo.id)}
-                              onKeyDown={e => { if (e.key === 'Enter') saveText(todo.id); if (e.key === 'Escape') setEditingId(null) }}
-                              aria-label="Modifier le texte de la tâche"
-                              className="flex-1 min-w-0 text-xs font-body bg-transparent outline-none border-b border-[var(--color-brand)] pb-0.5" />
-                          ) : (
-                            <p onDoubleClick={() => { setEditingId(todo.id); setEditText(todo.texte) }} title="Double-cliquer pour modifier"
-                              className={`flex-1 min-w-0 text-xs font-body leading-snug ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
-                              {(todo.projet_nom || todo.client_nom) && (
-                                <span className="text-[var(--color-dark-text-2)] font-semibold">{todo.projet_nom || todo.client_nom} · </span>
-                              )}
-                              {todo.texte}
-                              {todo.date_echeance && bucket !== 'sans_date' && <span className="ml-2 text-[10px] text-[var(--color-light-text-2)]">{formatDate(todo.date_echeance)}</span>}
-                              {todo.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
-                              {todo.contact_nom && <span aria-hidden="true" title={todo.contact_nom} className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-dark-text-2)] align-middle">contact_phone</span>}
-                              {todoView === 'all' && (todo.assignees || []).map(a => (
-                                <span key={a.id} className="ml-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--color-light-1)] text-[var(--color-dark-text-2)] align-middle">
-                                  {a.nom_complet.split(' ')[0]}
-                                </span>
-                              ))}
-                            </p>
-                          )}
-                          <button onClick={() => { setEditingId(todo.id); setEditText(todo.texte) }} title="Modifier"
+                          <p onDoubleClick={() => setDetailId(todo.id)} title="Double-cliquer pour ouvrir le détail"
+                            className={`flex-1 min-w-0 text-xs font-body leading-snug cursor-pointer ${todo.est_coche ? 'line-through text-[var(--color-dark-text-2)]' : 'text-[var(--color-dark-1)]'}`}>
+                            {(todo.projet_nom || todo.client_nom) && (
+                              <span className="text-[var(--color-dark-text-2)] font-semibold">{todo.projet_nom || todo.client_nom} · </span>
+                            )}
+                            {todo.texte}
+                            {todo.date_echeance && bucket !== 'sans_date' && <span className="ml-2 text-[10px] text-[var(--color-light-text-2)]">{formatDate(todo.date_echeance)}</span>}
+                            {todo.calendar_event_id && <span aria-hidden="true" className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-brand)] align-middle">event_available</span>}
+                            {todo.contact_nom && <span aria-hidden="true" title={todo.contact_nom} className="ml-1.5 material-symbols-outlined text-[10px] text-[var(--color-dark-text-2)] align-middle">contact_phone</span>}
+                            {todoView === 'all' && (todo.assignees || []).map(a => (
+                              <span key={a.id} className="ml-1.5 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[var(--color-light-1)] text-[var(--color-dark-text-2)] align-middle">
+                                {a.nom_complet.split(' ')[0]}
+                              </span>
+                            ))}
+                          </p>
+                          <button onClick={() => setDetailId(todo.id)} title="Détails"
                             className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-brand)] p-1.5 -m-1 flex-shrink-0">
-                            <span aria-hidden="true" className="material-symbols-outlined text-[13px]">edit</span>
+                            <span aria-hidden="true" className="material-symbols-outlined text-[14px]">tune</span>
                           </button>
-                          <ScheduleMenu todo={todo}
-                            isOpen={scheduleOpen === todo.id}
-                            onToggle={() => setScheduleOpen(scheduleOpen === todo.id ? null : todo.id)}
-                            onSchedule={(payload) => scheduleTodo(todo.id, payload)}
-                            onUnschedule={() => unscheduleTodo(todo.id)} />
-                          <AssignMenu
-                            currentProjetId={todo.projet_id ?? null}
-                            currentClientId={todo.client_id_effectif ?? null}
-                            currentTitreId={todo.parent_titre_id ?? null}
-                            currentAssigneeIds={(todo.assignees || []).map(a => a.id)}
-                            clients={clients} projets={projets} titres={titres} team={team}
-                            isOpen={assignOpen === todo.id}
-                            onToggle={() => setAssignOpen(assignOpen === todo.id ? null : todo.id)}
-                            onAssign={(payload) => assignTodo(todo.id, payload)} />
-                          <ContactMenu todo={todo}
-                            isOpen={contactOpen === todo.id}
-                            onToggle={() => setContactOpen(contactOpen === todo.id ? null : todo.id)}
-                            onSave={(payload) => updateContact(todo.id, payload)}
-                            onImportVCard={(file) => importVCardForTodo(todo.id, file)} />
                           <button onClick={() => deleteTodo(todo.id)}
                             className="transition-opacity opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/item:opacity-100 focus-visible:!opacity-100 text-[var(--color-dark-text-2)] hover:text-[var(--color-error)] p-1.5 -m-1 flex-shrink-0">
                             <span aria-hidden="true" className="material-symbols-outlined text-[14px]">close</span>
