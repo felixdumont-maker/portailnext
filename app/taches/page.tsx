@@ -1,41 +1,17 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import type { Task, Bucket } from '@/lib/tasks'
+import { formatDate as formatDateShared, formatDateLong as formatDateLongShared, parseVCard, BUCKET_LABEL, BUCKET_ORDER, bucketOf } from '@/lib/tasks'
 
 const TOKEN_KEY = 'cos_task_token'
 const API = process.env.NEXT_PUBLIC_API_URL || ''
-
-interface Task {
-  id: number
-  texte: string
-  est_coche: number
-  priorite: string
-  date_echeance: string | null
-  calendar_event_id: string | null
-  projet_id: number | null
-  projet_nom: string | null
-  client_id: number | null
-  client_nom: string | null
-  contact_nom: string | null
-  contact_telephone: string | null
-  contact_courriel: string | null
-  assignees?: { id: number; nom_complet: string }[]
-}
 
 interface Personne { id: number; nom_complet: string }
 interface Projet { id: number; nom_projet: string; client_nom: string | null }
 interface MarketingItem { id: number; titre: string; date_publication: string; plateformes: string[]; statut: string }
 
 type Etat = 'auth' | 'login' | 'list'
-type Bucket = 'retard' | 'aujourdhui' | 'avenir' | 'sans_date'
-
-const BUCKET_LABEL: Record<Bucket, string> = {
-  retard: 'En retard',
-  aujourdhui: "Aujourd'hui",
-  avenir: 'À venir',
-  sans_date: 'Sans date',
-}
-const BUCKET_ORDER: Bucket[] = ['retard', 'aujourdhui', 'avenir', 'sans_date']
 
 const PRIORITE = {
   haute:   { dot: 'bg-red-500' },
@@ -43,40 +19,10 @@ const PRIORITE = {
   basse:   { dot: 'bg-gray-500' },
 } as const
 
-const todayISO = () => new Date().toISOString().slice(0, 10)
 const ISO_RE = /^\d{4}-\d{2}-\d{2}$/
 
-function bucketOf(t: Task): Bucket {
-  if (!t.date_echeance || !ISO_RE.test(t.date_echeance)) return 'sans_date'
-  const today = todayISO()
-  if (t.date_echeance < today) return 'retard'
-  if (t.date_echeance === today) return 'aujourdhui'
-  return 'avenir'
-}
-
-function formatDate(d: string) {
-  return new Date(d + 'T12:00:00').toLocaleDateString('fr-CA', { day: 'numeric', month: 'short' })
-}
-
-function formatDateLong(d: string) {
-  return new Date(d + 'T12:00:00').toLocaleDateString('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' })
-}
-
-// Lecture minimale d'une fiche contact .vcf (FN / TEL / EMAIL) — partagée depuis
-// l'app Contacts iOS via "Enregistrer dans Fichiers" puis importée ici.
-function parseVCard(text: string): { nom: string; telephone: string; courriel: string } {
-  let nom = '', telephone = '', courriel = ''
-  for (const raw of text.split(/\r\n|\r|\n/)) {
-    const idx = raw.indexOf(':')
-    if (idx < 0) continue
-    const key = raw.slice(0, idx).toUpperCase()
-    const val = raw.slice(idx + 1).trim()
-    if (key.startsWith('FN') && !nom) nom = val
-    else if (key.startsWith('TEL') && !telephone) telephone = val
-    else if (key.startsWith('EMAIL') && !courriel) courriel = val
-  }
-  return { nom, telephone, courriel }
-}
+const formatDate = formatDateShared
+const formatDateLong = formatDateLongShared
 
 function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
@@ -347,7 +293,7 @@ export default function TachesPage() {
   }
 
   const buckets: Record<Bucket, Task[]> = { retard: [], aujourdhui: [], avenir: [], sans_date: [] }
-  for (const t of tasks) if (!t.est_coche) buckets[bucketOf(t)].push(t)
+  for (const t of tasks) if (!t.est_coche) buckets[bucketOf(t.date_echeance)].push(t)
   const doneTasks = tasks.filter(t => t.est_coche)
   const activeCount = BUCKET_ORDER.reduce((n, b) => n + buckets[b].length, 0)
   const detail = tasks.find(t => t.id === detailId) || null

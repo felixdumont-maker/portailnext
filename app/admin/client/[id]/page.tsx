@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
+import type { Task as Todo } from '@/lib/tasks'
 
 interface Client {
   id: number
@@ -31,10 +32,6 @@ interface Facture {
   total: number; date_emission: string; date_echeance: string | null; stripe_payment_url: string | null
 }
 interface FacturesData { factures: Facture[]; total_paye: number; total_attente: number; nb_factures: number }
-interface Todo {
-  id: number; texte: string; est_coche: number; is_titre: number
-  client_id?: number | null; client_id_effectif?: number | null
-}
 interface Activite { type: string; titre: string; detail?: string; date: string }
 
 const STAGES: { key: string; label: string }[] = [
