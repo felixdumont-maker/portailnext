@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const SECURITY_HEADERS = [
   { key: 'X-Frame-Options',           value: 'DENY' },
@@ -69,4 +70,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Upload des source maps à Sentry au build (stack traces lisibles en prod, sans exposer
+// les source maps publiquement — audit sécurité 2026-07-20). Sans SENTRY_AUTH_TOKEN dans
+// l'environnement, withSentryConfig build normalement et saute juste l'upload (no-op).
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: true,
+  widenClientFileUpload: true,
+  sourcemaps: { deleteSourcemapsAfterUpload: true },
+  disableLogger: true,
+});

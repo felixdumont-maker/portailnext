@@ -2,6 +2,7 @@
 import { Fragment, useEffect, useState } from 'react'
 import AuditSecurite from './AuditSecurite'
 import PlanMatch from './PlanMatch'
+import MigrationPostgresVPS from './MigrationPostgresVPS'
 
 // ───────────────────────────────────────────────────────────
 // Données — Vision produit CocktailOS (Avril 2026)
@@ -531,6 +532,9 @@ export default function CocktailOSVision() {
 
       {/* Plan de match pré-lancement — bogue comptable, infra multi-tenant, mobile, affaires */}
       <PlanMatch />
+
+      {/* Plan de migration détaillé — SQLite → Postgres + multi-tenant + VPS OVH (détaille la Phase B2 ci-dessus) */}
+      <MigrationPostgresVPS />
 
       {/* Audit technique — sécurité & fiabilité pré-lancement */}
       <AuditSecurite />

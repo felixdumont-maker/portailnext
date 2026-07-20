@@ -3,42 +3,59 @@
 import { useEffect, useState } from 'react'
 
 // Section interactive de suivi de l'audit technique pré-lancement (19 juillet 2026).
-// Réutilise la table cocktailos_vision_todos existante (routes génériques toggle/delete),
-// namespace phase_id 900-903 réservé aux 4 niveaux de sévérité de l'audit — distinct des
-// phase_id 0-5 de la roadmap produit pour éviter toute collision.
+// Réutilise la table cocktailos_vision_todos existante (routes génériques toggle/delete).
+// Namespaces phase_id réservés à l'audit, distincts des phase_id 0-5 de la roadmap produit :
+//   900-903 = round 1 (matin), 910-913 = round 2 (soir, après les correctifs du matin).
 
 type AuditTodo = { id: number; phase_id: number; texte: string; done: boolean }
 
-const ARTIFACT_URL = 'https://claude.ai/code/artifact/6bf3b1a4-a866-46b2-8ef0-f3457a3253e1'
+type Group = { phaseId: number; label: string; sub: string; color: string; bg: string }
 
-const GROUPS = [
-  { phaseId: 900, label: 'Critique', sub: "À corriger avant l'annonce", color: '#b3261e', bg: '#fbeae8' },
-  { phaseId: 901, label: 'Important', sub: 'Avant le lancement', color: '#b0621e', bg: '#fbf0e3' },
-  { phaseId: 902, label: 'À planifier', sub: 'Pas bloquant', color: '#2f7a6b', bg: '#e6f1ee' },
-  { phaseId: 903, label: 'Accessoire', sub: 'Polish', color: '#6e7160', bg: '#eeeee7' },
+type Audit = {
+  key: string
+  title: string
+  subtitle: string
+  artifactUrl: string
+  minPhase: number
+  maxPhase: number
+  groups: readonly Group[]
+}
+
+const AUDITS: readonly Audit[] = [
+  {
+    key: 'round1',
+    title: '🔍 Audit technique — 19 juillet 2026',
+    subtitle: 'Sécurité & fiabilité — pré-lancement',
+    artifactUrl: 'https://claude.ai/code/artifact/6bf3b1a4-a866-46b2-8ef0-f3457a3253e1',
+    minPhase: 900,
+    maxPhase: 903,
+    groups: [
+      { phaseId: 900, label: 'Critique', sub: "À corriger avant l'annonce", color: '#b3261e', bg: '#fbeae8' },
+      { phaseId: 901, label: 'Important', sub: 'Avant le lancement', color: '#b0621e', bg: '#fbf0e3' },
+      { phaseId: 902, label: 'À planifier', sub: 'Pas bloquant', color: '#2f7a6b', bg: '#e6f1ee' },
+      { phaseId: 903, label: 'Accessoire', sub: 'Polish', color: '#6e7160', bg: '#eeeee7' },
+    ],
+  },
+  {
+    key: 'round2',
+    title: '🔍 Audit technique — round 2 (19 juillet, soir)',
+    subtitle: 'Vérif. de non-régression + nouveaux constats',
+    artifactUrl: 'https://claude.ai/code/artifact/e820c9f6-70c2-408c-ae79-5f7d4adefd9e',
+    minPhase: 910,
+    maxPhase: 913,
+    groups: [
+      { phaseId: 910, label: 'Critique', sub: "À corriger avant l'annonce", color: '#b3261e', bg: '#fbeae8' },
+      { phaseId: 911, label: 'Important', sub: 'Avant le lancement', color: '#b0621e', bg: '#fbf0e3' },
+      { phaseId: 912, label: 'À planifier', sub: 'Pas bloquant', color: '#2f7a6b', bg: '#e6f1ee' },
+      { phaseId: 913, label: 'Accessoire', sub: 'Polish', color: '#6e7160', bg: '#eeeee7' },
+    ],
+  },
 ] as const
 
-export default function AuditSecurite() {
-  const [todos, setTodos] = useState<AuditTodo[]>([])
-  const [open, setOpen] = useState<Record<number, boolean>>({ 900: true })
-  const [loaded, setLoaded] = useState(false)
+function AuditCard({ audit, todos, onToggle }: { audit: Audit; todos: AuditTodo[]; onToggle: (id: number) => void }) {
+  const [open, setOpen] = useState<Record<number, boolean>>({ [audit.groups[0].phaseId]: true })
 
-  useEffect(() => {
-    fetch('/api/v1/admin/roadmaps/vision-todos', { credentials: 'include' })
-      .then(r => r.json())
-      .then((rows: AuditTodo[]) => {
-        if (!Array.isArray(rows)) return
-        setTodos(rows.filter(r => r.phase_id >= 900 && r.phase_id <= 903))
-      })
-      .finally(() => setLoaded(true))
-  }, [])
-
-  function toggle(id: number) {
-    setTodos(prev => prev.map(t => (t.id === id ? { ...t, done: !t.done } : t)))
-    fetch(`/api/v1/admin/roadmaps/vision-todos/${id}/toggle`, { method: 'POST', credentials: 'include' }).catch(() => {})
-  }
-
-  if (!loaded || todos.length === 0) return null
+  if (todos.length === 0) return null
 
   const total = todos.length
   const done = todos.filter(t => t.done).length
@@ -49,12 +66,12 @@ export default function AuditSecurite() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', marginBottom: '10px' }}>
         <div>
           <div style={{ fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', color: '#aaa', marginBottom: '4px' }}>
-            🔍 Audit technique — 19 juillet 2026
+            {audit.title}
           </div>
-          <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#2b2b2b', margin: 0 }}>Sécurité &amp; fiabilité — pré-lancement</h2>
+          <h2 style={{ fontSize: '1.15rem', fontWeight: 600, color: '#2b2b2b', margin: 0 }}>{audit.subtitle}</h2>
         </div>
         <a
-          href={ARTIFACT_URL}
+          href={audit.artifactUrl}
           target="_blank"
           rel="noopener noreferrer"
           style={{ fontSize: '12px', fontWeight: 500, color: 'white', background: '#2b2b2b', padding: '8px 16px', borderRadius: '20px', textDecoration: 'none', flexShrink: 0 }}
@@ -80,7 +97,7 @@ export default function AuditSecurite() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-        {GROUPS.map(g => {
+        {audit.groups.map(g => {
           const items = todos.filter(t => t.phase_id === g.phaseId)
           if (items.length === 0) return null
           const gDone = items.filter(t => t.done).length
@@ -123,7 +140,7 @@ export default function AuditSecurite() {
                         background: t.done ? '#f0faf4' : 'transparent',
                       }}
                     >
-                      <input type="checkbox" checked={t.done} onChange={() => toggle(t.id)} style={{ marginTop: '2px', flexShrink: 0 }} />
+                      <input type="checkbox" checked={t.done} onChange={() => onToggle(t.id)} style={{ marginTop: '2px', flexShrink: 0 }} />
                       <span
                         style={{
                           fontSize: '12px',
@@ -143,5 +160,40 @@ export default function AuditSecurite() {
         })}
       </div>
     </div>
+  )
+}
+
+export default function AuditSecurite() {
+  const [todos, setTodos] = useState<AuditTodo[]>([])
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/v1/admin/roadmaps/vision-todos', { credentials: 'include' })
+      .then(r => r.json())
+      .then((rows: AuditTodo[]) => {
+        if (!Array.isArray(rows)) return
+        setTodos(rows.filter(r => r.phase_id >= 900 && r.phase_id <= 913))
+      })
+      .finally(() => setLoaded(true))
+  }, [])
+
+  function toggle(id: number) {
+    setTodos(prev => prev.map(t => (t.id === id ? { ...t, done: !t.done } : t)))
+    fetch(`/api/v1/admin/roadmaps/vision-todos/${id}/toggle`, { method: 'POST', credentials: 'include' }).catch(() => {})
+  }
+
+  if (!loaded || todos.length === 0) return null
+
+  return (
+    <>
+      {AUDITS.map(audit => (
+        <AuditCard
+          key={audit.key}
+          audit={audit}
+          todos={todos.filter(t => t.phase_id >= audit.minPhase && t.phase_id <= audit.maxPhase)}
+          onToggle={toggle}
+        />
+      ))}
+    </>
   )
 }
