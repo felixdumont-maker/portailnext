@@ -52,6 +52,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Contenu', icon: 'folder_special',
     children: [
       { label: 'Sites',         icon: 'web',         href: '/admin/sites'                 },
+      { label: 'Boutique',      icon: 'storefront',  href: '/admin/boutique'              },
       { label: 'Soumissions',   icon: 'description', href: '/admin/soumissions'           },
       { label: 'Templates',     icon: 'article',      href: '/admin/soumissions/templates' },
       { label: 'Conditions',    icon: 'gavel',        href: '/admin/conditions'            },
