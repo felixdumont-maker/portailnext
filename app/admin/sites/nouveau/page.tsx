@@ -28,6 +28,7 @@ interface FormData {
   description_en: string
   hero_style: string
   direction: string
+  activer_boutique: boolean
   // Étape 3 — Coordonnées
   address: string
   city: string
@@ -65,6 +66,7 @@ const INITIAL: FormData = {
   description: '', description_fr: '', description_en: '',
   hero_style: 'A',
   direction: 'editorial',
+  activer_boutique: false,
   address: '', city: '', province: 'QC', postal_code: '',
   phone: '', email: '', acuity_url: '',
   instagram: '', facebook: '', linkedin: '',
@@ -522,6 +524,32 @@ export default function NouveauSitePage() {
                 <Field label="Direction artistique">
                   <DirectionPicker value={form.direction} onChange={set('direction')} />
                 </Field>
+              </>
+            )}
+
+            {isVitrine && (
+              <>
+                <Divider />
+                <label style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 'var(--space-3)',
+                  padding: 'var(--space-4)', borderRadius: 'var(--radius-md)',
+                  background: 'var(--color-light-2)', cursor: 'pointer',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={form.activer_boutique}
+                    onChange={e => setForm(f => ({ ...f, activer_boutique: e.target.checked }))}
+                    style={{ marginTop: 3 }}
+                  />
+                  <span>
+                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-sm)', color: 'var(--color-light-text)', margin: '0 0 2px', textTransform: 'uppercase' }}>
+                      Activer la boutique en ligne
+                    </p>
+                    <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: 0, fontFamily: 'var(--font-body)' }}>
+                      Crée (ou réutilise) le marchand CocktailOS de ce client et branche les pages /boutique et /produit sur son catalogue. Le catalogue lui-même se gère ensuite dans Admin → Boutique.
+                    </p>
+                  </span>
+                </label>
               </>
             )}
           </div>
