@@ -309,11 +309,136 @@ function PaiementTab({ marchand, onUpdated }: { marchand: Marchand; onUpdated: (
   )
 }
 
+interface ItemAAjuster {
+  commande_item_id: number
+  quantite_estimee: string
+  prix_estime: string
+  variante_id: number
+  attribut1: string | null
+  attribut2: string | null
+  prix_unitaire: string
+  produit_nom: string
+}
+
+interface CommandeAAjuster {
+  id: number
+  client_email: string
+  client_nom: string | null
+  client_telephone: string | null
+  notes_ramassage: string | null
+  statut: string
+  total_estime: string
+  created_at: string
+  items_a_peser: ItemAAjuster[]
+}
+
+function CommandesTab({ marchandId }: { marchandId: number }) {
+  const [commandes, setCommandes] = useState<CommandeAAjuster[]>([])
+  const [poids, setPoids] = useState<Record<number, string>>({})
+  const [enregistrement, setEnregistrement] = useState<number | null>(null)
+
+  const load = useCallback(() => {
+    fetch(`/api/v1/admin/boutique/marchands/${marchandId}/commandes-a-ajuster`, { credentials: 'include' })
+      .then(res => res.ok ? res.json() : [])
+      .then(setCommandes)
+  }, [marchandId])
+
+  useEffect(() => { load() }, [load])
+
+  async function confirmerPesee(commande: CommandeAAjuster) {
+    const items = commande.items_a_peser
+      .map(it => ({ commande_item_id: it.commande_item_id, quantite_finale: poids[it.commande_item_id] }))
+      .filter(it => it.quantite_finale !== undefined && it.quantite_finale !== '')
+    if (items.length !== commande.items_a_peser.length) return
+    setEnregistrement(commande.id)
+    await fetch(`/api/v1/admin/boutique/commandes/${commande.id}/ajuster`, {
+      method: 'PUT', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: items.map(it => ({ ...it, quantite_finale: Number(it.quantite_finale) })) }),
+    })
+    setEnregistrement(null)
+    load()
+  }
+
+  if (commandes.length === 0) {
+    return (
+      <div style={{
+        background: 'var(--color-light-2)', border: '1px solid var(--color-light-border)',
+        borderRadius: 'var(--radius-lg)', padding: 'var(--space-12)', textAlign: 'center',
+      }}>
+        <span aria-hidden="true" className="material-symbols-outlined" style={{ fontSize: 40, color: 'var(--color-light-text-3)', display: 'block', marginBottom: 'var(--space-3)' }}>scale</span>
+        <p style={{ color: 'var(--color-light-text-3)', fontSize: 'var(--text-sm)', margin: 0 }}>Aucune commande à ajuster pour l&apos;instant.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      {commandes.map(c => {
+        const tousRemplis = c.items_a_peser.every(it => poids[it.commande_item_id])
+        return (
+          <div key={c.id} style={{ border: '1px solid var(--color-light-border)', borderRadius: 'var(--radius-md)', padding: 'var(--space-5) var(--space-6)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 'var(--space-4)' }}>
+              <div>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'var(--text-base)', margin: 0 }}>
+                  Commande #{c.id} — {c.client_nom || c.client_email}
+                </p>
+                <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: '2px 0 0' }}>
+                  {c.client_email}{c.client_telephone ? ` · ${c.client_telephone}` : ''}
+                </p>
+                {c.notes_ramassage && (
+                  <p style={{ fontSize: 'var(--text-xs)', color: 'var(--color-light-text-3)', margin: '4px 0 0', fontStyle: 'italic' }}>
+                    {c.notes_ramassage}
+                  </p>
+                )}
+              </div>
+              <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-warning)', fontFamily: 'var(--font-display)', textTransform: 'uppercase' }}>
+                {c.statut === 'en_attente_pesee' ? 'À peser' : c.statut}
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)', marginBottom: 'var(--space-4)' }}>
+              {c.items_a_peser.map(it => (
+                <div key={it.commande_item_id} style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)', fontSize: 'var(--text-sm)' }}>
+                  <span style={{ flex: 1 }}>
+                    {it.produit_nom}{it.attribut1 ? ` — ${[it.attribut1, it.attribut2].filter(Boolean).join(' · ')}` : ''}
+                  </span>
+                  <span style={{ color: 'var(--color-light-text-3)', fontSize: 'var(--text-xs)' }}>
+                    Estimé : {Number(it.quantite_estimee).toFixed(2)} kg ({Number(it.prix_estime).toFixed(2)} $)
+                  </span>
+                  <input
+                    type="number" step="0.001" placeholder="Poids réel (kg)"
+                    value={poids[it.commande_item_id] ?? ''}
+                    onChange={e => setPoids(p => ({ ...p, [it.commande_item_id]: e.target.value }))}
+                    style={{ ...inputStyle, width: 130 }}
+                  />
+                  {poids[it.commande_item_id] && (
+                    <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-light-text-2)', width: 70 }}>
+                      {(Number(poids[it.commande_item_id]) * Number(it.prix_unitaire)).toFixed(2)} $
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => confirmerPesee(c)}
+              disabled={!tousRemplis || enregistrement === c.id}
+              style={{ ...btnStyle, opacity: tousRemplis ? 1 : 0.4, cursor: tousRemplis ? 'pointer' : 'not-allowed' }}
+            >
+              {enregistrement === c.id ? 'Enregistrement…' : 'Confirmer la pesée'}
+            </button>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 export default function MarchandDetailPage() {
   const params = useParams()
   const marchandId = Number(params.id)
   const [marchand, setMarchand] = useState<Marchand | null>(null)
-  const [onglet, setOnglet]     = useState<'catalogue' | 'paiement'>('catalogue')
+  const [onglet, setOnglet]     = useState<'catalogue' | 'commandes' | 'paiement'>('catalogue')
 
   const load = useCallback(() => {
     fetch(`/api/v1/admin/boutique/marchands/${marchandId}`, { credentials: 'include' })
@@ -335,7 +460,7 @@ export default function MarchandDetailPage() {
       </p>
 
       <div style={{ display: 'flex', gap: 'var(--space-2)', marginBottom: 'var(--space-6)', borderBottom: '1px solid var(--color-light-border)' }}>
-        {(['catalogue', 'paiement'] as const).map(t => (
+        {(['catalogue', 'commandes', 'paiement'] as const).map(t => (
           <button
             key={t}
             onClick={() => setOnglet(t)}
@@ -348,14 +473,14 @@ export default function MarchandDetailPage() {
               marginRight: 'var(--space-6)',
             }}
           >
-            {t === 'catalogue' ? 'Catalogue & inventaire' : 'Identifiants de paiement'}
+            {t === 'catalogue' ? 'Catalogue & inventaire' : t === 'commandes' ? 'Commandes à ajuster' : 'Identifiants de paiement'}
           </button>
         ))}
       </div>
 
-      {onglet === 'catalogue'
-        ? <CatalogueTab marchandId={marchand.id} />
-        : <PaiementTab marchand={marchand} onUpdated={load} />}
+      {onglet === 'catalogue' && <CatalogueTab marchandId={marchand.id} />}
+      {onglet === 'commandes' && <CommandesTab marchandId={marchand.id} />}
+      {onglet === 'paiement' && <PaiementTab marchand={marchand} onUpdated={load} />}
     </div>
   )
 }
